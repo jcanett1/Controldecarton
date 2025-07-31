@@ -1,1 +1,378 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Almacén de Cartón</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-boxes"></i>
+                    <span>Almacén Cartón</span>
+                </div>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="menu-item active" data-section="dashboard">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </li>
+                <li class="menu-item" data-section="productos">
+                    <i class="fas fa-box"></i>
+                    <span>Productos</span>
+                </li>
+                <li class="menu-item" data-section="inventario">
+                    <i class="fas fa-warehouse"></i>
+                    <span>Inventario</span>
+                </li>
+                <li class="menu-item" data-section="movimientos">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>Movimientos</span>
+                </li>
+                <li class="menu-item" data-section="reportes">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Reportes</span>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1 id="page-title">Dashboard</h1>
+                    <p id="page-subtitle">Resumen general del almacén</p>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-primary" id="refresh-btn">
+                        <i class="fas fa-sync-alt"></i>
+                        Actualizar
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Dashboard Section -->
+                <section id="dashboard-section" class="content-section active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-box"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="total-productos">0</h3>
+                                <p>Total Productos</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-cubes"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="total-stock">0</h3>
+                                <p>Total Stock</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card warning">
+                            <div class="stat-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="stock-bajo">0</h3>
+                                <p>Stock Bajo</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card danger">
+                            <div class="stat-icon">
+                                <i class="fas fa-times-circle"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="sin-stock">0</h3>
+                                <p>Sin Stock</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3>Productos con Stock Bajo</h3>
+                                <button class="btn btn-sm btn-outline" onclick="showSection('inventario')">
+                                    Ver Todo
+                                </button>
+                            </div>
+                            <div class="card-content">
+                                <div id="stock-bajo-list" class="stock-list">
+                                    <div class="loading">Cargando...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3>Movimientos Recientes</h3>
+                                <button class="btn btn-sm btn-outline" onclick="showSection('movimientos')">
+                                    Ver Todo
+                                </button>
+                            </div>
+                            <div class="card-content">
+                                <div id="movimientos-recientes" class="movements-list">
+                                    <div class="loading">Cargando...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Productos Section -->
+                <section id="productos-section" class="content-section">
+                    <div class="section-header">
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddProductModal()">
+                                <i class="fas fa-plus"></i>
+                                Nuevo Producto
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Número de Parte</th>
+                                    <th>Descripción</th>
+                                    <th>Estado</th>
+                                    <th>Fecha Creación</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productos-table-body">
+                                <tr>
+                                    <td colspan="5" class="loading">Cargando productos...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Inventario Section -->
+                <section id="inventario-section" class="content-section">
+                    <div class="section-header">
+                        <div class="section-filters">
+                            <select id="inventario-filter" class="form-select">
+                                <option value="all">Todos los productos</option>
+                                <option value="stock-bajo">Solo stock bajo</option>
+                                <option value="sin-stock">Sin stock</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Stock Actual</th>
+                                    <th>Stock Mínimo</th>
+                                    <th>Stock Máximo</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventario-table-body">
+                                <tr>
+                                    <td colspan="6" class="loading">Cargando inventario...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Movimientos Section -->
+                <section id="movimientos-section" class="content-section">
+                    <div class="section-header">
+                        <div class="section-actions">
+                            <button class="btn btn-success" onclick="showMovementModal('ENTRADA')">
+                                <i class="fas fa-arrow-down"></i>
+                                Registrar Entrada
+                            </button>
+                            <button class="btn btn-danger" onclick="showMovementModal('SALIDA')">
+                                <i class="fas fa-arrow-up"></i>
+                                Registrar Salida
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Producto</th>
+                                    <th>Tipo</th>
+                                    <th>Cantidad</th>
+                                    <th>Usuario</th>
+                                    <th>Motivo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movimientos-table-body">
+                                <tr>
+                                    <td colspan="6" class="loading">Cargando movimientos...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Reportes Section -->
+                <section id="reportes-section" class="content-section">
+                    <div class="reports-grid">
+                        <div class="report-card" onclick="generateReport('stock-bajo')">
+                            <div class="report-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="report-content">
+                                <h3>Reporte de Stock Bajo</h3>
+                                <p>Productos que requieren reabastecimiento</p>
+                            </div>
+                        </div>
+
+                        <div class="report-card" onclick="generateReport('resumen-inventario')">
+                            <div class="report-icon">
+                                <i class="fas fa-chart-pie"></i>
+                            </div>
+                            <div class="report-content">
+                                <h3>Resumen de Inventario</h3>
+                                <p>Estadísticas generales del almacén</p>
+                            </div>
+                        </div>
+
+                        <div class="report-card" onclick="generateReport('productos-activos')">
+                            <div class="report-icon">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <div class="report-content">
+                                <h3>Productos Más Activos</h3>
+                                <p>Productos con más movimientos</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="report-results" class="report-results" style="display: none;">
+                        <div class="card-header">
+                            <h3 id="report-title">Resultado del Reporte</h3>
+                            <button class="btn btn-sm btn-outline" onclick="exportReport()">
+                                <i class="fas fa-download"></i>
+                                Exportar
+                            </button>
+                        </div>
+                        <div id="report-content" class="report-content-area">
+                            <!-- Report content will be loaded here -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay" style="display: none;">
+        <!-- Add Product Modal -->
+        <div id="add-product-modal" class="modal">
+            <div class="modal-header">
+                <h3>Nuevo Producto</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="add-product-form">
+                    <div class="form-group">
+                        <label for="numero-parte">Número de Parte</label>
+                        <input type="text" id="numero-parte" name="numero_parte" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="descripcion">Descripción</label>
+                        <input type="text" id="descripcion" name="descripcion" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cantidad-inicial">Cantidad Inicial</label>
+                        <input type="number" id="cantidad-inicial" name="cantidad_inicial" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="cantidad-minima">Cantidad Mínima</label>
+                        <input type="number" id="cantidad-minima" name="cantidad_minima" value="10" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="cantidad-maxima">Cantidad Máxima</label>
+                        <input type="number" id="cantidad-maxima" name="cantidad_maxima" value="1000" min="1">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="addProduct()">Crear Producto</button>
+            </div>
+        </div>
+
+        <!-- Movement Modal -->
+        <div id="movement-modal" class="modal">
+            <div class="modal-header">
+                <h3 id="movement-modal-title">Registrar Movimiento</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="movement-form">
+                    <div class="form-group">
+                        <label for="movement-producto">Producto</label>
+                        <select id="movement-producto" name="producto_id" required>
+                            <option value="">Seleccionar producto...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="movement-cantidad">Cantidad</label>
+                        <input type="number" id="movement-cantidad" name="cantidad" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="movement-motivo">Motivo</label>
+                        <input type="text" id="movement-motivo" name="motivo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="movement-usuario">Usuario</label>
+                        <input type="text" id="movement-usuario" name="usuario" value="admin" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="movement-documento">Número de Documento</label>
+                        <input type="text" id="movement-documento" name="numero_documento">
+                    </div>
+                    <div class="form-group">
+                        <label for="movement-observaciones">Observaciones</label>
+                        <textarea id="movement-observaciones" name="observaciones" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" id="movement-submit-btn" onclick="submitMovement()">Registrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
