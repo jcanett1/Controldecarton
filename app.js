@@ -593,6 +593,41 @@ async function submitMovement() {
         showToast('Error al registrar movimiento', 'error');
     }
 }
+// Variable para guardar el ID del producto que se está editando
+let currentEditingProductId = null;
+
+// Función para mostrar el modal de edición de producto
+async function editProduct(productId) {
+    try {
+        // Obtener datos del producto desde Supabase
+        const { data: producto, error } = await supabase
+            .from('productos_carton')
+            .select('*')
+            .eq('id', productId)
+            .single();
+
+        if (error) throw error;
+        if (!producto) throw new Error('Producto no encontrado');
+
+        // Llenar el formulario con los datos actuales
+        document.getElementById('edit-numero-parte').value = producto.numero_parte;
+        document.getElementById('edit-descripcion').value = producto.descripcion;
+        document.getElementById('edit-activo').value = producto.activo.toString();
+        
+        // Guardar el ID del producto que se está editando
+        currentEditingProductId = productId;
+        
+        // Mostrar el modal
+        document.getElementById('modal-overlay').style.display = 'flex';
+        document.getElementById('edit-product-modal').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error al cargar los datos del producto:', error);
+        showToast('Error al cargar los datos del producto', 'error');
+    }
+}
+
+// Función para actualizar el producto en Supabase
 async function updateProduct() {
     if (!currentEditingProductId) {
         showToast('Error: No hay producto seleccionado para editar', 'error');
@@ -609,10 +644,12 @@ async function updateProduct() {
     };
 
     try {
-        await apiCall(`/productos/${currentEditingProductId}`, {
-            method: 'PUT',
-            body: JSON.stringify(productData)
-        });
+        const { error } = await supabase
+            .from('productos_carton')
+            .update(productData)
+            .eq('id', currentEditingProductId);
+
+        if (error) throw error;
         
         showToast('Producto actualizado exitosamente', 'success');
         closeModal();
@@ -626,11 +663,10 @@ async function updateProduct() {
         currentEditingProductId = null;
         
     } catch (error) {
-        console.error('Error updating product:', error);
+        console.error('Error al actualizar el producto:', error);
         showToast('Error al actualizar el producto', 'error');
     }
 }
-
 
 // Make functions available globally
 window.editProduct = editProduct;
