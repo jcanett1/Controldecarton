@@ -439,6 +439,7 @@ function getToastIcon(type) {
 function showAddProductModal() {
     document.getElementById('modal-overlay').style.display = 'flex';
     document.getElementById('add-product-modal').style.display = 'block';
+    document.getElementById('edit-product-modal').style.display = 'none';
     document.getElementById('movement-modal').style.display = 'none';
 }
 
@@ -492,14 +493,20 @@ async function showMovementModal(type) {
     document.getElementById('modal-overlay').style.display = 'flex';
     document.getElementById('movement-modal').style.display = 'block';
     document.getElementById('add-product-modal').style.display = 'none';
+    document.getElementById('edit-product-modal').style.display = 'none';
 }
 
 function closeModal() {
     document.getElementById('modal-overlay').style.display = 'none';
+    document.getElementById('add-product-modal').style.display = 'none';
+    document.getElementById('edit-product-modal').style.display = 'none';
+    document.getElementById('movement-modal').style.display = 'none';
+    
+    // Resetear formularios
     document.getElementById('add-product-form').reset();
+    document.getElementById('edit-product-form').reset();
     document.getElementById('movement-form').reset();
 }
-
 // Form Submissions
 async function addProduct() {
     const form = document.getElementById('add-product-form');
@@ -610,23 +617,22 @@ async function editProduct(productId) {
         if (!producto) throw new Error('Producto no encontrado');
 
         // Llenar el formulario con los datos actuales
+        document.getElementById('edit-product-id').value = producto.id;
         document.getElementById('edit-numero-parte').value = producto.numero_parte;
         document.getElementById('edit-descripcion').value = producto.descripcion;
-        document.getElementById('edit-activo').value = producto.activo.toString();
+        document.getElementById('edit-activo').value = producto.activo;
         
-        // Guardar el ID del producto que se está editando
-        currentEditingProductId = productId;
-        
-        // Mostrar el modal
+        // Mostrar solo el modal de edición y ocultar los demás
         document.getElementById('modal-overlay').style.display = 'flex';
         document.getElementById('edit-product-modal').style.display = 'block';
+        document.getElementById('add-product-modal').style.display = 'none';
+        document.getElementById('movement-modal').style.display = 'none';
         
     } catch (error) {
         console.error('Error al cargar los datos del producto:', error);
         showToast('Error al cargar los datos del producto', 'error');
     }
 }
-
 // Función para actualizar el producto en Supabase
 async function updateProduct() {
     if (!currentEditingProductId) {
