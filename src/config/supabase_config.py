@@ -14,7 +14,7 @@ class SupabaseConfig:
     
     # URL y credenciales de Supabase
     SUPABASE_URL = "https://bdrxcilsuxbkpmolfbgu.supabase.co"
-    SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs"
+    SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDI1NDQ1NywiZXhwIjoyMDY5ODMwNDU3fQ.K98GcfmxohDRFd06XpUzIkDl-H_YwYuNnLpkk3NaOcw"
     
     # Configuración de la base de datos PostgreSQL
     # Supabase usa PostgreSQL en el puerto 5432
@@ -25,7 +25,7 @@ class SupabaseConfig:
     
     # La contraseña debe ser configurada en las variables de entorno
     # o solicitada al usuario (por seguridad)
-    DB_PASSWORD = os.getenv('Edel1ewy', '')
+    DB_PASSWORD = os.getenv('Edel1ewy.', '')
     
     @classmethod
     def get_database_url(cls, password=None):
