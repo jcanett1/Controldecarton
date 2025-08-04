@@ -47,7 +47,42 @@ def create_app(config_name='default'):
         print("💾 Configuración: Usando SQLite local")
     
     # Habilitar CORS para todas las rutas
-    CORS(app)
+  CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "https://jcanett1.github.io",  # Tu GitHub Pages
+            "http://localhost:*",          # Desarrollo local
+            "http://127.0.0.1:*",         # Alternativa local
+            "https://bdrxcilsuxbkpmolfbgu.supabase.co"       # Tu dominio de producción
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+        "expose_headers": ["Content-Range", "X-Total-Count"],
+        "supports_credentials": True,
+        "max_age": 86400
+    }
+})
+
+# Middleware para headers adicionales
+@app.after_request
+def after_request(response):
+    # Headers esenciales
+    response.headers.add('Access-Control-Allow-Origin', 
+                       'https://jcanett1.github.io, http://localhost:*, http://127.0.0.1:*')
+    response.headers.add('Access-Control-Allow-Headers', 
+                       'Content-Type,Authorization,X-Requested-With')
+    response.headers.add('Access-Control-Allow-Methods', 
+                       'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Expose-Headers', 
+                       'Content-Range,X-Total-Count')
+    
+    # Headers de seguridad recomendados
+    response.headers.add('Content-Security-Policy', "default-src 'self'")
+    response.headers.add('X-Content-Type-Options', 'nosniff')
+    response.headers.add('X-Frame-Options', 'SAMEORIGIN')
+    
+    return response
     
     # Registrar blueprints
     app.register_blueprint(productos_bp, url_prefix='/api')
