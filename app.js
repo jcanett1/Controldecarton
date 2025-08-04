@@ -6,7 +6,7 @@ let inventario = [];
 let movimientos = [];
 
 // API Base URL
-const API_BASE = '/api';
+const API_BASE = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
