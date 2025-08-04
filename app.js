@@ -123,31 +123,58 @@ function refreshCurrentSection() {
 
 // Data Loading Functions
 async function loadDashboardData() {
-    try {
-        const [
-            productosRes, 
-            inventarioRes, 
-            movimientosRes
-        ] = await Promise.all([
-            supabase.from('productos_carton').select('*').eq('activo', true),
-            supabase.from('inventario').select('*, producto:productos_carton(*)'),
-            supabase.from('movimientos_inventario')
-                .select('*, producto:productos_carton(*)')
-                .order('fecha_movimiento', { ascending: false })
-                .limit(10)
-        ]);
+  try {
+    console.log('Loading dashboard data...');
+    
+    // Carga en paralelo usando el cliente Supabase
+    const [
+      { data: productos, error: productosError },
+      { data: inventario, error: inventarioError },
+      { data: movimientos, error: movimientosError }
+    ] = await Promise.all([
+      supabase
+        .from('productos_carton')
+        .select('*')
+        .eq('activo', true),
+      supabase
+        .from('inventario')
+        .select('*, producto:productos_carton(*)'),
+      supabase
+        .from('movimientos_inventario')
+        .select('*, producto:productos_carton(*)')
+        .order('fecha_movimiento', { ascending: false })
+        .limit(10)
+    ]);
 
-        productos = productosRes.data || [];
-        inventario = inventarioRes.data || [];
-        movimientos = movimientosRes.data || [];
+    // Manejo de errores
+    if (productosError) throw productosError;
+    if (inventarioError) throw inventarioError;
+    if (movimientosError) throw movimientosError;
 
-        updateDashboardStats();
-        updateStockBajoList();
-        updateMovimientosRecientes();
-    } catch (error) {
-        console.error('Error loading dashboard:', error);
-        showToast('Error cargando datos del dashboard', 'error');
+    // Asignación de datos
+    window.productos = productos || [];
+    window.inventario = inventario || [];
+    window.movimientos = movimientos || [];
+
+    console.log('Data loaded successfully');
+    
+    updateDashboardStats();
+    updateStockBajoList();
+    updateMovimientosRecientes();
+    
+  } catch (error) {
+    console.error('Error loading dashboard:', error);
+    showToast('Error cargando datos del dashboard', 'error');
+    
+    // Fallback a datos mock en desarrollo
+    if (window.location.hostname === 'localhost') {
+      console.warn('Using mock data for development');
+      window.productos = mockProductos;
+      window.inventario = mockInventario;
+      window.movimientos = mockMovimientos;
+      updateDashboardStats();
     }
+  }
 }
 
 async function loadProductos() {
