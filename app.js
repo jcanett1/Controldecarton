@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function initializeApp() {
     setupEventListeners();
-    // Delay inicial para asegurar que el DOM esté completamente listo
+    // Delay initial load to ensure DOM is fully ready
     setTimeout(() => {
         loadDashboardData();
     }, 100);
@@ -143,22 +143,36 @@ async function apiCall(endpoint, options = {}) {
 // Dashboard Functions
 async function loadDashboardData() {
     try {
-        // Load summary data
-        const [productosRes, inventarioRes, movimientosRes] = await Promise.all([
-            apiCall('/productos'),
-            apiCall('/inventario'),
-            apiCall('/movimientos?limite=10')
-        ]);
+        console.log('Loading dashboard data...');
+        
+        // Load summary data with individual error handling
+        const productosRes = await apiCall('/productos').catch(err => {
+            console.error('Error loading productos:', err);
+            return { data: [], success: false };
+        });
+        
+        const inventarioRes = await apiCall('/inventario').catch(err => {
+            console.error('Error loading inventario:', err);
+            return { data: [], success: false };
+        });
+        
+        const movimientosRes = await apiCall('/movimientos?limite=10').catch(err => {
+            console.error('Error loading movimientos:', err);
+            return { data: [], success: false };
+        });
 
-        productos = productosRes.data;
-        inventario = inventarioRes.data;
-        movimientos = movimientosRes.data;
+        productos = productosRes.data || [];
+        inventario = inventarioRes.data || [];
+        movimientos = movimientosRes.data || [];
+
+        console.log('Data loaded:', { productos: productos.length, inventario: inventario.length, movimientos: movimientos.length });
 
         updateDashboardStats();
         updateStockBajoList();
         updateMovimientosRecientes();
     } catch (error) {
         console.error('Error loading dashboard:', error);
+        showToast('Error cargando datos del dashboard', 'error');
     }
 }
 
@@ -218,7 +232,7 @@ function updateMovimientosRecientes() {
 // Products Functions
 async function loadProductos() {
     try {
-        const response = await apiCall('src/routes/productos.py');
+        const response = await apiCall('/productos');
         productos = response.data;
         updateProductosTable();
     } catch (error) {
@@ -697,4 +711,3 @@ function toggleProductStatus(id, currentStatus) {
 function showAdjustModal(productId) {
     showToast('Función de ajuste de inventario en desarrollo', 'info');
 }
-
