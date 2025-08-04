@@ -6,20 +6,17 @@ let inventario = [];
 let movimientos = [];
 
 // Supabase configuration
-const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
-
-// Initialize Supabase client
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: false
-  },
-  global: {
-    headers: {
-      'Access-Control-Allow-Origin': 'https://jcanett1.github.io'
+if (typeof supabase === 'undefined') {
+  const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
+  
+  // Crea el cliente Supabase
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false
     }
-  }
-});
+  });
+}
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
