@@ -25,7 +25,7 @@ class SupabaseConfig:
     
     # La contraseña debe ser configurada en las variables de entorno
     # o solicitada al usuario (por seguridad)
-    DB_PASSWORD = os.getenv('SUPABASE_DB_PASSWORD', '')
+    DB_PASSWORD = os.getenv('Edel1ewy', '')
     
     @classmethod
     def get_database_url(cls, password=None):
