@@ -634,37 +634,55 @@ async function addProduct() {
 
 async function updateProduct() {
     const productId = document.getElementById('edit-product-id').value;
-    const form = document.getElementById('edit-product-form');
-    const formData = new FormData(form);
-    
-    const productData = {
-        numero_parte: formData.get('numero_parte'),
-        descripcion: formData.get('descripcion'),
-        activo: formData.get('activo') === 'true'
+    if (!productId) {
+        showToast('Error: No se ha seleccionado un producto', 'error');
+        return;
+    }
+
+    const formData = {
+        numero_parte: document.getElementById('edit-numero-parte').value,
+        descripcion: document.getElementById('edit-descripcion').value,
+        activo: document.getElementById('edit-activo').value === 'true'
     };
 
     try {
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('productos_carton')
-            .update(productData)
-            .eq('id', productId);
+            .update(formData)
+            .eq('id', productId)
+            .select();  // Añade .select() para obtener la respuesta
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase error:', error);
+            throw error;
+        }
+
+        if (!data || data.length === 0) {
+            throw new Error('No se recibieron datos de actualización');
+        }
         
-        showToast('Producto actualizado exitosamente', 'success');
+        showToast('Producto actualizado correctamente', 'success');
         closeModal();
         loadProductos();
         
-        if (currentSection === 'dashboard') {
-            loadDashboardData();
-        }
+        if (currentSection === 'dashboard') loadDashboardData();
+        if (currentSection === 'inventario') loadInventario();
         
     } catch (error) {
-        console.error('Error updating product:', error);
-        showToast('Error al actualizar producto', 'error');
+        console.error('Error completo al actualizar producto:', {
+            message: error.message,
+            code: error.code,
+            details: error.details
+        });
+        
+        let errorMessage = 'Error al actualizar el producto';
+        if (error.code === '42501') {
+            errorMessage = 'No tienes permisos para actualizar productos';
+        }
+        
+        showToast(errorMessage, 'error');
     }
 }
-
 async function submitAdjustment() {
     const productId = document.getElementById('adjust-product-id').value;
     const newStock = parseInt(document.getElementById('adjust-new-stock').value);
