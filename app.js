@@ -1,10 +1,3 @@
-// Global variables
-let currentSection = 'dashboard';
-let currentMovementType = '';
-let productos = [];
-let inventario = [];
-let movimientos = [];
-
 // Configuración de Supabase
 const { createClient } = supabase;
 const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
