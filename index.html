@@ -325,6 +325,38 @@
             </div>
         </div>
 
+        <!-- Edit Product Modal -->
+        <div id="edit-product-modal" class="modal">
+            <div class="modal-header">
+                <h3>Editar Producto</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-product-form">
+                    <input type="hidden" id="edit-product-id">
+                    <div class="form-group">
+                        <label for="edit-numero-parte">Número de Parte</label>
+                        <input type="text" id="edit-numero-parte" name="numero_parte" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-descripcion">Descripción</label>
+                        <input type="text" id="edit-descripcion" name="descripcion" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-activo">Estado</label>
+                        <select id="edit-activo" name="activo">
+                            <option value="true">Activo</option>
+                            <option value="false">Inactivo</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="updateProduct()">Actualizar Producto</button>
+            </div>
+        </div>
+
         <!-- Movement Modal -->
         <div id="movement-modal" class="modal">
             <div class="modal-header">
@@ -375,4 +407,3 @@
     <script src="app.js"></script>
 </body>
 </html>
-
