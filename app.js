@@ -218,7 +218,7 @@ function updateMovimientosRecientes() {
 // Products Functions
 async function loadProductos() {
     try {
-        const response = await apiCall('/productos');
+        const response = await apiCall('src/routes/productos.py');
         productos = response.data;
         updateProductosTable();
     } catch (error) {
