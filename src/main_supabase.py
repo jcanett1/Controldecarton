@@ -32,7 +32,7 @@ def create_app(config_name='default'):
     # Configurar la aplicación
     if config_name == 'supabase':
         # Configuración para Supabase
-        password = os.getenv('SUPABASE_DB_PASSWORD')
+        password = os.getenv('Edel1ewy.')
         if not password:
             raise ValueError("Se requiere la variable de entorno SUPABASE_DB_PASSWORD")
         
