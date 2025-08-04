@@ -5,8 +5,21 @@ let productos = [];
 let inventario = [];
 let movimientos = [];
 
-// API Base URL
-const API_BASE = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
+// Supabase configuration
+const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
+
+// Initialize Supabase client
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false
+  },
+  global: {
+    headers: {
+      'Access-Control-Allow-Origin': 'https://jcanett1.github.io'
+    }
+  }
+});
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
@@ -15,7 +28,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function initializeApp() {
     setupEventListeners();
-    // Delay initial load to ensure DOM is fully ready
     setTimeout(() => {
         loadDashboardData();
     }, 100);
@@ -50,22 +62,17 @@ function setupEventListeners() {
 
 // Navigation
 function showSection(sectionName) {
-    // Update sidebar
     document.querySelectorAll('.menu-item').forEach(item => {
         item.classList.remove('active');
     });
     document.querySelector(`[data-section="${sectionName}"]`).classList.add('active');
 
-    // Update content
     document.querySelectorAll('.content-section').forEach(section => {
         section.classList.remove('active');
     });
     document.getElementById(`${sectionName}-section`).classList.add('active');
 
-    // Update header
     updateHeader(sectionName);
-
-    // Load section data
     currentSection = sectionName;
     loadSectionData(sectionName);
 }
@@ -99,7 +106,6 @@ function loadSectionData(sectionName) {
             loadMovimientos();
             break;
         case 'reportes':
-            // Reports are loaded on demand
             break;
     }
 }
@@ -115,57 +121,25 @@ function refreshCurrentSection() {
     }, 1000);
 }
 
-// API Functions
-async function apiCall(endpoint, options = {}) {
-    try {
-        const response = await fetch(`${API_BASE}${endpoint}`, {
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            },
-            ...options
-        });
-
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'Error en la solicitud');
-        }
-
-        return data;
-    } catch (error) {
-        console.error('API Error:', error);
-        showToast(error.message, 'error');
-        throw error;
-    }
-}
-
-// Dashboard Functions
+// Data Loading Functions
 async function loadDashboardData() {
     try {
-        console.log('Loading dashboard data...');
-        
-        // Load summary data with individual error handling
-        const productosRes = await apiCall('/productos').catch(err => {
-            console.error('Error loading productos:', err);
-            return { data: [], success: false };
-        });
-        
-        const inventarioRes = await apiCall('/inventario').catch(err => {
-            console.error('Error loading inventario:', err);
-            return { data: [], success: false };
-        });
-        
-        const movimientosRes = await apiCall('/movimientos?limite=10').catch(err => {
-            console.error('Error loading movimientos:', err);
-            return { data: [], success: false };
-        });
+        const [
+            productosRes, 
+            inventarioRes, 
+            movimientosRes
+        ] = await Promise.all([
+            supabase.from('productos_carton').select('*').eq('activo', true),
+            supabase.from('inventario').select('*, producto:productos_carton(*)'),
+            supabase.from('movimientos_inventario')
+                .select('*, producto:productos_carton(*)')
+                .order('fecha_movimiento', { ascending: false })
+                .limit(10)
+        ]);
 
         productos = productosRes.data || [];
         inventario = inventarioRes.data || [];
         movimientos = movimientosRes.data || [];
-
-        console.log('Data loaded:', { productos: productos.length, inventario: inventario.length, movimientos: movimientos.length });
 
         updateDashboardStats();
         updateStockBajoList();
@@ -176,10 +150,70 @@ async function loadDashboardData() {
     }
 }
 
+async function loadProductos() {
+    try {
+        const { data, error } = await supabase
+            .from('productos_carton')
+            .select('*')
+            .order('numero_parte');
+        
+        if (error) throw error;
+        
+        productos = data;
+        updateProductosTable();
+    } catch (error) {
+        console.error('Error loading productos:', error);
+        showToast('Error cargando productos', 'error');
+    }
+}
+
+async function loadInventario(filter = 'all') {
+    try {
+        let query = supabase
+            .from('inventario')
+            .select('*, producto:productos_carton(*)');
+        
+        if (filter === 'stock-bajo') {
+            query = query.lte('cantidad_actual', supabase.rpc('get_cantidad_minima'));
+        } else if (filter === 'sin-stock') {
+            query = query.eq('cantidad_actual', 0);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        inventario = data;
+        updateInventarioTable();
+    } catch (error) {
+        console.error('Error loading inventario:', error);
+        showToast('Error cargando inventario', 'error');
+    }
+}
+
+async function loadMovimientos() {
+    try {
+        const { data, error } = await supabase
+            .from('movimientos_inventario')
+            .select('*, producto:productos_carton(*)')
+            .order('fecha_movimiento', { ascending: false })
+            .limit(50);
+        
+        if (error) throw error;
+        
+        movimientos = data;
+        updateMovimientosTable();
+    } catch (error) {
+        console.error('Error loading movimientos:', error);
+        showToast('Error cargando movimientos', 'error');
+    }
+}
+
+// Update UI Functions
 function updateDashboardStats() {
     const totalProductos = productos.length;
     const totalStock = inventario.reduce((sum, item) => sum + item.cantidad_actual, 0);
-    const stockBajo = inventario.filter(item => item.stock_bajo).length;
+    const stockBajo = inventario.filter(item => item.cantidad_actual <= item.cantidad_minima).length;
     const sinStock = inventario.filter(item => item.cantidad_actual === 0).length;
 
     document.getElementById('total-productos').textContent = totalProductos;
@@ -190,7 +224,9 @@ function updateDashboardStats() {
 
 function updateStockBajoList() {
     const stockBajoContainer = document.getElementById('stock-bajo-list');
-    const stockBajoItems = inventario.filter(item => item.stock_bajo).slice(0, 5);
+    const stockBajoItems = inventario
+        .filter(item => item.cantidad_actual <= item.cantidad_minima)
+        .slice(0, 5);
 
     if (stockBajoItems.length === 0) {
         stockBajoContainer.innerHTML = '<p class="text-center text-gray-500">No hay productos con stock bajo</p>';
@@ -203,7 +239,9 @@ function updateStockBajoList() {
                 <h4>${item.producto.numero_parte}</h4>
                 <p>${item.producto.descripcion}</p>
             </div>
-            <div class="stock-quantity">${item.cantidad_actual}</div>
+            <div class="stock-quantity ${item.cantidad_actual === 0 ? 'text-danger' : 'text-warning'}">
+                ${item.cantidad_actual} / ${item.cantidad_minima}
+            </div>
         </div>
     `).join('');
 }
@@ -227,17 +265,6 @@ function updateMovimientosRecientes() {
             </div>
         </div>
     `).join('');
-}
-
-// Products Functions
-async function loadProductos() {
-    try {
-        const response = await apiCall('/productos');
-        productos = response.data;
-        updateProductosTable();
-    } catch (error) {
-        console.error('Error loading productos:', error);
-    }
 }
 
 function updateProductosTable() {
@@ -269,27 +296,6 @@ function updateProductosTable() {
             </td>
         </tr>
     `).join('');
-}
-
-// Inventory Functions
-async function loadInventario(filter = 'all') {
-    try {
-        let endpoint = '/inventario';
-        if (filter === 'stock-bajo') {
-            endpoint += '?stock_bajo=true';
-        }
-        
-        const response = await apiCall(endpoint);
-        inventario = response.data;
-        
-        if (filter === 'sin-stock') {
-            inventario = inventario.filter(item => item.cantidad_actual === 0);
-        }
-        
-        updateInventarioTable();
-    } catch (error) {
-        console.error('Error loading inventario:', error);
-    }
 }
 
 function updateInventarioTable() {
@@ -325,25 +331,14 @@ function updateInventarioTable() {
 
 function getStockStatus(item) {
     if (item.cantidad_actual === 0) return 'status-out';
-    if (item.stock_bajo) return 'status-low';
+    if (item.cantidad_actual <= item.cantidad_minima) return 'status-low';
     return 'status-normal';
 }
 
 function getStockStatusText(item) {
     if (item.cantidad_actual === 0) return 'Sin Stock';
-    if (item.stock_bajo) return 'Stock Bajo';
+    if (item.cantidad_actual <= item.cantidad_minima) return 'Stock Bajo';
     return 'Normal';
-}
-
-// Movements Functions
-async function loadMovimientos() {
-    try {
-        const response = await apiCall('/movimientos?limite=50');
-        movimientos = response.data;
-        updateMovimientosTable();
-    } catch (error) {
-        console.error('Error loading movimientos:', error);
-    }
 }
 
 function updateMovimientosTable() {
@@ -371,287 +366,6 @@ function updateMovimientosTable() {
             <td>${mov.motivo}</td>
         </tr>
     `).join('');
-}
-
-// Modal Functions
-function showAddProductModal() {
-    document.getElementById('modal-overlay').style.display = 'flex';
-    document.getElementById('add-product-modal').style.display = 'block';
-    document.getElementById('movement-modal').style.display = 'none';
-}
-
-async function showMovementModal(type) {
-    currentMovementType = type;
-    
-    // Load products for dropdown
-    if (productos.length === 0) {
-        await loadProductos();
-    }
-    
-    const select = document.getElementById('movement-producto');
-    select.innerHTML = '<option value="">Seleccionar producto...</option>' +
-        productos.filter(p => p.activo).map(p => 
-            `<option value="${p.id}">${p.numero_parte} - ${p.descripcion}</option>`
-        ).join('');
-    
-    document.getElementById('movement-modal-title').textContent = 
-        `Registrar ${type === 'ENTRADA' ? 'Entrada' : 'Salida'}`;
-    
-    const submitBtn = document.getElementById('movement-submit-btn');
-    submitBtn.className = `btn ${type === 'ENTRADA' ? 'btn-success' : 'btn-danger'}`;
-    submitBtn.textContent = `Registrar ${type === 'ENTRADA' ? 'Entrada' : 'Salida'}`;
-    
-    document.getElementById('modal-overlay').style.display = 'flex';
-    document.getElementById('movement-modal').style.display = 'block';
-    document.getElementById('add-product-modal').style.display = 'none';
-}
-
-function closeModal() {
-    document.getElementById('modal-overlay').style.display = 'none';
-    
-    // Reset forms
-    document.getElementById('add-product-form').reset();
-    document.getElementById('movement-form').reset();
-}
-
-// Form Submissions
-async function addProduct() {
-    const form = document.getElementById('add-product-form');
-    const formData = new FormData(form);
-    
-    const productData = {
-        numero_parte: formData.get('numero_parte'),
-        descripcion: formData.get('descripcion'),
-        cantidad_inicial: parseInt(formData.get('cantidad_inicial')) || 0,
-        cantidad_minima: parseInt(formData.get('cantidad_minima')) || 10,
-        cantidad_maxima: parseInt(formData.get('cantidad_maxima')) || 1000
-    };
-
-    try {
-        await apiCall('/productos', {
-            method: 'POST',
-            body: JSON.stringify(productData)
-        });
-        
-        showToast('Producto creado exitosamente', 'success');
-        closeModal();
-        loadProductos();
-        
-        if (currentSection === 'dashboard') {
-            loadDashboardData();
-        }
-    } catch (error) {
-        console.error('Error creating product:', error);
-    }
-}
-
-async function submitMovement() {
-    const form = document.getElementById('movement-form');
-    const formData = new FormData(form);
-    
-    const movementData = {
-        producto_id: parseInt(formData.get('producto_id')),
-        cantidad: parseInt(formData.get('cantidad')),
-        motivo: formData.get('motivo'),
-        usuario: formData.get('usuario'),
-        numero_documento: formData.get('numero_documento'),
-        observaciones: formData.get('observaciones')
-    };
-
-    try {
-        const endpoint = currentMovementType === 'ENTRADA' ? '/movimientos/entrada' : '/movimientos/salida';
-        await apiCall(endpoint, {
-            method: 'POST',
-            body: JSON.stringify(movementData)
-        });
-        
-        showToast(`${currentMovementType} registrada exitosamente`, 'success');
-        closeModal();
-        
-        if (currentSection === 'movimientos') {
-            loadMovimientos();
-        }
-        if (currentSection === 'dashboard') {
-            loadDashboardData();
-        }
-        if (currentSection === 'inventario') {
-            loadInventario();
-        }
-    } catch (error) {
-        console.error('Error submitting movement:', error);
-    }
-}
-
-// Reports Functions
-async function generateReport(reportType) {
-    const reportResults = document.getElementById('report-results');
-    const reportTitle = document.getElementById('report-title');
-    const reportContent = document.getElementById('report-content');
-    
-    reportResults.style.display = 'block';
-    reportContent.innerHTML = '<div class="loading">Generando reporte...</div>';
-    
-    try {
-        let response;
-        let title;
-        
-        switch (reportType) {
-            case 'stock-bajo':
-                response = await apiCall('/reportes/stock-bajo');
-                title = 'Reporte de Stock Bajo';
-                renderStockBajoReport(response.data);
-                break;
-                
-            case 'resumen-inventario':
-                response = await apiCall('/reportes/resumen-inventario');
-                title = 'Resumen de Inventario';
-                renderResumenInventarioReport(response.data);
-                break;
-                
-            case 'productos-activos':
-                response = await apiCall('/reportes/productos-mas-activos');
-                title = 'Productos Más Activos';
-                renderProductosActivosReport(response.data);
-                break;
-        }
-        
-        reportTitle.textContent = title;
-    } catch (error) {
-        reportContent.innerHTML = '<div class="error">Error al generar el reporte</div>';
-    }
-}
-
-function renderStockBajoReport(data) {
-    const content = document.getElementById('report-content');
-    
-    content.innerHTML = `
-        <div class="report-summary">
-            <div class="summary-stats">
-                <div class="summary-stat">
-                    <h4>${data.resumen.total_productos_stock_bajo}</h4>
-                    <p>Productos con Stock Bajo</p>
-                </div>
-                <div class="summary-stat">
-                    <h4>${data.resumen.productos_sin_stock}</h4>
-                    <p>Sin Stock</p>
-                </div>
-                <div class="summary-stat">
-                    <h4>${data.resumen.productos_stock_critico}</h4>
-                    <p>Stock Crítico</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="report-table">
-            <h4>Productos Sin Stock</h4>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Número de Parte</th>
-                        <th>Descripción</th>
-                        <th>Stock Actual</th>
-                        <th>Stock Mínimo</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${data.productos_sin_stock.map(item => `
-                        <tr>
-                            <td>${item.producto.numero_parte}</td>
-                            <td>${item.producto.descripcion}</td>
-                            <td class="text-danger">${item.cantidad_actual}</td>
-                            <td>${item.cantidad_minima}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-}
-
-function renderResumenInventarioReport(data) {
-    const content = document.getElementById('report-content');
-    
-    content.innerHTML = `
-        <div class="report-summary">
-            <div class="summary-stats">
-                <div class="summary-stat">
-                    <h4>${data.resumen_general.total_productos_activos}</h4>
-                    <p>Productos Activos</p>
-                </div>
-                <div class="summary-stat">
-                    <h4>${data.resumen_general.total_stock.toLocaleString()}</h4>
-                    <p>Total Stock</p>
-                </div>
-                <div class="summary-stat">
-                    <h4>$${data.resumen_general.valor_total_estimado.toLocaleString()}</h4>
-                    <p>Valor Estimado</p>
-                </div>
-                <div class="summary-stat">
-                    <h4>${data.resumen_general.movimientos_ultimos_30_dias}</h4>
-                    <p>Movimientos (30 días)</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="report-charts">
-            <h4>Distribución de Stock</h4>
-            <div class="distribution-chart">
-                <div class="chart-item">
-                    <span class="chart-label">Sin Stock:</span>
-                    <span class="chart-value">${data.distribucion_stock.sin_stock}</span>
-                </div>
-                <div class="chart-item">
-                    <span class="chart-label">Stock Bajo:</span>
-                    <span class="chart-value">${data.distribucion_stock.stock_bajo}</span>
-                </div>
-                <div class="chart-item">
-                    <span class="chart-label">Stock Normal:</span>
-                    <span class="chart-value">${data.distribucion_stock.stock_normal}</span>
-                </div>
-                <div class="chart-item">
-                    <span class="chart-label">Stock Alto:</span>
-                    <span class="chart-value">${data.distribucion_stock.stock_alto}</span>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderProductosActivosReport(data) {
-    const content = document.getElementById('report-content');
-    
-    content.innerHTML = `
-        <div class="report-table">
-            <h4>Productos Más Activos (${data.periodo_dias} días)</h4>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Total Movimientos</th>
-                        <th>Entradas</th>
-                        <th>Salidas</th>
-                        <th>Balance</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${data.productos_mas_activos.map(item => `
-                        <tr>
-                            <td>
-                                <strong>${item.producto.numero_parte}</strong><br>
-                                <small>${item.producto.descripcion}</small>
-                            </td>
-                            <td>${item.estadisticas.total_movimientos}</td>
-                            <td class="movement-entrada">+${item.estadisticas.total_entradas}</td>
-                            <td class="movement-salida">-${item.estadisticas.total_salidas}</td>
-                            <td class="${item.estadisticas.balance_neto >= 0 ? 'movement-entrada' : 'movement-salida'}">
-                                ${item.estadisticas.balance_neto >= 0 ? '+' : ''}${item.estadisticas.balance_neto}
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
 }
 
 // Utility Functions
@@ -694,20 +408,170 @@ function getToastIcon(type) {
     return icons[type] || 'info-circle';
 }
 
-// Export function (placeholder)
-function exportReport() {
-    showToast('Función de exportación en desarrollo', 'info');
+// Modal Functions
+function showAddProductModal() {
+    document.getElementById('modal-overlay').style.display = 'flex';
+    document.getElementById('add-product-modal').style.display = 'block';
+    document.getElementById('movement-modal').style.display = 'none';
 }
 
-// Additional action functions (placeholders)
+async function showMovementModal(type) {
+    currentMovementType = type;
+    
+    if (productos.length === 0) {
+        await loadProductos();
+    }
+    
+    const select = document.getElementById('movement-producto');
+    select.innerHTML = '<option value="">Seleccionar producto...</option>' +
+        productos.filter(p => p.activo).map(p => 
+            `<option value="${p.id}">${p.numero_parte} - ${p.descripcion}</option>`
+        ).join('');
+    
+    document.getElementById('movement-modal-title').textContent = 
+        `Registrar ${type === 'ENTRADA' ? 'Entrada' : 'Salida'}`;
+    
+    const submitBtn = document.getElementById('movement-submit-btn');
+    submitBtn.className = `btn ${type === 'ENTRADA' ? 'btn-success' : 'btn-danger'}`;
+    submitBtn.textContent = `Registrar ${type === 'ENTRADA' ? 'Entrada' : 'Salida'}`;
+    
+    document.getElementById('modal-overlay').style.display = 'flex';
+    document.getElementById('movement-modal').style.display = 'block';
+    document.getElementById('add-product-modal').style.display = 'none';
+}
+
+function closeModal() {
+    document.getElementById('modal-overlay').style.display = 'none';
+    document.getElementById('add-product-form').reset();
+    document.getElementById('movement-form').reset();
+}
+
+// Form Submissions
+async function addProduct() {
+    const form = document.getElementById('add-product-form');
+    const formData = new FormData(form);
+    
+    const productData = {
+        numero_parte: formData.get('numero_parte'),
+        descripcion: formData.get('descripcion'),
+        activo: true
+    };
+
+    try {
+        const { data, error } = await supabase
+            .from('productos_carton')
+            .insert([productData])
+            .select();
+        
+        if (error) throw error;
+        
+        // Crear registro de inventario inicial
+        const inventoryData = {
+            producto_id: data[0].id,
+            cantidad_actual: parseInt(formData.get('cantidad_inicial')) || 0,
+            cantidad_minima: parseInt(formData.get('cantidad_minima')) || 10,
+            cantidad_maxima: parseInt(formData.get('cantidad_maxima')) || 1000
+        };
+        
+        await supabase.from('inventario').insert([inventoryData]);
+        
+        showToast('Producto creado exitosamente', 'success');
+        closeModal();
+        loadProductos();
+        
+        if (currentSection === 'dashboard') {
+            loadDashboardData();
+        }
+    } catch (error) {
+        console.error('Error creating product:', error);
+        showToast('Error al crear producto', 'error');
+    }
+}
+
+async function submitMovement() {
+    const form = document.getElementById('movement-form');
+    const formData = new FormData(form);
+    
+    const movementData = {
+        producto_id: parseInt(formData.get('producto_id')),
+        tipo_movimiento: currentMovementType,
+        cantidad: parseInt(formData.get('cantidad')),
+        motivo: formData.get('motivo'),
+        usuario: formData.get('usuario'),
+        numero_documento: formData.get('numero_documento'),
+        observaciones: formData.get('observaciones')
+    };
+
+    try {
+        const { error } = await supabase
+            .from('movimientos_inventario')
+            .insert([movementData]);
+        
+        if (error) throw error;
+        
+        // Actualizar inventario
+        const updateOperation = currentMovementType === 'ENTRADA' ? 
+            supabase.rpc('increment_inventory', {
+                product_id: movementData.producto_id,
+                amount: movementData.cantidad
+            }) :
+            supabase.rpc('decrement_inventory', {
+                product_id: movementData.producto_id,
+                amount: movementData.cantidad
+            });
+        
+        await updateOperation;
+        
+        showToast(`${currentMovementType} registrada exitosamente`, 'success');
+        closeModal();
+        
+        if (currentSection === 'movimientos') {
+            loadMovimientos();
+        }
+        if (currentSection === 'dashboard') {
+            loadDashboardData();
+        }
+        if (currentSection === 'inventario') {
+            loadInventario();
+        }
+    } catch (error) {
+        console.error('Error submitting movement:', error);
+        showToast('Error al registrar movimiento', 'error');
+    }
+}
+
+// Placeholder functions for future implementation
 function editProduct(id) {
     showToast('Función de edición en desarrollo', 'info');
 }
 
-function toggleProductStatus(id, currentStatus) {
-    showToast('Función de cambio de estado en desarrollo', 'info');
+async function toggleProductStatus(id, currentStatus) {
+    try {
+        const { error } = await supabase
+            .from('productos_carton')
+            .update({ activo: !currentStatus })
+            .eq('id', id);
+        
+        if (error) throw error;
+        
+        showToast(`Producto ${currentStatus ? 'desactivado' : 'activado'} correctamente`, 'success');
+        loadProductos();
+    } catch (error) {
+        console.error('Error updating product status:', error);
+        showToast('Error al cambiar estado del producto', 'error');
+    }
 }
 
 function showAdjustModal(productId) {
     showToast('Función de ajuste de inventario en desarrollo', 'info');
 }
+
+// Make functions available globally
+window.editProduct = editProduct;
+window.toggleProductStatus = toggleProductStatus;
+window.showAdjustModal = showAdjustModal;
+window.showAddProductModal = showAddProductModal;
+window.showMovementModal = showMovementModal;
+window.closeModal = closeModal;
+window.addProduct = addProduct;
+window.submitMovement = submitMovement;
