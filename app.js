@@ -489,7 +489,73 @@ async function showAdjustModal(productId) {
         showToast('Error al cargar datos para ajuste de inventario', 'error');
     }
 }
+// Función para editar producto (MANTENIENDO LA QUE YA TENÍAS)
+async function editProduct(productId) {
+    try {
+        // Obtener datos del producto desde Supabase
+        const { data: producto, error } = await supabase
+            .from('productos_carton')
+            .select('*')
+            .eq('id', productId)
+            .single();
 
+        if (error) throw error;
+        if (!producto) throw new Error('Producto no encontrado');
+
+        // Llenar el formulario con los datos actuales
+        document.getElementById('edit-product-id').value = producto.id;
+        document.getElementById('edit-numero-parte').value = producto.numero_parte;
+        document.getElementById('edit-descripcion').value = producto.descripcion;
+        document.getElementById('edit-activo').value = producto.activo;
+        
+        // Mostrar solo el modal de edición
+        document.getElementById('modal-overlay').style.display = 'flex';
+        document.getElementById('edit-product-modal').style.display = 'block';
+        document.getElementById('add-product-modal').style.display = 'none';
+        document.getElementById('movement-modal').style.display = 'none';
+        document.getElementById('adjust-modal').style.display = 'none';
+        
+    } catch (error) {
+        console.error('Error al cargar los datos del producto:', error);
+        showToast('Error al cargar los datos del producto', 'error');
+    }
+}
+
+// Función para actualizar el producto (también necesaria)
+async function updateProduct() {
+    const productId = document.getElementById('edit-product-id').value;
+    if (!productId) {
+        showToast('Error: No se ha seleccionado un producto', 'error');
+        return;
+    }
+
+    const formData = {
+        numero_parte: document.getElementById('edit-numero-parte').value,
+        descripcion: document.getElementById('edit-descripcion').value,
+        activo: document.getElementById('edit-activo').value === 'true'
+    };
+
+    try {
+        const { error } = await supabase
+            .from('productos_carton')
+            .update(formData)
+            .eq('id', productId);
+
+        if (error) throw error;
+        
+        showToast('Producto actualizado correctamente', 'success');
+        closeModal();
+        loadProductos();
+        
+        // Actualizar otras secciones si es necesario
+        if (currentSection === 'dashboard') loadDashboardData();
+        if (currentSection === 'inventario') loadInventario();
+        
+    } catch (error) {
+        console.error('Error al actualizar producto:', error);
+        showToast('Error al actualizar el producto', 'error');
+    }
+}
 async function showMovementModal(type) {
     currentMovementType = type;
     
