@@ -1,20 +1,19 @@
-// Configuración de Supabase
-const { createClient } = supabase;
+// Configuración de Supabase (al inicio de app.js)
 const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
 
-// Crea el cliente Supabase
-const supabaseClient = createClient(supabaseUrl, supabaseKey, {
+// Inicialización correcta del cliente
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
   auth: {
-    persistSession: false
+    persistSession: false,
+    autoRefreshToken: true
   },
   global: {
     headers: {
-      'Access-Control-Allow-Origin': 'https://jcanett1.github.io'
+      'Access-Control-Allow-Origin': '*'
     }
   }
 });
-
 // Variables globales
 let currentSection = 'dashboard';
 let currentMovementType = '';
