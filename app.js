@@ -673,7 +673,29 @@ async function updateProduct() {
         showToast('Error al actualizar el producto', 'error');
     }
 }
+// Función para cambiar el estado activo/inactivo del producto
+async function toggleProductStatus(productId, currentStatus) {
+    try {
+        const { error } = await supabase
+            .from('productos_carton')
+            .update({ activo: !currentStatus })
+            .eq('id', productId);
 
+        if (error) throw error;
+        
+        showToast(`Producto ${!currentStatus ? 'activado' : 'desactivado'} correctamente`, 'success');
+        loadProductos();
+        
+        // Actualizar dashboard si estamos en esa sección
+        if (currentSection === 'dashboard') {
+            loadDashboardData();
+        }
+        
+    } catch (error) {
+        console.error('Error al cambiar el estado del producto:', error);
+        showToast('Error al cambiar el estado del producto', 'error');
+    }
+}
 // Make functions available globally
 window.editProduct = editProduct;
 window.toggleProductStatus = toggleProductStatus;
