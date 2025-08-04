@@ -15,7 +15,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function initializeApp() {
     setupEventListeners();
-    loadDashboardData();
+    // Delay inicial para asegurar que el DOM esté completamente listo
+    setTimeout(() => {
+        loadDashboardData();
+    }, 100);
 }
 
 function setupEventListeners() {
