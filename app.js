@@ -145,7 +145,7 @@ async function loadDashboardData() {
     try {
         // Load summary data
         const [productosRes, inventarioRes, movimientosRes] = await Promise.all([
-            apiCall('/productos'),
+            apiCall('src/routes/productos.py'),
             apiCall('/inventario'),
             apiCall('/movimientos?limite=10')
         ]);
