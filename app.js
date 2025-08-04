@@ -5,18 +5,29 @@ let productos = [];
 let inventario = [];
 let movimientos = [];
 
-// Supabase configuration
-if (typeof supabase === 'undefined') {
-  const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
-  
-  // Crea el cliente Supabase
-  const supabase = supabase.createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: false
+// Configuración de Supabase
+const { createClient } = supabase;
+const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
+
+// Crea el cliente Supabase
+const supabaseClient = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false
+  },
+  global: {
+    headers: {
+      'Access-Control-Allow-Origin': 'https://jcanett1.github.io'
     }
-  });
-}
+  }
+});
+
+// Variables globales
+let currentSection = 'dashboard';
+let currentMovementType = '';
+let productos = [];
+let inventario = [];
+let movimientos = [];
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
