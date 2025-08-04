@@ -593,7 +593,43 @@ async function submitMovement() {
         showToast('Error al registrar movimiento', 'error');
     }
 }
+async function updateProduct() {
+    if (!currentEditingProductId) {
+        showToast('Error: No hay producto seleccionado para editar', 'error');
+        return;
+    }
+    
+    const form = document.getElementById('edit-product-form');
+    const formData = new FormData(form);
+    
+    const productData = {
+        numero_parte: formData.get('numero_parte'),
+        descripcion: formData.get('descripcion'),
+        activo: formData.get('activo') === 'true'
+    };
 
+    try {
+        await apiCall(`/productos/${currentEditingProductId}`, {
+            method: 'PUT',
+            body: JSON.stringify(productData)
+        });
+        
+        showToast('Producto actualizado exitosamente', 'success');
+        closeModal();
+        loadProductos();
+        
+        // Actualizar dashboard si estamos en esa sección
+        if (currentSection === 'dashboard') {
+            loadDashboardData();
+        }
+        
+        currentEditingProductId = null;
+        
+    } catch (error) {
+        console.error('Error updating product:', error);
+        showToast('Error al actualizar el producto', 'error');
+    }
+}
 
 
 // Make functions available globally
