@@ -324,7 +324,6 @@ function updateProductosTable() {
         </tr>
     `).join('');
 }
-
 function updateInventarioTable() {
     const tbody = document.getElementById('inventario-table-body');
     
