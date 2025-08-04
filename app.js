@@ -442,6 +442,33 @@ function showAddProductModal() {
     document.getElementById('movement-modal').style.display = 'none';
 }
 
+
+async function showEditProductModal(productId) {
+    try {
+        // Obtener datos del producto
+        const response = await apiCall(`/productos/${productId}`);
+        const producto = response.data;
+        
+        // Llenar el formulario con los datos actuales
+        document.getElementById('edit-numero-parte').value = producto.numero_parte;
+        document.getElementById('edit-descripcion').value = producto.descripcion;
+        document.getElementById('edit-activo').value = producto.activo.toString();
+        
+        // Guardar el ID del producto que se está editando
+        currentEditingProductId = productId;
+        
+        // Mostrar el modal
+        document.getElementById('modal-overlay').style.display = 'flex';
+        document.getElementById('edit-product-modal').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error loading product data:', error);
+        showToast('Error al cargar los datos del producto', 'error');
+    }
+}
+
+
+
 async function showMovementModal(type) {
     currentMovementType = type;
     
@@ -567,31 +594,7 @@ async function submitMovement() {
     }
 }
 
-// Placeholder functions for future implementation
-function editProduct(id) {
-    showToast('Función de edición en desarrollo', 'info');
-}
 
-async function toggleProductStatus(id, currentStatus) {
-    try {
-        const { error } = await supabase
-            .from('productos_carton')
-            .update({ activo: !currentStatus })
-            .eq('id', id);
-        
-        if (error) throw error;
-        
-        showToast(`Producto ${currentStatus ? 'desactivado' : 'activado'} correctamente`, 'success');
-        loadProductos();
-    } catch (error) {
-        console.error('Error updating product status:', error);
-        showToast('Error al cambiar estado del producto', 'error');
-    }
-}
-
-function showAdjustModal(productId) {
-    showToast('Función de ajuste de inventario en desarrollo', 'info');
-}
 
 // Make functions available globally
 window.editProduct = editProduct;
