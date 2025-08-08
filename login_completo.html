@@ -6,6 +6,7 @@
     <title>Login - Sistema de Almacén de Cartón</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -346,6 +347,38 @@
             margin-right: 8px;
         }
 
+        .test-data {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-test {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-test:hover {
+            background: #667eea;
+            color: white;
+        }
+
         @media (max-width: 768px) {
             .login-container {
                 flex-direction: column;
@@ -424,6 +457,7 @@
             width: 90%;
             text-align: center;
             animation: modalSlideIn 0.3s ease-out;
+            position: relative;
         }
 
         @keyframes modalSlideIn {
@@ -481,6 +515,18 @@
             <div class="form-container">
                 <!-- Panel de Login -->
                 <div id="login-panel" class="form-panel active">
+                    <div class="test-data">
+                        <strong>Datos de prueba:</strong>
+                        <div class="test-buttons">
+                            <button class="btn-test" onclick="fillTestData('admin')">
+                                <i class="fas fa-user-shield"></i> Admin
+                            </button>
+                            <button class="btn-test" onclick="fillTestData('viewer')">
+                                <i class="fas fa-eye"></i> Viewer
+                            </button>
+                        </div>
+                    </div>
+
                     <form id="login-form">
                         <div class="form-group">
                             <label for="login-email">
@@ -550,12 +596,13 @@
                                    placeholder="Mínimo 6 caracteres" 
                                    oninput="checkPasswordStrength(this.value)">
                             <i class="fas fa-eye" onclick="togglePassword('register-password', this)"></i>
-                            <div class="password-strength">
-                                <div class="strength-bar">
-                                    <div class="strength-fill" id="strength-fill"></div>
-                                </div>
-                                <span id="strength-text">Ingresa una contraseña</span>
+                        </div>
+
+                        <div class="password-strength" id="password-strength" style="display: none;">
+                            <div class="strength-bar">
+                                <div class="strength-fill" id="strength-fill"></div>
                             </div>
+                            <span id="strength-text">Ingresa una contraseña</span>
                         </div>
 
                         <div class="form-group">
@@ -563,8 +610,9 @@
                                 <i class="fas fa-user-tag"></i> Rol
                             </label>
                             <select id="register-role" name="role" required>
-                                <option value="viewer">Visualizador (Solo lectura)</option>
-                                <option value="admin">Administrador (Acceso completo)</option>
+                                <option value="">Selecciona un rol</option>
+                                <option value="admin">Administrador</option>
+                                <option value="viewer">Visualizador</option>
                             </select>
                         </div>
 
@@ -585,96 +633,140 @@
     <!-- Modal de Recuperación de Contraseña -->
     <div id="forgot-modal" class="forgot-modal">
         <div class="modal-content">
-            <button class="modal-close" onclick="hideForgotPassword()">&times;</button>
-            <h3><i class="fas fa-key"></i> Recuperar Contraseña</h3>
-            <p>Ingresa tu email para recibir instrucciones de recuperación:</p>
+            <button class="modal-close" onclick="closeForgotModal()">&times;</button>
+            <h3>Recuperar Contraseña</h3>
+            <p>Ingresa tu email para recibir instrucciones de recuperación</p>
             <form id="forgot-form">
                 <div class="form-group">
-                    <input type="email" id="forgot-email" required placeholder="tu@email.com">
+                    <input type="email" id="forgot-email" placeholder="tu@email.com" required>
                 </div>
                 <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i> Enviar Instrucciones
+                    <i class="fas fa-paper-plane"></i> Enviar
                 </button>
             </form>
         </div>
     </div>
 
     <script>
-        // Variables globales
-        let currentTab = 'login';
-        
-        // Configuración de la API (ajustar según tu backend)
-        const API_BASE_URL = 'https://g8h3ilc1v3qv.manus.space/api';
-        
-        // Funciones de navegación entre tabs
-        function switchTab(tab) {
-            // Actualizar botones
+        // Configuración de Supabase
+        const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
+
+        // Inicializar Supabase
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true
+            }
+        });
+
+        // Verificar si ya hay una sesión activa al cargar la página
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔍 Verificando sesión existente...');
+            
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (session && !error) {
+                    console.log('✅ Sesión activa encontrada, redirigiendo...');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                console.log('ℹ️ No hay sesión activa, mostrando login');
+            } catch (error) {
+                console.error('Error verificando sesión:', error);
+            }
+        });
+
+        // Cambiar entre tabs
+        function switchTab(tabName) {
+            // Actualizar botones de tab
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
-            
+
             // Actualizar paneles
             document.querySelectorAll('.form-panel').forEach(panel => {
                 panel.classList.remove('active');
             });
-            document.getElementById(tab + '-panel').classList.add('active');
-            
-            currentTab = tab;
+            document.getElementById(`${tabName}-panel`).classList.add('active');
+
+            // Limpiar alertas
             clearAlerts();
         }
-        
-        // Función para mostrar/ocultar contraseña
+
+        // Llenar datos de prueba
+        function fillTestData(role) {
+            if (role === 'admin') {
+                document.getElementById('login-email').value = 'admin@almacen.com';
+                document.getElementById('login-password').value = 'admin123';
+            } else if (role === 'viewer') {
+                document.getElementById('login-email').value = 'viewer@almacen.com';
+                document.getElementById('login-password').value = 'admin123';
+            }
+        }
+
+        // Toggle password visibility
         function togglePassword(inputId, icon) {
             const input = document.getElementById(inputId);
             const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
             input.setAttribute('type', type);
             
-            // Cambiar icono
             icon.classList.toggle('fa-eye');
             icon.classList.toggle('fa-eye-slash');
         }
-        
-        // Función para verificar fortaleza de contraseña
+
+        // Verificar fortaleza de contraseña
         function checkPasswordStrength(password) {
+            const strengthContainer = document.getElementById('password-strength');
             const strengthFill = document.getElementById('strength-fill');
             const strengthText = document.getElementById('strength-text');
-            
-            if (!password) {
-                strengthFill.className = 'strength-fill';
-                strengthText.textContent = 'Ingresa una contraseña';
+
+            if (password.length === 0) {
+                strengthContainer.style.display = 'none';
                 return;
             }
-            
-            let score = 0;
-            let feedback = '';
-            
-            // Criterios de fortaleza
-            if (password.length >= 8) score++;
-            if (/[a-z]/.test(password)) score++;
-            if (/[A-Z]/.test(password)) score++;
-            if (/[0-9]/.test(password)) score++;
-            if (/[^A-Za-z0-9]/.test(password)) score++;
-            
-            // Determinar nivel
-            if (score < 2) {
-                strengthFill.className = 'strength-fill strength-weak';
-                feedback = 'Muy débil';
-            } else if (score < 3) {
-                strengthFill.className = 'strength-fill strength-fair';
-                feedback = 'Débil';
-            } else if (score < 4) {
-                strengthFill.className = 'strength-fill strength-good';
-                feedback = 'Buena';
-            } else {
-                strengthFill.className = 'strength-fill strength-strong';
-                feedback = 'Muy fuerte';
+
+            strengthContainer.style.display = 'block';
+
+            let strength = 0;
+            let text = '';
+            let className = '';
+
+            if (password.length >= 6) strength++;
+            if (password.match(/[a-z]/)) strength++;
+            if (password.match(/[A-Z]/)) strength++;
+            if (password.match(/[0-9]/)) strength++;
+            if (password.match(/[^a-zA-Z0-9]/)) strength++;
+
+            switch (strength) {
+                case 0:
+                case 1:
+                    text = 'Muy débil';
+                    className = 'strength-weak';
+                    break;
+                case 2:
+                    text = 'Débil';
+                    className = 'strength-fair';
+                    break;
+                case 3:
+                    text = 'Buena';
+                    className = 'strength-good';
+                    break;
+                case 4:
+                case 5:
+                    text = 'Fuerte';
+                    className = 'strength-strong';
+                    break;
             }
-            
-            strengthText.textContent = feedback;
+
+            strengthFill.className = `strength-fill ${className}`;
+            strengthText.textContent = text;
         }
-        
-        // Funciones de alertas
+
+        // Mostrar alertas
         function showAlert(message, type = 'error') {
             const container = document.getElementById('alert-container');
             container.innerHTML = `
@@ -683,238 +775,209 @@
                     ${message}
                 </div>
             `;
-            
-            // Auto-ocultar después de 5 segundos
+
             setTimeout(() => {
                 clearAlerts();
             }, 5000);
         }
-        
+
+        // Limpiar alertas
         function clearAlerts() {
-            const container = document.getElementById('alert-container');
-            container.innerHTML = '';
+            document.getElementById('alert-container').innerHTML = '';
         }
-        
-        // Funciones de loading
-        function showLoading(type) {
-            const btn = document.getElementById(type + '-btn');
-            const loading = document.getElementById(type + '-loading');
+
+        // Mostrar/ocultar loading
+        function showLoading(formType, show = true) {
+            const button = document.getElementById(`${formType}-btn`);
+            const loading = document.getElementById(`${formType}-loading`);
+
+            if (show) {
+                button.disabled = true;
+                button.style.display = 'none';
+                loading.classList.add('show');
+            } else {
+                button.disabled = false;
+                button.style.display = 'block';
+                loading.classList.remove('show');
+            }
+        }
+
+        // Manejar login
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            btn.disabled = true;
-            loading.classList.add('show');
-        }
-        
-        function hideLoading(type) {
-            const btn = document.getElementById(type + '-btn');
-            const loading = document.getElementById(type + '-loading');
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            if (!email || !password) {
+                showAlert('Por favor completa todos los campos');
+                return;
+            }
+
+            showLoading('login', true);
+            clearAlerts();
+
+            try {
+                console.log('🔐 Intentando login con:', email);
+
+                // Intentar login con Supabase Auth
+                const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (authError) {
+                    console.error('Error de autenticación:', authError);
+                    throw new Error('Credenciales incorrectas');
+                }
+
+                console.log('✅ Autenticación exitosa');
+
+                // Verificar usuario en la tabla users
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('email', email)
+                    .single();
+
+                if (userError || !userData) {
+                    console.error('Error obteniendo datos del usuario:', userError);
+                    await supabase.auth.signOut();
+                    throw new Error('Usuario no encontrado en el sistema');
+                }
+
+                console.log('✅ Usuario encontrado:', userData);
+
+                showAlert('¡Login exitoso! Redirigiendo...', 'success');
+
+                // Redirigir al dashboard después de un breve delay
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error en login:', error);
+                showAlert(error.message || 'Error al iniciar sesión');
+                showLoading('login', false);
+            }
+        });
+
+        // Manejar registro
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            btn.disabled = false;
-            loading.classList.remove('show');
-        }
-        
+            const fullName = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const role = document.getElementById('register-role').value;
+
+            if (!fullName || !email || !password || !role) {
+                showAlert('Por favor completa todos los campos');
+                return;
+            }
+
+            if (password.length < 6) {
+                showAlert('La contraseña debe tener al menos 6 caracteres');
+                return;
+            }
+
+            showLoading('register', true);
+            clearAlerts();
+
+            try {
+                console.log('📝 Registrando usuario:', email);
+
+                // Crear usuario en Supabase Auth
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email: email,
+                    password: password
+                });
+
+                if (authError) {
+                    console.error('Error creando usuario:', authError);
+                    throw new Error(authError.message);
+                }
+
+                console.log('✅ Usuario creado en Auth');
+
+                // Crear registro en la tabla users
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .insert([
+                        {
+                            email: email,
+                            full_name: fullName,
+                            role: role,
+                            created_at: new Date().toISOString()
+                        }
+                    ])
+                    .select()
+                    .single();
+
+                if (userError) {
+                    console.error('Error creando registro de usuario:', userError);
+                    // Si falla la inserción, eliminar el usuario de Auth
+                    await supabase.auth.signOut();
+                    throw new Error('Error creando el perfil de usuario');
+                }
+
+                console.log('✅ Registro completo:', userData);
+
+                showAlert('¡Cuenta creada exitosamente! Redirigiendo...', 'success');
+
+                // Redirigir al dashboard
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error en registro:', error);
+                showAlert(error.message || 'Error al crear la cuenta');
+                showLoading('register', false);
+            }
+        });
+
         // Modal de recuperación de contraseña
         function showForgotPassword() {
             document.getElementById('forgot-modal').classList.add('show');
         }
-        
-        function hideForgotPassword() {
+
+        function closeForgotModal() {
             document.getElementById('forgot-modal').classList.remove('show');
         }
-        
-        // Función de login
-        async function handleLogin(formData) {
+
+        // Manejar recuperación de contraseña
+        document.getElementById('forgot-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('forgot-email').value;
+
+            if (!email) {
+                showAlert('Por favor ingresa tu email');
+                return;
+            }
+
             try {
-                const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        email: formData.get('email'),
-                        password: formData.get('password')
-                    })
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.origin + '/reset-password.html'
                 });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Guardar token
-                    localStorage.setItem('auth_token', data.token);
-                    localStorage.setItem('user_data', JSON.stringify(data.user));
-                    
-                    showAlert('¡Login exitoso! Redirigiendo...', 'success');
-                    
-                    // Redirigir al dashboard
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1500);
-                } else {
-                    showAlert(data.message || 'Error en el login');
-                }
+
+                if (error) throw error;
+
+                showAlert('Se han enviado las instrucciones a tu email', 'success');
+                closeForgotModal();
+
             } catch (error) {
-                console.error('Error:', error);
-                showAlert('Error de conexión. Intenta nuevamente.');
+                console.error('Error enviando email de recuperación:', error);
+                showAlert('Error enviando email de recuperación');
             }
-        }
-        
-        // Función de registro
-        async function handleRegister(formData) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/auth/register`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        email: formData.get('email'),
-                        password: formData.get('password'),
-                        full_name: formData.get('full_name'),
-                        role: formData.get('role')
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showAlert('¡Cuenta creada exitosamente! Puedes iniciar sesión.', 'success');
-                    
-                    // Cambiar a tab de login
-                    setTimeout(() => {
-                        switchTab('login');
-                        // Pre-llenar email
-                        document.getElementById('login-email').value = formData.get('email');
-                    }, 2000);
-                } else {
-                    showAlert(data.message || 'Error al crear la cuenta');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showAlert('Error de conexión. Intenta nuevamente.');
-            }
-        }
-        
-        // Función de recuperación de contraseña
-        async function handleForgotPassword(email) {
-            try {
-                // Simular envío (implementar según tu backend)
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                showAlert('Se han enviado las instrucciones a tu email.', 'success');
-                hideForgotPassword();
-            } catch (error) {
-                showAlert('Error al enviar las instrucciones.');
-            }
-        }
-        
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            // Verificar si ya está logueado
-            const token = localStorage.getItem('auth_token');
-            if (token) {
-                // Verificar token válido
-                fetch(`${API_BASE_URL}/auth/verify-token`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.valid) {
-                        window.location.href = '/';
-                    } else {
-                        localStorage.removeItem('auth_token');
-                        localStorage.removeItem('user_data');
-                    }
-                })
-                .catch(() => {
-                    localStorage.removeItem('auth_token');
-                    localStorage.removeItem('user_data');
-                });
-            }
-            
-            // Form de login
-            document.getElementById('login-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                clearAlerts();
-                showLoading('login');
-                
-                const formData = new FormData(this);
-                await handleLogin(formData);
-                
-                hideLoading('login');
-            });
-            
-            // Form de registro
-            document.getElementById('register-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                clearAlerts();
-                
-                // Validar contraseña
-                const password = document.getElementById('register-password').value;
-                if (password.length < 6) {
-                    showAlert('La contraseña debe tener al menos 6 caracteres');
-                    return;
-                }
-                
-                showLoading('register');
-                
-                const formData = new FormData(this);
-                await handleRegister(formData);
-                
-                hideLoading('register');
-            });
-            
-            // Form de recuperación
-            document.getElementById('forgot-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const email = document.getElementById('forgot-email').value;
-                await handleForgotPassword(email);
-            });
-            
-            // Cerrar modal al hacer clic fuera
-            document.getElementById('forgot-modal').addEventListener('click', function(e) {
-                if (e.target === this) {
-                    hideForgotPassword();
-                }
-            });
-            
-            // Manejar tecla Escape
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    hideForgotPassword();
-                }
-            });
         });
-        
-        // Función para demo (llenar campos automáticamente)
-        function fillDemoData(type) {
-            if (type === 'admin') {
-                document.getElementById('login-email').value = 'admin@almacen.com';
-                document.getElementById('login-password').value = 'admin123';
-            } else if (type === 'viewer') {
-                document.getElementById('login-email').value = 'viewer@almacen.com';
-                document.getElementById('login-password').value = 'admin123';
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('forgot-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeForgotModal();
             }
-        }
-        
-        // Agregar botones de demo (opcional)
-        function addDemoButtons() {
-            const loginPanel = document.getElementById('login-panel');
-            const demoDiv = document.createElement('div');
-            demoDiv.innerHTML = `
-                <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
-                    <small style="color: #666; display: block; margin-bottom: 10px;">Datos de prueba:</small>
-                    <button type="button" onclick="fillDemoData('admin')" style="margin: 0 5px; padding: 5px 10px; border: 1px solid #667eea; background: white; color: #667eea; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">Admin</button>
-                    <button type="button" onclick="fillDemoData('viewer')" style="margin: 0 5px; padding: 5px 10px; border: 1px solid #667eea; background: white; color: #667eea; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">Viewer</button>
-                </div>
-            `;
-            loginPanel.appendChild(demoDiv);
-        }
-        
-        // Llamar función de demo al cargar
-        document.addEventListener('DOMContentLoaded', function() {
-            addDemoButtons();
         });
     </script>
 </body>
