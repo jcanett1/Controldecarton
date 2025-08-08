@@ -558,7 +558,7 @@ async function loadInventario(filter = 'all') {
             .from('inventario')
             .select(`
                 *,
-               producto:producto_id (*)  // Correct relationship (*)
+               producto:producto_id (*)  // Correct relationship
             `);  // Nota el nombre exacto de la columna de relación
 
         // 3. Aplicar filtros
