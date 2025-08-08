@@ -7,6 +7,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="app-container">
@@ -52,6 +53,7 @@
                     <p id="page-subtitle">Resumen general del almacén</p>
                 </div>
                 <div class="header-right">
+                    <!-- El contenedor de información del usuario se agregará aquí dinámicamente -->
                     <button class="btn btn-primary" id="refresh-btn">
                         <i class="fas fa-sync-alt"></i>
                         Actualizar
@@ -353,7 +355,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-                <button class="btn btn-primary" onclick="updateProduct()">Actualizar Producto</button>
+                <button class="btn btn-primary" onclick="updateProduct()">Actualizar</button>
             </div>
         </div>
 
@@ -365,45 +367,75 @@
             </div>
             <div class="modal-body">
                 <form id="movement-form">
+                    <input type="hidden" id="movement-type">
                     <div class="form-group">
                         <label for="movement-producto">Producto</label>
                         <select id="movement-producto" name="producto_id" required>
-                            <option value="">Seleccionar producto...</option>
+                            <option value="">Selecciona un producto</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="movement-cantidad">Cantidad</label>
-                        <input type="number" id="movement-cantidad" name="cantidad" required min="1">
+                        <input type="number" id="movement-cantidad" name="cantidad" min="1" required>
                     </div>
                     <div class="form-group">
                         <label for="movement-motivo">Motivo</label>
                         <input type="text" id="movement-motivo" name="motivo" required>
                     </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="registerMovement()">Registrar</button>
+            </div>
+        </div>
+
+        <!-- Adjust Stock Modal -->
+        <div id="adjust-modal" class="modal">
+            <div class="modal-header">
+                <h3>Ajustar Stock</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="adjust-form">
+                    <input type="hidden" id="adjust-product-id">
                     <div class="form-group">
-                        <label for="movement-usuario">Usuario</label>
-                        <input type="text" id="movement-usuario" name="usuario" value="admin" required>
+                        <label>Producto</label>
+                        <p id="adjust-product-name" class="form-text"></p>
                     </div>
                     <div class="form-group">
-                        <label for="movement-documento">Número de Documento</label>
-                        <input type="text" id="movement-documento" name="numero_documento">
+                        <label>Stock Actual</label>
+                        <p id="adjust-current-stock" class="form-text"></p>
                     </div>
                     <div class="form-group">
-                        <label for="movement-observaciones">Observaciones</label>
-                        <textarea id="movement-observaciones" name="observaciones" rows="3"></textarea>
+                        <label for="adjust-new-stock">Nuevo Stock</label>
+                        <input type="number" id="adjust-new-stock" name="new_stock" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="adjust-min-stock">Stock Mínimo</label>
+                        <input type="number" id="adjust-min-stock" name="min_stock" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="adjust-max-stock">Stock Máximo</label>
+                        <input type="number" id="adjust-max-stock" name="max_stock" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="adjust-motivo">Motivo del Ajuste</label>
+                        <input type="text" id="adjust-motivo" name="motivo" required>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-                <button class="btn btn-primary" id="movement-submit-btn" onclick="submitMovement()">Registrar</button>
+                <button class="btn btn-primary" onclick="adjustStock()">Ajustar</button>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notifications -->
-    <div id="toast-container" class="toast-container"></div>
-    
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Toast Container -->
+    <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
+
+    <!-- Scripts -->
     <script src="app.js"></script>
 </body>
 </html>
