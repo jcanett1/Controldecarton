@@ -550,28 +550,88 @@ async function loadProductos() {
 
 async function loadInventario(filter = 'all') {
     try {
+        // 1. Primero verificar la estructura de las tablas
+        console.log("🔄 Cargando inventario con filtro:", filter);
+        
+        // 2. Construir consulta base con relación explícita
         let query = supabase
             .from('inventario')
-            .select('*, producto:productos_carton(*)');
-        
+            .select(`
+                *,
+                productos_carton:productos_carton_id (*)
+            `);  // Nota el nombre exacto de la columna de relación
+
+        // 3. Aplicar filtros
         if (filter === 'stock-bajo') {
             query = query.lte('cantidad_actual', supabase.rpc('get_cantidad_minima'));
         } else if (filter === 'sin-stock') {
             query = query.eq('cantidad_actual', 0);
         }
-        
+
+        // 4. Ejecutar consulta con manejo detallado de errores
         const { data, error } = await query;
         
-        if (error) throw error;
-        
-        inventario = data;
+        if (error) {
+            console.error("❌ Error en consulta Supabase:", {
+                message: error.message,
+                code: error.code,
+                details: error.details
+            });
+            throw error;
+        }
+
+        // 5. Validar y procesar los datos recibidos
+        if (!data || data.length === 0) {
+            console.warn("⚠️ No se encontraron registros de inventario");
+            inventario = [];
+        } else {
+            console.log(`✅ Se cargaron ${data.length} registros de inventario`);
+            inventario = data.map(item => {
+                // Validar que el producto relacionado exista
+                if (!item.productos_carton) {
+                    console.warn("⚠️ Registro de inventario sin producto relacionado:", item.id);
+                    item.productos_carton = {
+                        numero_parte: "N/A",
+                        descripcion: "Producto no disponible"
+                    };
+                }
+                return item;
+            });
+        }
+
+        // 6. Actualizar la interfaz
         updateInventarioTable();
+
     } catch (error) {
-        console.error('Error loading inventario:', error);
-        showToast('Error cargando inventario', 'error');
+        console.error("🔥 Error completo al cargar inventario:", error);
+        showToast("Error al cargar el inventario. Ver consola para detalles.", "error");
+        
+        // Intentar carga básica como fallback
+        await loadBasicInventory();
     }
 }
 
+// Función de respaldo para cargar inventario sin relaciones
+async function loadBasicInventory() {
+    try {
+        console.log("🔄 Intentando carga básica de inventario...");
+        const { data, error } = await supabase
+            .from('inventario')
+            .select('*');
+            
+        if (error) throw error;
+        
+        inventario = data || [];
+        console.log(`✅ Carga básica exitosa (${inventario.length} registros)`);
+        updateInventarioTable();
+        
+    } catch (fallbackError) {
+        console.error("🔥 Error en carga básica:", fallbackError);
+        inventario = [];
+        updateInventarioTable();
+        showToast("Error crítico al cargar inventario", "error");
+    }
+}
 async function loadMovimientos() {
     try {
         const { data, error } = await supabase
