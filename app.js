@@ -268,6 +268,126 @@ async function handleLogout() {
     }
 }
 
+
+
+async function addProduct() {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+
+    const numeroParte = document.getElementById('numero-parte').value;
+    const descripcion = document.getElementById('descripcion').value;
+
+    if (!numeroParte || !descripcion) {
+        showToast('Por favor complete todos los campos', 'error');
+        return;
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('productos_carton')
+            .insert([
+                {
+                    numero_parte: numeroParte,
+                    descripcion: descripcion,
+                    activo: true,
+                    fecha_creacion: new Date().toISOString()
+                }
+            ])
+            .select();
+
+        if (error) throw error;
+
+        showToast('Producto agregado correctamente', 'success');
+        closeModal();
+        loadProductos();
+        loadDashboardData(); // Actualizar dashboard
+
+        // Limpiar formulario
+        document.getElementById('numero-parte').value = '';
+        document.getElementById('descripcion').value = '';
+
+    } catch (error) {
+        console.error('Error al agregar producto:', error);
+        showToast('Error al agregar producto: ' + error.message, 'error');
+    }
+}
+
+async function updateProduct() {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+
+    const productId = document.getElementById('edit-product-id').value;
+    const numeroParte = document.getElementById('edit-numero-parte').value;
+    const descripcion = document.getElementById('edit-descripcion').value;
+    const activo = document.getElementById('edit-activo').value === 'true';
+
+    if (!productId || !numeroParte || !descripcion) {
+        showToast('Por favor complete todos los campos', 'error');
+        return;
+    }
+
+    try {
+        const { error } = await supabase
+            .from('productos_carton')
+            .update({
+                numero_parte: numeroParte,
+                descripcion: descripcion,
+                activo: activo
+            })
+            .eq('id', productId);
+
+        if (error) throw error;
+
+        showToast('Producto actualizado correctamente', 'success');
+        closeModal();
+        loadProductos();
+        loadDashboardData(); // Actualizar dashboard
+
+    } catch (error) {
+        console.error('Error al actualizar producto:', error);
+        showToast('Error al actualizar producto: ' + error.message, 'error');
+    }
+}
+
+async function toggleProductStatus(productId, currentStatus) {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+
+    if (!confirm(`¿Estás seguro de querer ${currentStatus ? 'desactivar' : 'activar'} este producto?`)) {
+        return;
+    }
+
+    try {
+        const { error } = await supabase
+            .from('productos_carton')
+            .update({ activo: !currentStatus })
+            .eq('id', productId);
+
+        if (error) throw error;
+
+        showToast(`Producto ${currentStatus ? 'desactivado' : 'activado'} correctamente`, 'success');
+        loadProductos();
+        loadDashboardData(); // Actualizar dashboard
+
+    } catch (error) {
+        console.error('Error al cambiar estado del producto:', error);
+        showToast('Error al cambiar estado del producto: ' + error.message, 'error');
+    }
+}
+
+
+
+
+
+
+
+
 // ===== FUNCIONES ORIGINALES DEL SISTEMA =====
 
 function initializeApp() {
