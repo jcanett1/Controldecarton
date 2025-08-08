@@ -285,7 +285,8 @@ async function addProduct() {
     }
 
     try {
-        const { data, error } = await supabase
+        // Iniciar transacción
+        const { data: newProduct, error: productError } = await supabase
             .from('productos_carton')
             .insert([
                 {
@@ -295,18 +296,36 @@ async function addProduct() {
                     fecha_creacion: new Date().toISOString()
                 }
             ])
-            .select();
+            .select()
+            .single();
 
-        if (error) throw error;
+        if (productError) throw productError;
 
-        showToast('Producto agregado correctamente', 'success');
+        // Crear registro en inventario automáticamente
+        const { error: inventoryError } = await supabase
+            .from('inventario')
+            .insert([
+                {
+                    producto_id: newProduct.id,
+                    cantidad_actual: 0,         // Valor por defecto
+                    cantidad_minima: 0,         // Valor por defecto
+                    cantidad_maxima: 1000       // Valor por defecto
+                }
+            ]);
+
+        if (inventoryError) throw inventoryError;
+
+        showToast('Producto agregado correctamente con registro de inventario', 'success');
         closeModal();
-        loadProductos();
-        loadDashboardData(); // Actualizar dashboard
-
+        
         // Limpiar formulario
         document.getElementById('numero-parte').value = '';
         document.getElementById('descripcion').value = '';
+        
+        // Actualizar vistas
+        loadProductos();
+        loadInventario();
+        loadDashboardData();
 
     } catch (error) {
         console.error('Error al agregar producto:', error);
@@ -745,34 +764,72 @@ function updateInventarioTable() {
     const tbody = document.getElementById('inventario-table-body');
     
     if (inventario.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="loading">No hay datos de inventario</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">No hay datos de inventario</td></tr>';
         return;
     }
 
     tbody.innerHTML = inventario.map(item => `
         <tr>
             <td>
-                <strong>${item.producto.numero_parte}</strong><br>
-                <small>${item.producto.descripcion}</small>
+                <strong>${item.producto?.numero_parte || 'N/A'}</strong><br>
+                <small>${item.producto?.descripcion || 'Sin descripción'}</small>
             </td>
-            <td><strong>${item.cantidad_actual}</strong></td>
-            <td>${item.cantidad_minima}</td>
-            <td>${item.cantidad_maxima}</td>
+            <td>
+                <input type="number" 
+                       class="inventory-input" 
+                       value="${item.cantidad_actual}" 
+                       onchange="updateInventoryField(${item.id}, 'cantidad_actual', this.value)">
+            </td>
+            <td>
+                <input type="number" 
+                       class="inventory-input" 
+                       value="${item.cantidad_minima}" 
+                       onchange="updateInventoryField(${item.id}, 'cantidad_minima', this.value)">
+            </td>
+            <td>
+                <input type="number" 
+                       class="inventory-input" 
+                       value="${item.cantidad_maxima}" 
+                       onchange="updateInventoryField(${item.id}, 'cantidad_maxima', this.value)">
+            </td>
             <td>
                 <span class="status-badge ${getStockStatus(item)}">
                     ${getStockStatusText(item)}
                 </span>
             </td>
+            <td>${formatDate(item.ultima_actualizacion)}</td>
             <td>
-                ${currentUser && currentUser.role === 'admin' ? `
-                    <button class="action-btn adjust" onclick="showAdjustModal(${item.producto_id})">
-                        <i class="fas fa-cog"></i> Ajustar
+                ${currentUser?.role === 'admin' ? `
+                    <button class="action-btn delete" onclick="deleteInventoryItem(${item.id})">
+                        <i class="fas fa-trash"></i>
                     </button>
-                ` : '<span class="text-muted">Solo lectura</span>'}
+                ` : ''}
             </td>
         </tr>
     `).join('');
 }
+
+// Función para actualizar campos
+async function updateInventoryField(id, field, value) {
+    try {
+        const { error } = await supabase
+            .from('inventario')
+            .update({ 
+                [field]: parseInt(value),
+                ultima_actualizacion: new Date().toISOString()
+            })
+            .eq('id', id);
+
+        if (error) throw error;
+        
+        showToast('Inventario actualizado', 'success');
+        loadInventario(); // Refrescar datos
+    } catch (error) {
+        console.error('Error actualizando inventario:', error);
+        showToast('Error al actualizar', 'error');
+    }
+}
+
 
 function getStockStatus(item) {
     if (item.cantidad_actual === 0) return 'status-out';
