@@ -625,56 +625,50 @@ async function loadBasicInventory() {
 
 
 function setupAddInventoryButton() {
-  const addButton = document.getElementById('add-inventory-btn');
-  if (!addButton) return;
-
-  addButton.onclick = () => {
-    // Crear modal dinámico
-    const modalHTML = `
-      <div class="modal-content">
-        <h3>Agregar al Inventario</h3>
-        
-        <div class="form-group">
-          <label>Producto de Cartón</label>
-          <select id="inventory-product-select" class="form-control">
-            <option value="">Seleccionar producto...</option>
-            ${productosDisponibles.map(p => `
-              <option value="${p.id}">${p.numero_parte} - ${p.descripcion}</option>
-            `).join('')}
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label>Stock Actual</label>
-          <input type="number" id="inventory-current" class="form-control" min="0" value="0">
-        </div>
-        
-        <div class="form-group">
-          <label>Stock Mínimo</label>
-          <input type="number" id="inventory-min" class="form-control" min="0" value="0">
-        </div>
-        
-        <div class="form-group">
-          <label>Stock Máximo</label>
-          <input type="number" id="inventory-max" class="form-control" min="1" value="1000">
-        </div>
-        
-        <div class="form-group">
-          <label>Fecha de Alta</label>
-          <input type="datetime-local" id="inventory-date" class="form-control" 
-                 value="${new Date().toISOString().slice(0, 16)}">
-        </div>
-        
-        <div class="modal-actions">
-          <button class="btn btn-cancel" onclick="closeModal()">Cancelar</button>
-          <button class="btn btn-primary" onclick="saveInventoryItem()">Guardar</button>
-        </div>
+  const modalHTML = `
+    <div class="modal-content">
+      <h3>Agregar al Inventario</h3>
+      
+      <div class="form-group">
+        <label for="inventory-product-select">Producto de Cartón</label>
+        <select id="inventory-product-select" class="form-control">
+          <option value="">Seleccionar producto...</option>
+          ${productosDisponibles.map(p => `
+            <option value="${p.id}">${p.numero_parte} - ${p.descripcion}</option>
+          `).join('')}
+        </select>
       </div>
-    `;
-
-    showCustomModal('Agregar Inventario', modalHTML);
-  };
+      
+      <div class="form-group">
+        <label for="inventory-current">Stock Actual</label>
+        <input type="number" id="inventory-current" class="form-control" min="0" value="0">
+      </div>
+      
+      <div class="form-group">
+        <label for="inventory-min">Stock Mínimo</label>
+        <input type="number" id="inventory-min" class="form-control" min="0" value="0">
+      </div>
+      
+      <div class="form-group">
+        <label for="inventory-max">Stock Máximo</label>
+        <input type="number" id="inventory-max" class="form-control" min="1" value="1000">
+      </div>
+      
+      <div class="form-group">
+        <label for="inventory-date">Fecha de Alta</label>
+        <input type="datetime-local" id="inventory-date" class="form-control" 
+               value="${new Date().toISOString().slice(0, 16)}">
+      </div>
+      
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveInventoryItem()">Guardar</button>
+      </div>
+    </div>
+  `;
+  showCustomModal('Agregar Inventario', modalHTML);
 }
+
 
 function showCustomModal(title, content) {
   const modal = document.getElementById('custom-modal');
