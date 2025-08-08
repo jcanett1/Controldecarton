@@ -79,7 +79,7 @@ async function checkAuthentication() {
 
 function redirectToLogin() {
     console.log('🔄 Redirigiendo al login...');
-    window.location.href = 'login.html';
+    window.location.href = 'login_completo.html';
 }
 
 function setupUserInterface() {
