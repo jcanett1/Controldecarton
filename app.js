@@ -401,7 +401,41 @@ async function toggleProductStatus(productId, currentStatus) {
 }
 
 
-
+async function editInventoryItem(id) {
+  const modalHTML = `
+    <div class="form-group">
+      <label for="edit-product">Producto</label>
+      <input id="edit-product" type="text" class="form-control" 
+             value="${item.producto?.numero_parte || 'N/A'} - ${item.producto?.descripcion || ''}" 
+             disabled>
+    </div>
+    
+    <div class="form-group">
+      <label for="edit-current">Stock Actual</label>
+      <input type="number" id="edit-current" class="form-control" 
+             value="${item.cantidad_actual}" min="0">
+    </div>
+    
+    <div class="form-group">
+      <label for="edit-min">Stock Mínimo</label>
+      <input type="number" id="edit-min" class="form-control" 
+             value="${item.cantidad_minima}" min="0">
+    </div>
+    
+    <div class="form-group">
+      <label for="edit-max">Stock Máximo</label>
+      <input type="number" id="edit-max" class="form-control" 
+             value="${item.cantidad_maxima}" min="1">
+    </div>
+    
+    <div class="form-group">
+      <label for="edit-date">Fecha de Actualización</label>
+      <input type="datetime-local" id="edit-date" class="form-control" 
+             value="${new Date(item.ultima_actualizacion).toISOString().slice(0, 16)}">
+    </div>
+  `;
+  showCustomModal('Editar Registro', modalHTML);
+}
 
 
 
