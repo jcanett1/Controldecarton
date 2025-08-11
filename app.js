@@ -1,3 +1,8 @@
+// Agrega al inicio de tu app.js
+window.saveInventoryItem = saveInventoryItem;
+window.closeCustomModal = closeCustomModal;
+
+
 // Configuración de Supabase
 const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
@@ -659,48 +664,63 @@ async function loadBasicInventory() {
 
 
 function setupAddInventoryButton() {
-  const modalHTML = `
-    <div class="modal-content">
-      <h3>Agregar al Inventario</h3>
-      
-      <div class="form-group">
-        <label for="inventory-product-select">Producto de Cartón</label>
-        <select id="inventory-product-select" class="form-control">
-          <option value="">Seleccionar producto...</option>
-          ${productosDisponibles.map(p => `
-            <option value="${p.id}">${p.numero_parte} - ${p.descripcion}</option>
-          `).join('')}
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label for="inventory-current">Stock Actual</label>
-        <input type="number" id="inventory-current" class="form-control" min="0" value="0">
-      </div>
-      
-      <div class="form-group">
-        <label for="inventory-min">Stock Mínimo</label>
-        <input type="number" id="inventory-min" class="form-control" min="0" value="0">
-      </div>
-      
-      <div class="form-group">
-        <label for="inventory-max">Stock Máximo</label>
-        <input type="number" id="inventory-max" class="form-control" min="1" value="1000">
-      </div>
-      
-      <div class="form-group">
-        <label for="inventory-date">Fecha de Alta</label>
-        <input type="datetime-local" id="inventory-date" class="form-control" 
-               value="${new Date().toISOString().slice(0, 16)}">
-      </div>
-      
-      <div class="modal-actions">
-        <button class="btn btn-cancel" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveInventoryItem()">Guardar</button>
-      </div>
-    </div>
-  `;
-  showCustomModal('Agregar Inventario', modalHTML);
+  const addButton = document.getElementById('add-inventory-btn');
+  if (!addButton) return;
+
+  addButton.onclick = async () => {
+    try {
+      // Obtener productos activos
+      const { data: productos, error } = await supabase
+        .from('productos_carton')
+        .select('id, numero_parte, descripcion')
+        .eq('activo', true)
+        .order('numero_parte');
+
+      if (error) throw error;
+
+      // Crear modal
+      const modalHTML = `
+        <div class="modal-content">
+          <h3>Agregar al Inventario</h3>
+          
+          <div class="form-group">
+            <label for="inventory-product">Producto</label>
+            <select id="inventory-product" class="form-control" required>
+              <option value="">Seleccionar producto...</option>
+              ${productos.map(p => `
+                <option value="${p.id}">${p.numero_parte} - ${p.descripcion}</option>
+              `).join('')}
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="inventory-current">Stock Actual</label>
+            <input type="number" id="inventory-current" class="form-control" min="0" value="0" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="inventory-min">Stock Mínimo</label>
+            <input type="number" id="inventory-min" class="form-control" min="0" value="0" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="inventory-max">Stock Máximo</label>
+            <input type="number" id="inventory-max" class="form-control" min="1" value="1000" required>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" class="btn btn-cancel" onclick="closeCustomModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="saveInventoryItem()">Guardar</button>
+          </div>
+        </div>
+      `;
+
+      showCustomModal('Agregar Inventario', modalHTML);
+    } catch (error) {
+      console.error('Error al cargar productos:', error);
+      showToast('Error al cargar productos para inventario', 'error');
+    }
+  };
 }
 
 
@@ -735,41 +755,57 @@ function closeCustomModal() {
 
 async function saveInventoryItem() {
   try {
-    const productoId = document.getElementById('inventory-product-select').value;
+    const productoId = document.getElementById('inventory-product').value;
     const cantidadActual = document.getElementById('inventory-current').value;
     const cantidadMinima = document.getElementById('inventory-min').value;
     const cantidadMaxima = document.getElementById('inventory-max').value;
-    const fechaAlta = document.getElementById('inventory-date').value;
 
+    // Validaciones
     if (!productoId) {
       showToast('Debes seleccionar un producto', 'error');
       return;
     }
 
+    if (parseInt(cantidadMaxima) <= parseInt(cantidadMinima)) {
+      showToast('El stock máximo debe ser mayor al mínimo', 'error');
+      return;
+    }
+
+    // Verificar si ya existe inventario para este producto
+    const { data: existing, error: checkError } = await supabase
+      .from('inventario')
+      .select('id')
+      .eq('producto_id', productoId)
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+    if (existing) {
+      showToast('Este producto ya tiene registro de inventario', 'warning');
+      return;
+    }
+
+    // Crear registro
     const { error } = await supabase
       .from('inventario')
-      .insert([
-        {
-          producto_id: productoId,
-          cantidad_actual: parseInt(cantidadActual),
-          cantidad_minima: parseInt(cantidadMinima),
-          cantidad_maxima: parseInt(cantidadMaxima),
-          ultima_actualizacion: fechaAlta || new Date().toISOString()
-        }
-      ]);
+      .insert([{
+        producto_id: productoId,
+        cantidad_actual: parseInt(cantidadActual),
+        cantidad_minima: parseInt(cantidadMinima),
+        cantidad_maxima: parseInt(cantidadMaxima),
+        ultima_actualizacion: new Date().toISOString()
+      }]);
 
     if (error) throw error;
 
-    showToast('Inventario actualizado correctamente', 'success');
+    showToast('Inventario agregado correctamente', 'success');
     closeCustomModal();
     loadInventario();
-
+    
   } catch (error) {
-    console.error('Error guardando inventario:', error);
-    showToast('Error al guardar: ' + error.message, 'error');
+    console.error('Error al guardar inventario:', error);
+    showToast('Error al guardar inventario: ' + error.message, 'error');
   }
 }
-
 
 
 
