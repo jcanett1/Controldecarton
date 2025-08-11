@@ -906,7 +906,7 @@ async function saveInventoryItem() {
         cantidad_maxima: parseInt(cantidadMaxima),
         ultima_actualizacion: new Date().toISOString()
       }]);
-
+ .select('*, producto:producto_id(*)'); // Esto es clave para obtener las relaciones
     if (error) throw error;
 
     showToast('Inventario agregado correctamente', 'success');
