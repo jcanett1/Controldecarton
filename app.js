@@ -566,7 +566,39 @@ async function editInventoryItem(id) {
   }
 }
 
+async function updateInventoryItem(id) {
+  try {
+    const cantidadActual = document.getElementById('edit-current').value;
+    const cantidadMinima = document.getElementById('edit-min').value;
+    const cantidadMaxima = document.getElementById('edit-max').value;
 
+    // Validaciones básicas
+    if (parseInt(cantidadMaxima) <= parseInt(cantidadMinima)) {
+      showToast('El stock máximo debe ser mayor al mínimo', 'error');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('inventario')
+      .update({
+        cantidad_actual: parseInt(cantidadActual),
+        cantidad_minima: parseInt(cantidadMinima),
+        cantidad_maxima: parseInt(cantidadMaxima),
+        ultima_actualizacion: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+
+    showToast('Inventario actualizado correctamente', 'success');
+    closeCustomModal();
+    loadInventario(); // Recargar los datos
+
+  } catch (error) {
+    console.error('Error actualizando inventario:', error);
+    showToast('Error al actualizar inventario', 'error');
+  }
+}
 
 // ===== FUNCIONES ORIGINALES DEL SISTEMA =====
 
