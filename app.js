@@ -715,16 +715,7 @@ async function loadProductos() {
 
 async function loadInventario() {
   try {
-    // Obtener productos disponibles
-    const { data: productos, error: productosError } = await supabase
-      .from('productos_carton')
-      .select('id, numero_parte, descripcion')
-      .eq('activo', true)
-      .order('numero_parte');
-    
-    if (productosError) throw productosError;
-
-    // Obtener inventario actual con información de productos
+    // Solo obtener inventario con relaciones
     const { data: inventarioData, error: inventarioError } = await supabase
       .from('inventario')
       .select(`
@@ -735,7 +726,14 @@ async function loadInventario() {
 
     if (inventarioError) throw inventarioError;
 
-    window.productosDisponibles = productos;
+    // Obtener productos disponibles para el modal
+    const { data: productos } = await supabase
+      .from('productos_carton')
+      .select('id, numero_parte, descripcion')
+      .eq('activo', true)
+      .order('numero_parte');
+
+    window.productosDisponibles = productos || [];
     window.inventario = inventarioData || [];
     
     updateInventarioTable();
@@ -744,6 +742,7 @@ async function loadInventario() {
   } catch (error) {
     console.error('Error cargando inventario:', error);
     showToast('Error al cargar inventario', 'error');
+    await loadBasicInventory(); // Fallback a carga básica
   }
 }
 
@@ -867,32 +866,32 @@ async function saveInventoryItem() {
     const cantidadMinima = document.getElementById('inventory-min').value;
     const cantidadMaxima = document.getElementById('inventory-max').value;
 
-    // Validaciones
     if (!productoId) {
       showToast('Debes seleccionar un producto', 'error');
       return;
     }
 
-    if (parseInt(cantidadMaxima) <= parseInt(cantidadMinima)) {
-      showToast('El stock máximo debe ser mayor al mínimo', 'error');
-      return;
-    }
-
-    // Verificar si ya existe inventario para este producto
-    const { data: existing, error: checkError } = await supabase
+    // Verificar si el producto ya tiene inventario
+    const { data: existing } = await supabase
       .from('inventario')
       .select('id')
       .eq('producto_id', productoId)
       .maybeSingle();
 
-    if (checkError) throw checkError;
     if (existing) {
       showToast('Este producto ya tiene registro de inventario', 'warning');
       return;
     }
 
-    // Crear registro
-    const { error } = await supabase
+    // Obtener datos del producto para la relación
+    const { data: productoData } = await supabase
+      .from('productos_carton')
+      .select('id, numero_parte, descripcion')
+      .eq('id', productoId)
+      .single();
+
+    // Insertar con select para obtener el registro completo
+    const { data: newInventory, error } = await supabase
       .from('inventario')
       .insert([{
         producto_id: productoId,
@@ -901,21 +900,28 @@ async function saveInventoryItem() {
         cantidad_maxima: parseInt(cantidadMaxima),
         ultima_actualizacion: new Date().toISOString()
       }])
-    .select('*, producto:producto_id(*)');// Esto es clave para obtener las relaciones+
+      .select('*');
 
-    
     if (error) throw error;
 
+    // Agregar manualmente la relación del producto
+    const completeRecord = {
+      ...newInventory[0],
+      producto: productoData
+    };
+
+    // Actualizar el array local y la vista
+    window.inventario = [completeRecord, ...window.inventario];
+    updateInventarioTable();
+    
     showToast('Inventario agregado correctamente', 'success');
     closeCustomModal();
-    loadInventario();
-    
+
   } catch (error) {
     console.error('Error al guardar inventario:', error);
     showToast('Error al guardar inventario: ' + error.message, 'error');
   }
 }
-
 
 
 
@@ -1036,7 +1042,7 @@ function updateProductosTable() {
 function updateInventarioTable() {
   const tbody = document.getElementById('inventario-table-body');
   
-  if (inventario.length === 0) {
+  if (!window.inventario || window.inventario.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="7" class="empty-inventory">
@@ -1053,40 +1059,28 @@ function updateInventarioTable() {
     return;
   }
 
-  tbody.innerHTML = inventario.map(item => `
+  tbody.innerHTML = window.inventario.map(item => `
     <tr>
       <td>
         <strong>${item.producto?.numero_parte || 'N/A'}</strong>
-        <small>${item.producto?.descripcion || 'Producto no encontrado'}</small>
+        <small>${item.producto?.descripcion || 'Producto no disponible'}</small>
       </td>
-      <td class="editable-cell" data-id="${item.id}" data-field="cantidad_actual">
-        ${item.cantidad_actual}
-      </td>
-      <td class="editable-cell" data-id="${item.id}" data-field="cantidad_minima">
-        ${item.cantidad_minima}
-      </td>
-      <td class="editable-cell" data-id="${item.id}" data-field="cantidad_maxima">
-        ${item.cantidad_maxima}
-      </td>
+      <td>${item.cantidad_actual}</td>
+      <td>${item.cantidad_minima}</td>
+      <td>${item.cantidad_maxima}</td>
       <td>
-        <span class="badge ${getStockStatusClass(item)}">
+        <span class="status-badge ${getStockStatus(item)}">
           ${getStockStatusText(item)}
         </span>
       </td>
       <td>${formatDate(item.ultima_actualizacion)}</td>
-      <td class="actions">
+      <td>
         <button class="btn-icon edit" onclick="editInventoryItem(${item.id})">
           <i class="fas fa-edit"></i>
-        </button>
-        <button class="btn-icon delete" onclick="deleteInventoryItem(${item.id})">
-          <i class="fas fa-trash"></i>
         </button>
       </td>
     </tr>
   `).join('');
-
-  // Activar edición en línea
-  setupInlineEditing();
 }
 // Función para actualizar campos
 async function updateInventoryField(id, field, value) {
