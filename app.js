@@ -514,42 +514,57 @@ async function toggleProductStatus(productId, currentStatus) {
 
 
 async function editInventoryItem(id) {
-  const modalHTML = `
-    <div class="form-group">
-      <label for="edit-product">Producto</label>
-      <input id="edit-product" type="text" class="form-control" 
-             value="${item.producto?.numero_parte || 'N/A'} - ${item.producto?.descripcion || ''}" 
-             disabled>
-    </div>
-    
-    <div class="form-group">
-      <label for="edit-current">Stock Actual</label>
-      <input type="number" id="edit-current" class="form-control" 
-             value="${item.cantidad_actual}" min="0">
-    </div>
-    
-    <div class="form-group">
-      <label for="edit-min">Stock Mínimo</label>
-      <input type="number" id="edit-min" class="form-control" 
-             value="${item.cantidad_minima}" min="0">
-    </div>
-    
-    <div class="form-group">
-      <label for="edit-max">Stock Máximo</label>
-      <input type="number" id="edit-max" class="form-control" 
-             value="${item.cantidad_maxima}" min="1">
-    </div>
-    
-    <div class="form-group">
-      <label for="edit-date">Fecha de Actualización</label>
-      <input type="datetime-local" id="edit-date" class="form-control" 
-             value="${new Date(item.ultima_actualizacion).toISOString().slice(0, 16)}">
-    </div>
-  `;
-  showCustomModal('Editar Registro', modalHTML);
+  try {
+    // Buscar el item en el inventario actual
+    const item = window.inventario.find(i => i.id === id);
+    if (!item) {
+      showToast('Registro de inventario no encontrado', 'error');
+      return;
+    }
+
+    const modalHTML = `
+      <div class="modal-content">
+        <h3>Editar Inventario</h3>
+        
+        <div class="form-group">
+          <label>Producto</label>
+          <input type="text" class="form-control" 
+                 value="${item.producto?.numero_parte || 'N/A'} - ${item.producto?.descripcion || ''}" 
+                 disabled>
+        </div>
+        
+        <div class="form-group">
+          <label for="edit-current">Stock Actual</label>
+          <input type="number" id="edit-current" class="form-control" 
+                 value="${item.cantidad_actual}" min="0">
+        </div>
+        
+        <div class="form-group">
+          <label for="edit-min">Stock Mínimo</label>
+          <input type="number" id="edit-min" class="form-control" 
+                 value="${item.cantidad_minima}" min="0">
+        </div>
+        
+        <div class="form-group">
+          <label for="edit-max">Stock Máximo</label>
+          <input type="number" id="edit-max" class="form-control" 
+                 value="${item.cantidad_maxima}" min="1">
+        </div>
+        
+        <div class="modal-actions">
+          <button class="btn btn-cancel" onclick="closeCustomModal()">Cancelar</button>
+          <button class="btn btn-primary" onclick="updateInventoryItem(${item.id})">Guardar</button>
+        </div>
+      </div>
+    `;
+
+    showCustomModal('Editar Inventario', modalHTML);
+
+  } catch (error) {
+    console.error('Error al editar inventario:', error);
+    showToast('Error al cargar datos para edición', 'error');
+  }
 }
-
-
 
 
 
