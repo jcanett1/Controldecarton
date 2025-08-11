@@ -971,7 +971,25 @@ async function saveInventoryItem() {
 }
 
 
+async function deleteInventoryItem(id) {
+  if (!confirm('¿Estás seguro de eliminar este registro de inventario?')) return;
+  
+  try {
+    const { error } = await supabase
+      .from('inventario')
+      .delete()
+      .eq('id', id);
 
+    if (error) throw error;
+
+    showToast('Registro eliminado correctamente', 'success');
+    loadInventario(); // Recargar los datos
+
+  } catch (error) {
+    console.error('Error eliminando inventario:', error);
+    showToast('Error al eliminar registro', 'error');
+  }
+}
 
 
 
@@ -1387,9 +1405,8 @@ function exportReport() {
     showToast('Exportando reporte - Función por implementar', 'info');
 }
 
-// Agrega al inicio de tu app.js
-window.saveInventoryItem = saveInventoryItem;
+// Hacer funciones disponibles globalmente
+window.editInventoryItem = editInventoryItem;
+window.updateInventoryItem = updateInventoryItem;
+window.deleteInventoryItem = deleteInventoryItem; // Asegúrate de tener esta función definida
 window.closeCustomModal = closeCustomModal;
-window.loadInventario = loadInventario;
-
-
