@@ -216,6 +216,115 @@ function updateUserInfo() {
     }
 }
 
+// ===== ESTILOS CSS DINÁMICOS =====
+function addInventoryModalStyles() {
+  const style = document.createElement('style');
+  style.id = 'inventory-modal-styles';
+  style.textContent = `
+    /* Estilos para el modal de inventario */
+    .custom-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-content h3 {
+      margin-top: 0;
+      color: #2d3748;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #4a5568;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .form-control:focus {
+      border-color: #4299e1;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-cancel {
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      color: #4a5568;
+    }
+
+    .btn-cancel:hover {
+      background: #edf2f7;
+    }
+
+    .btn-primary {
+      background: #4299e1;
+      border: 1px solid #4299e1;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #3182ce;
+    }
+    
+    .close-modal {
+      cursor: pointer;
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Llamar a la función para agregar los estilos
+addInventoryModalStyles();
+
+
+
+
 function hideAdminFeatures() {
     console.log('🔒 Ocultando funciones de administrador para usuario viewer');
     
