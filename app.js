@@ -1,8 +1,3 @@
-// Agrega al inicio de tu app.js
-window.saveInventoryItem = saveInventoryItem;
-window.closeCustomModal = closeCustomModal;
-
-
 // Configuración de Supabase
 const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
@@ -1350,3 +1345,10 @@ function generateReport(reportType) {
 function exportReport() {
     showToast('Exportando reporte - Función por implementar', 'info');
 }
+
+// Agrega al inicio de tu app.js
+window.saveInventoryItem = saveInventoryItem;
+window.closeCustomModal = closeCustomModal;
+window.loadInventario = loadInventario;
+
+
