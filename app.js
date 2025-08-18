@@ -589,7 +589,7 @@ function updateProductosTable() {
                     ${producto.activo ? 'Activo' : 'Inactivo'}
                 </span>
             </td>
-            <td>${formatDate(producto.fecha_creacion)}</td>
+            <td>${formatDate(producto.fecha_creacion || producto.created_at)}</td>
             <td>
                 ${currentUser && currentUser.role === 'admin' ? `
                     <button class="action-btn edit" onclick="editProduct(${producto.id})">
@@ -697,6 +697,230 @@ function updateProduccionTable() {
     `).join('');
 }
 
+// ===== FUNCIONES DE PRODUCTOS =====
+
+function showAddProductModal() {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    // Limpiar formulario
+    document.getElementById('add-product-form').reset();
+    
+    // Mostrar modal
+    document.getElementById('modal-overlay').style.display = 'flex';
+    document.getElementById('add-product-modal').style.display = 'block';
+    document.getElementById('edit-product-modal').style.display = 'none';
+    document.getElementById('movement-modal').style.display = 'none';
+    document.getElementById('adjust-modal').style.display = 'none';
+    document.getElementById('return-inventory-modal').style.display = 'none';
+    document.getElementById('adjust-produccion-modal').style.display = 'none';
+}
+
+async function addProduct() {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    const form = document.getElementById('add-product-form');
+    const formData = new FormData(form);
+    
+    const numeroParte = formData.get('numero_parte');
+    const descripcion = formData.get('descripcion');
+    const cantidadInicial = parseInt(formData.get('cantidad_inicial')) || 0;
+    const cantidadMinima = parseInt(formData.get('cantidad_minima')) || 10;
+    const cantidadMaxima = parseInt(formData.get('cantidad_maxima')) || 1000;
+    
+    if (!numeroParte || !descripcion) {
+        showToast('Por favor completa todos los campos requeridos', 'error');
+        return;
+    }
+    
+    if (cantidadMaxima <= cantidadMinima) {
+        showToast('La cantidad máxima debe ser mayor que la mínima', 'error');
+        return;
+    }
+    
+    try {
+        // Verificar si el número de parte ya existe
+        const { data: existingProduct, error: checkError } = await supabase
+            .from('productos_carton')
+            .select('numero_parte')
+            .eq('numero_parte', numeroParte)
+            .single();
+        
+        if (existingProduct) {
+            showToast('Ya existe un producto con ese número de parte', 'error');
+            return;
+        }
+        
+        // Crear producto
+        const { data: newProduct, error: productError } = await supabase
+            .from('productos_carton')
+            .insert([{
+                numero_parte: numeroParte,
+                descripcion: descripcion,
+                activo: true,
+                fecha_creacion: new Date().toISOString()
+            }])
+            .select()
+            .single();
+        
+        if (productError) throw productError;
+        
+        // Crear registro en inventario
+        const { error: inventarioError } = await supabase
+            .from('inventario')
+            .insert([{
+                producto_id: newProduct.id,
+                cantidad_actual: cantidadInicial,
+                cantidad_minima: cantidadMinima,
+                cantidad_maxima: cantidadMaxima
+            }]);
+        
+        if (inventarioError) throw inventarioError;
+        
+        // Si hay cantidad inicial, registrar movimiento de entrada
+        if (cantidadInicial > 0) {
+            const { error: movimientoError } = await supabase
+                .from('movimientos_inventario')
+                .insert([{
+                    producto_id: newProduct.id,
+                    tipo_movimiento: 'ENTRADA',
+                    cantidad: cantidadInicial,
+                    usuario: currentUser.full_name,
+                    motivo: 'Stock inicial del producto',
+                    fecha_movimiento: new Date().toISOString()
+                }]);
+            
+            if (movimientoError) throw movimientoError;
+        }
+        
+        showToast('Producto creado exitosamente', 'success');
+        closeModal();
+        loadSectionData(currentSection);
+        
+    } catch (error) {
+        console.error('Error creando producto:', error);
+        if (error.code === '23505') {
+            showToast('Ya existe un producto con ese número de parte', 'error');
+        } else {
+            showToast('Error creando producto', 'error');
+        }
+    }
+}
+
+async function showEditProductModal(productId) {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    try {
+        const { data: producto, error } = await supabase
+            .from('productos_carton')
+            .select('*')
+            .eq('id', productId)
+            .single();
+
+        if (error) throw error;
+        if (!producto) throw new Error('Producto no encontrado');
+
+        document.getElementById('edit-product-id').value = producto.id;
+        document.getElementById('edit-numero-parte').value = producto.numero_parte;
+        document.getElementById('edit-descripcion').value = producto.descripcion;
+        document.getElementById('edit-activo').value = producto.activo;
+        
+        document.getElementById('modal-overlay').style.display = 'flex';
+        document.getElementById('edit-product-modal').style.display = 'block';
+        document.getElementById('add-product-modal').style.display = 'none';
+        document.getElementById('movement-modal').style.display = 'none';
+        document.getElementById('adjust-modal').style.display = 'none';
+        document.getElementById('return-inventory-modal').style.display = 'none';
+        document.getElementById('adjust-produccion-modal').style.display = 'none';
+        
+    } catch (error) {
+        console.error('Error al cargar los datos del producto:', error);
+        showToast('Error al cargar los datos del producto', 'error');
+    }
+}
+
+async function updateProduct() {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    const form = document.getElementById('edit-product-form');
+    const formData = new FormData(form);
+    
+    const productId = document.getElementById('edit-product-id').value;
+    const numeroParte = formData.get('numero_parte');
+    const descripcion = formData.get('descripcion');
+    const activo = formData.get('activo') === 'true';
+    
+    if (!numeroParte || !descripcion) {
+        showToast('Por favor completa todos los campos requeridos', 'error');
+        return;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('productos_carton')
+            .update({
+                numero_parte: numeroParte,
+                descripcion: descripcion,
+                activo: activo
+            })
+            .eq('id', productId);
+        
+        if (error) throw error;
+        
+        showToast('Producto actualizado exitosamente', 'success');
+        closeModal();
+        loadSectionData(currentSection);
+        
+    } catch (error) {
+        console.error('Error actualizando producto:', error);
+        if (error.code === '23505') {
+            showToast('Ya existe un producto con ese número de parte', 'error');
+        } else {
+            showToast('Error actualizando producto', 'error');
+        }
+    }
+}
+
+async function toggleProductStatus(productId, currentStatus) {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    const action = currentStatus ? 'desactivar' : 'activar';
+    
+    if (!confirm(`¿Estás seguro de que quieres ${action} este producto?`)) {
+        return;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('productos_carton')
+            .update({ activo: !currentStatus })
+            .eq('id', productId);
+        
+        if (error) throw error;
+        
+        showToast(`Producto ${action}do exitosamente`, 'success');
+        loadSectionData(currentSection);
+        
+    } catch (error) {
+        console.error('Error cambiando estado del producto:', error);
+        showToast('Error cambiando estado del producto', 'error');
+    }
+}
+
 // ===== FUNCIONES DE MOVIMIENTOS Y PRODUCCIÓN =====
 
 async function showMovementModal(type) {
@@ -718,6 +942,10 @@ async function showMovementModal(type) {
         modalTitle.textContent = 'Registrar Salida';
         salidaOptions.style.display = 'block';
     }
+    
+    // Limpiar formulario
+    document.getElementById('movement-form').reset();
+    document.getElementById('stock-info').style.display = 'none';
     
     // Cargar productos en el selector
     await loadProductosForMovement();
@@ -928,6 +1156,10 @@ async function showReturnToInventoryModal(productoId = null) {
         showToast('No tienes permisos para realizar esta acción', 'error');
         return;
     }
+    
+    // Limpiar formulario
+    document.getElementById('return-inventory-form').reset();
+    document.getElementById('produccion-stock-info').style.display = 'none';
     
     // Cargar productos en producción
     await loadProductosForReturn();
@@ -1197,6 +1429,7 @@ function getStockStatusText(item) {
 }
 
 function formatDate(dateString) {
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', {
         year: 'numeric',
@@ -1276,56 +1509,6 @@ function editProduct(productId) {
     showEditProductModal(productId);
 }
 
-function showAddProductModal() {
-    if (currentUser && currentUser.role !== 'admin') {
-        showToast('No tienes permisos para realizar esta acción', 'error');
-        return;
-    }
-    
-    document.getElementById('modal-overlay').style.display = 'flex';
-    document.getElementById('add-product-modal').style.display = 'block';
-    document.getElementById('edit-product-modal').style.display = 'none';
-    document.getElementById('movement-modal').style.display = 'none';
-    document.getElementById('adjust-modal').style.display = 'none';
-    document.getElementById('return-inventory-modal').style.display = 'none';
-    document.getElementById('adjust-produccion-modal').style.display = 'none';
-}
-
-async function showEditProductModal(productId) {
-    if (currentUser && currentUser.role !== 'admin') {
-        showToast('No tienes permisos para realizar esta acción', 'error');
-        return;
-    }
-    
-    try {
-        const { data: producto, error } = await supabase
-            .from('productos_carton')
-            .select('*')
-            .eq('id', productId)
-            .single();
-
-        if (error) throw error;
-        if (!producto) throw new Error('Producto no encontrado');
-
-        document.getElementById('edit-product-id').value = producto.id;
-        document.getElementById('edit-numero-parte').value = producto.numero_parte;
-        document.getElementById('edit-descripcion').value = producto.descripcion;
-        document.getElementById('edit-activo').value = producto.activo;
-        
-        document.getElementById('modal-overlay').style.display = 'flex';
-        document.getElementById('edit-product-modal').style.display = 'block';
-        document.getElementById('add-product-modal').style.display = 'none';
-        document.getElementById('movement-modal').style.display = 'none';
-        document.getElementById('adjust-modal').style.display = 'none';
-        document.getElementById('return-inventory-modal').style.display = 'none';
-        document.getElementById('adjust-produccion-modal').style.display = 'none';
-        
-    } catch (error) {
-        console.error('Error al cargar los datos del producto:', error);
-        showToast('Error al cargar los datos del producto', 'error');
-    }
-}
-
 function showAdjustModal(productId) {
     if (currentUser && currentUser.role !== 'admin') {
         showToast('No tienes permisos para realizar esta acción', 'error');
@@ -1334,16 +1517,6 @@ function showAdjustModal(productId) {
     
     // Implementar lógica del modal de ajuste
     showToast('Modal de ajuste - Función por implementar', 'info');
-}
-
-function toggleProductStatus(productId, currentStatus) {
-    if (currentUser && currentUser.role !== 'admin') {
-        showToast('No tienes permisos para realizar esta acción', 'error');
-        return;
-    }
-    
-    // Implementar lógica de cambio de estado
-    showToast('Cambio de estado - Función por implementar', 'info');
 }
 
 function generateReport(reportType) {
