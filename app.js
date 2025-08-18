@@ -22,6 +22,7 @@ let currentEditingProductId = null;
 let productos = [];
 let inventario = [];
 let movimientos = [];
+let produccion = [];
 let currentUser = null;
 
 // Initialize app
@@ -79,7 +80,7 @@ async function checkAuthentication() {
 
 function redirectToLogin() {
     console.log('🔄 Redirigiendo al login...');
-    window.location.href = 'login_completo.html';
+    window.location.href = 'login.html';
 }
 
 function setupUserInterface() {
@@ -121,10 +122,7 @@ function updateUserInfo() {
         const refreshBtn = document.getElementById('refresh-btn');
         headerRight.insertBefore(userInfoContainer, refreshBtn);
     }
-
-
-
-  
+    
     // Agregar estilos si no existen
     if (!document.getElementById('auth-styles')) {
         const style = document.createElement('style');
@@ -211,115 +209,6 @@ function updateUserInfo() {
     }
 }
 
-// ===== ESTILOS CSS DINÁMICOS =====
-function addInventoryModalStyles() {
-  const style = document.createElement('style');
-  style.id = 'inventory-modal-styles';
-  style.textContent = `
-    /* Estilos para el modal de inventario */
-    .custom-modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.5);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-    
-    .modal-content {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      width: 90%;
-      max-width: 500px;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-
-    .modal-content h3 {
-      margin-top: 0;
-      color: #2d3748;
-    }
-
-    .form-group {
-      margin-bottom: 15px;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: 500;
-      color: #4a5568;
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #e2e8f0;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-
-    .form-control:focus {
-      border-color: #4299e1;
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
-    }
-
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 20px;
-    }
-
-    .btn {
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-
-    .btn-cancel {
-      background: #f7fafc;
-      border: 1px solid #e2e8f0;
-      color: #4a5568;
-    }
-
-    .btn-cancel:hover {
-      background: #edf2f7;
-    }
-
-    .btn-primary {
-      background: #4299e1;
-      border: 1px solid #4299e1;
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: #3182ce;
-    }
-    
-    .close-modal {
-      cursor: pointer;
-      font-size: 1.5rem;
-      line-height: 1;
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-// Llamar a la función para agregar los estilos
-addInventoryModalStyles();
-
-
-
-
 function hideAdminFeatures() {
     console.log('🔒 Ocultando funciones de administrador para usuario viewer');
     
@@ -330,7 +219,9 @@ function hideAdminFeatures() {
         'button[onclick*="addProduct"]',
         'button[onclick*="editProduct"]',
         'button[onclick*="toggleProductStatus"]',
-        'button[onclick*="showAdjustModal"]'
+        'button[onclick*="showAdjustModal"]',
+        'button[onclick*="showReturnToInventoryModal"]',
+        'button[onclick*="showAdjustProduccionModal"]'
     ];
     
     adminButtons.forEach(selector => {
@@ -371,233 +262,13 @@ async function handleLogout() {
             currentUser = null;
             
             // Redirigir al login
-            window.location.href = 'login_completo.html';
+            window.location.href = 'login.html';
             
         } catch (error) {
             console.error('Error inesperado cerrando sesión:', error);
             showToast('Error inesperado al cerrar sesión', 'error');
         }
     }
-}
-
-
-
-async function addProduct() {
-    if (currentUser && currentUser.role !== 'admin') {
-        showToast('No tienes permisos para realizar esta acción', 'error');
-        return;
-    }
-
-    const numeroParte = document.getElementById('numero-parte').value;
-    const descripcion = document.getElementById('descripcion').value;
-
-    if (!numeroParte || !descripcion) {
-        showToast('Por favor complete todos los campos', 'error');
-        return;
-    }
-
-    try {
-        // Iniciar transacción
-        const { data: newProduct, error: productError } = await supabase
-            .from('productos_carton')
-            .insert([
-                {
-                    numero_parte: numeroParte,
-                    descripcion: descripcion,
-                    activo: true,
-                    fecha_creacion: new Date().toISOString()
-                }
-            ])
-            .select()
-            .single();
-
-        if (productError) throw productError;
-
-        // Crear registro en inventario automáticamente
-        const { error: inventoryError } = await supabase
-            .from('inventario')
-            .insert([
-                {
-                    producto_id: newProduct.id,
-                    cantidad_actual: 0,         // Valor por defecto
-                    cantidad_minima: 0,         // Valor por defecto
-                    cantidad_maxima: 1000       // Valor por defecto
-                }
-            ]);
-
-        if (inventoryError) throw inventoryError;
-
-        showToast('Producto agregado correctamente con registro de inventario', 'success');
-        closeModal();
-        
-        // Limpiar formulario
-        document.getElementById('numero-parte').value = '';
-        document.getElementById('descripcion').value = '';
-        
-        // Actualizar vistas
-        loadProductos();
-        loadInventario();
-        loadDashboardData();
-
-    } catch (error) {
-        console.error('Error al agregar producto:', error);
-        showToast('Error al agregar producto: ' + error.message, 'error');
-    }
-}
-
-async function updateProduct() {
-    if (currentUser && currentUser.role !== 'admin') {
-        showToast('No tienes permisos para realizar esta acción', 'error');
-        return;
-    }
-
-    const productId = document.getElementById('edit-product-id').value;
-    const numeroParte = document.getElementById('edit-numero-parte').value;
-    const descripcion = document.getElementById('edit-descripcion').value;
-    const activo = document.getElementById('edit-activo').value === 'true';
-
-    if (!productId || !numeroParte || !descripcion) {
-        showToast('Por favor complete todos los campos', 'error');
-        return;
-    }
-
-    try {
-        const { error } = await supabase
-            .from('productos_carton')
-            .update({
-                numero_parte: numeroParte,
-                descripcion: descripcion,
-                activo: activo
-            })
-            .eq('id', productId);
-
-        if (error) throw error;
-
-        showToast('Producto actualizado correctamente', 'success');
-        closeModal();
-        loadProductos();
-        loadDashboardData(); // Actualizar dashboard
-
-    } catch (error) {
-        console.error('Error al actualizar producto:', error);
-        showToast('Error al actualizar producto: ' + error.message, 'error');
-    }
-}
-
-async function toggleProductStatus(productId, currentStatus) {
-    if (currentUser && currentUser.role !== 'admin') {
-        showToast('No tienes permisos para realizar esta acción', 'error');
-        return;
-    }
-
-    if (!confirm(`¿Estás seguro de querer ${currentStatus ? 'desactivar' : 'activar'} este producto?`)) {
-        return;
-    }
-
-    try {
-        const { error } = await supabase
-            .from('productos_carton')
-            .update({ activo: !currentStatus })
-            .eq('id', productId);
-
-        if (error) throw error;
-
-        showToast(`Producto ${currentStatus ? 'desactivado' : 'activado'} correctamente`, 'success');
-        loadProductos();
-        loadDashboardData(); // Actualizar dashboard
-
-    } catch (error) {
-        console.error('Error al cambiar estado del producto:', error);
-        showToast('Error al cambiar estado del producto: ' + error.message, 'error');
-    }
-}
-
-
-async function editInventoryItem(id) {
-  try {
-    // Buscar el item en el inventario actual
-    const item = window.inventario.find(i => i.id === id);
-    if (!item) {
-      showToast('Registro de inventario no encontrado', 'error');
-      return;
-    }
-
-    const modalHTML = `
-      <div class="modal-content">
-        <h3>Editar Inventario</h3>
-        
-        <div class="form-group">
-          <label>Producto</label>
-          <input type="text" class="form-control" 
-                 value="${item.producto?.numero_parte || 'N/A'} - ${item.producto?.descripcion || ''}" 
-                 disabled>
-        </div>
-        
-        <div class="form-group">
-          <label for="edit-current">Stock Actual</label>
-          <input type="number" id="edit-current" class="form-control" 
-                 value="${item.cantidad_actual}" min="0">
-        </div>
-        
-        <div class="form-group">
-          <label for="edit-min">Stock Mínimo</label>
-          <input type="number" id="edit-min" class="form-control" 
-                 value="${item.cantidad_minima}" min="0">
-        </div>
-        
-        <div class="form-group">
-          <label for="edit-max">Stock Máximo</label>
-          <input type="number" id="edit-max" class="form-control" 
-                 value="${item.cantidad_maxima}" min="1">
-        </div>
-        
-        <div class="modal-actions">
-          <button class="btn btn-cancel" onclick="closeCustomModal()">Cancelar</button>
-          <button class="btn btn-primary" onclick="updateInventoryItem(${item.id})">Guardar</button>
-        </div>
-      </div>
-    `;
-
-    showCustomModal('Editar Inventario', modalHTML);
-
-  } catch (error) {
-    console.error('Error al editar inventario:', error);
-    showToast('Error al cargar datos para edición', 'error');
-  }
-}
-
-async function updateInventoryItem(id) {
-  try {
-    const cantidadActual = document.getElementById('edit-current').value;
-    const cantidadMinima = document.getElementById('edit-min').value;
-    const cantidadMaxima = document.getElementById('edit-max').value;
-
-    // Validaciones básicas
-    if (parseInt(cantidadMaxima) <= parseInt(cantidadMinima)) {
-      showToast('El stock máximo debe ser mayor al mínimo', 'error');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('inventario')
-      .update({
-        cantidad_actual: parseInt(cantidadActual),
-        cantidad_minima: parseInt(cantidadMinima),
-        cantidad_maxima: parseInt(cantidadMaxima),
-        ultima_actualizacion: new Date().toISOString()
-      })
-      .eq('id', id);
-
-    if (error) throw error;
-
-    showToast('Inventario actualizado correctamente', 'success');
-    closeCustomModal();
-    loadInventario(); // Recargar los datos
-
-  } catch (error) {
-    console.error('Error actualizando inventario:', error);
-    showToast('Error al actualizar inventario', 'error');
-  }
 }
 
 // ===== FUNCIONES ORIGINALES DEL SISTEMA =====
@@ -665,6 +336,7 @@ function updateHeader(sectionName) {
         productos: { title: 'Productos', subtitle: 'Gestión de productos de cartón' },
         inventario: { title: 'Inventario', subtitle: 'Control de stock y niveles' },
         movimientos: { title: 'Movimientos', subtitle: 'Historial de entradas y salidas' },
+        produccion: { title: 'Producción', subtitle: 'Almacén en piso - Control de producción' },
         reportes: { title: 'Reportes', subtitle: 'Análisis y estadísticas' }
     };
 
@@ -687,6 +359,9 @@ function loadSectionData(sectionName) {
         case 'movimientos':
             loadMovimientos();
             break;
+        case 'produccion':
+            loadProduccion();
+            break;
         case 'reportes':
             break;
     }
@@ -703,13 +378,15 @@ function refreshCurrentSection() {
     }, 1000);
 }
 
-// Data Loading Functions
+// ===== FUNCIONES DE CARGA DE DATOS =====
+
 async function loadDashboardData() {
     try {
         const [
             { data: productos, error: productosError },
             { data: inventario, error: inventarioError },
-            { data: movimientos, error: movimientosError }
+            { data: movimientos, error: movimientosError },
+            { data: produccion, error: produccionError }
         ] = await Promise.all([
             supabase
                 .from('productos_carton')
@@ -722,16 +399,21 @@ async function loadDashboardData() {
                 .from('movimientos_inventario')
                 .select('*, producto:productos_carton(*)')
                 .order('fecha_movimiento', { ascending: false })
-                .limit(10)
+                .limit(10),
+            supabase
+                .from('produccion_almacen')
+                .select('*, producto:productos_carton(*)')
         ]);
 
         if (productosError) throw productosError;
         if (inventarioError) throw inventarioError;
         if (movimientosError) throw movimientosError;
+        if (produccionError) throw produccionError;
 
         window.productos = productos || [];
         window.inventario = inventario || [];
         window.movimientos = movimientos || [];
+        window.produccion = produccion || [];
 
         updateDashboardStats();
         updateStockBajoList();
@@ -760,240 +442,29 @@ async function loadProductos() {
     }
 }
 
-async function loadInventario() {
-  try {
-    // Solo obtener inventario con relaciones
-    const { data: inventarioData, error: inventarioError } = await supabase
-      .from('inventario')
-      .select(`
-        *,
-        producto:producto_id (id, numero_parte, descripcion)
-      `)
-      .order('ultima_actualizacion', { ascending: false });
-
-    if (inventarioError) throw inventarioError;
-
-    // Obtener productos disponibles para el modal
-    const { data: productos } = await supabase
-      .from('productos_carton')
-      .select('id, numero_parte, descripcion')
-      .eq('activo', true)
-      .order('numero_parte');
-
-    window.productosDisponibles = productos || [];
-    window.inventario = inventarioData || [];
-    
-    updateInventarioTable();
-    setupAddInventoryButton();
-
-  } catch (error) {
-    console.error('Error cargando inventario:', error);
-    showToast('Error al cargar inventario', 'error');
-    await loadBasicInventory(); // Fallback a carga básica
-  }
-}
-
-// Función de respaldo para cargar inventario sin relaciones
-async function loadBasicInventory() {
+async function loadInventario(filter = 'all') {
     try {
-        console.log("🔄 Intentando carga básica de inventario...");
-        const { data, error } = await supabase
+        let query = supabase
             .from('inventario')
-            .select('*');
-            
+            .select('*, producto:productos_carton(*)');
+        
+        if (filter === 'stock-bajo') {
+            query = query.lte('cantidad_actual', supabase.rpc('get_cantidad_minima'));
+        } else if (filter === 'sin-stock') {
+            query = query.eq('cantidad_actual', 0);
+        }
+        
+        const { data, error } = await query;
+        
         if (error) throw error;
         
-        inventario = data || [];
-        console.log(`✅ Carga básica exitosa (${inventario.length} registros)`);
+        inventario = data;
         updateInventarioTable();
-        
-    } catch (fallbackError) {
-        console.error("🔥 Error en carga básica:", fallbackError);
-        inventario = [];
-        updateInventarioTable();
-        showToast("Error crítico al cargar inventario", "error");
-    }
-}
-
-
-function setupAddInventoryButton() {
-  const addButton = document.getElementById('add-inventory-btn');
-  if (!addButton) return;
-
-  addButton.onclick = async () => {
-    try {
-      // Obtener productos activos
-      const { data: productos, error } = await supabase
-        .from('productos_carton')
-        .select('id, numero_parte, descripcion')
-        .eq('activo', true)
-        .order('numero_parte');
-
-      if (error) throw error;
-
-      // Crear modal
-      const modalHTML = `
-        <div class="modal-content">
-          <h3>Agregar al Inventario</h3>
-          
-          <div class="form-group">
-            <label for="inventory-product">Producto</label>
-            <select id="inventory-product" class="form-control" required>
-              <option value="">Seleccionar producto...</option>
-              ${productos.map(p => `
-                <option value="${p.id}">${p.numero_parte} - ${p.descripcion}</option>
-              `).join('')}
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="inventory-current">Stock Actual</label>
-            <input type="number" id="inventory-current" class="form-control" min="0" value="0" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="inventory-min">Stock Mínimo</label>
-            <input type="number" id="inventory-min" class="form-control" min="0" value="0" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="inventory-max">Stock Máximo</label>
-            <input type="number" id="inventory-max" class="form-control" min="1" value="1000" required>
-          </div>
-          
-          <div class="modal-actions">
-            <button type="button" class="btn btn-cancel" onclick="closeCustomModal()">Cancelar</button>
-            <button type="button" class="btn btn-primary" onclick="saveInventoryItem()">Guardar</button>
-          </div>
-        </div>
-      `;
-
-      showCustomModal('Agregar Inventario', modalHTML);
     } catch (error) {
-      console.error('Error al cargar productos:', error);
-      showToast('Error al cargar productos para inventario', 'error');
+        console.error('Error loading inventario:', error);
+        showToast('Error cargando inventario', 'error');
     }
-  };
 }
-
-
-function showCustomModal(title, content) {
-  const modal = document.getElementById('custom-modal');
-  if (!modal) {
-    const modalDiv = document.createElement('div');
-    modalDiv.id = 'custom-modal';
-    modalDiv.className = 'custom-modal-overlay';
-    modalDiv.innerHTML = `
-      <div class="custom-modal-container">
-        <div class="custom-modal-header">
-          <h3>${title}</h3>
-          <span class="close-modal" onclick="closeCustomModal()">&times;</span>
-        </div>
-        <div class="custom-modal-body">${content}</div>
-      </div>
-    `;
-    document.body.appendChild(modalDiv);
-  } else {
-    modal.querySelector('.custom-modal-header h3').textContent = title;
-    modal.querySelector('.custom-modal-body').innerHTML = content;
-    modal.style.display = 'flex';
-  }
-}
-
-function closeCustomModal() {
-  const modal = document.getElementById('custom-modal');
-  if (modal) modal.style.display = 'none';
-}
-
-
-async function saveInventoryItem() {
-  try {
-    const productoId = document.getElementById('inventory-product').value;
-    const cantidadActual = document.getElementById('inventory-current').value;
-    const cantidadMinima = document.getElementById('inventory-min').value;
-    const cantidadMaxima = document.getElementById('inventory-max').value;
-
-    if (!productoId) {
-      showToast('Debes seleccionar un producto', 'error');
-      return;
-    }
-
-    // Verificar si el producto ya tiene inventario
-    const { data: existing } = await supabase
-      .from('inventario')
-      .select('id')
-      .eq('producto_id', productoId)
-      .maybeSingle();
-
-    if (existing) {
-      showToast('Este producto ya tiene registro de inventario', 'warning');
-      return;
-    }
-
-    // Obtener datos del producto para la relación
-    const { data: productoData } = await supabase
-      .from('productos_carton')
-      .select('id, numero_parte, descripcion')
-      .eq('id', productoId)
-      .single();
-
-    // Insertar con select para obtener el registro completo
-    const { data: newInventory, error } = await supabase
-      .from('inventario')
-      .insert([{
-        producto_id: productoId,
-        cantidad_actual: parseInt(cantidadActual),
-        cantidad_minima: parseInt(cantidadMinima),
-        cantidad_maxima: parseInt(cantidadMaxima),
-        ultima_actualizacion: new Date().toISOString()
-      }])
-      .select('*');
-
-    if (error) throw error;
-
-    // Agregar manualmente la relación del producto
-    const completeRecord = {
-      ...newInventory[0],
-      producto: productoData
-    };
-
-    // Actualizar el array local y la vista
-    window.inventario = [completeRecord, ...window.inventario];
-    updateInventarioTable();
-    
-    showToast('Inventario agregado correctamente', 'success');
-    closeCustomModal();
-
-  } catch (error) {
-    console.error('Error al guardar inventario:', error);
-    showToast('Error al guardar inventario: ' + error.message, 'error');
-  }
-}
-
-
-async function deleteInventoryItem(id) {
-  if (!confirm('¿Estás seguro de eliminar este registro de inventario?')) return;
-  
-  try {
-    const { error } = await supabase
-      .from('inventario')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-
-    showToast('Registro eliminado correctamente', 'success');
-    loadInventario(); // Recargar los datos
-
-  } catch (error) {
-    console.error('Error eliminando inventario:', error);
-    showToast('Error al eliminar registro', 'error');
-  }
-}
-
-
-
-
 
 async function loadMovimientos() {
     try {
@@ -1013,17 +484,47 @@ async function loadMovimientos() {
     }
 }
 
-// Update UI Functions
+async function loadProduccion() {
+    try {
+        const { data, error } = await supabase
+            .from('produccion_almacen')
+            .select('*, producto:productos_carton(*)')
+            .order('fecha_transferencia', { ascending: false });
+        
+        if (error) throw error;
+        
+        produccion = data;
+        updateProduccionTable();
+        updateProduccionStats();
+    } catch (error) {
+        console.error('Error loading produccion:', error);
+        showToast('Error cargando datos de producción', 'error');
+    }
+}
+
+// ===== FUNCIONES DE ACTUALIZACIÓN DE UI =====
+
 function updateDashboardStats() {
     const totalProductos = productos.length;
     const totalStock = inventario.reduce((sum, item) => sum + item.cantidad_actual, 0);
     const stockBajo = inventario.filter(item => item.cantidad_actual <= item.cantidad_minima).length;
-    const sinStock = inventario.filter(item => item.cantidad_actual === 0).length;
+    const totalProduccion = produccion.reduce((sum, item) => sum + item.cantidad_produccion, 0);
 
     document.getElementById('total-productos').textContent = totalProductos;
     document.getElementById('total-stock').textContent = totalStock.toLocaleString();
     document.getElementById('stock-bajo').textContent = stockBajo;
-    document.getElementById('sin-stock').textContent = sinStock;
+    document.getElementById('total-produccion').textContent = totalProduccion.toLocaleString();
+}
+
+function updateProduccionStats() {
+    const totalProductosProduccion = produccion.length;
+    const totalCantidadProduccion = produccion.reduce((sum, item) => sum + item.cantidad_produccion, 0);
+
+    const totalProductosElement = document.getElementById('total-productos-produccion');
+    const totalCantidadElement = document.getElementById('total-cantidad-produccion');
+    
+    if (totalProductosElement) totalProductosElement.textContent = totalProductosProduccion;
+    if (totalCantidadElement) totalCantidadElement.textContent = totalCantidadProduccion.toLocaleString();
 }
 
 function updateStockBajoList() {
@@ -1105,80 +606,36 @@ function updateProductosTable() {
 }
 
 function updateInventarioTable() {
-  const tbody = document.getElementById('inventario-table-body');
-  
-  if (!window.inventario || window.inventario.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7" class="empty-inventory">
-          <div>
-            <i class="fas fa-box-open"></i>
-            <p>No hay registros de inventario</p>
-            <button class="btn btn-primary" onclick="document.getElementById('add-inventory-btn').click()">
-              <i class="fas fa-plus"></i> Agregar Inventario
-            </button>
-          </div>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  tbody.innerHTML = window.inventario.map(item => `
-    <tr>
-      <td>
-        <strong>${item.producto?.numero_parte || 'N/A'}</strong>
-        <small>${item.producto?.descripcion || 'Producto no disponible'}</small>
-      </td>
-      <td>${item.cantidad_actual}</td>
-      <td>${item.cantidad_minima}</td>
-      <td>${item.cantidad_maxima}</td>
-      <td>
-        <span class="status-badge ${getStockStatus(item)}">
-          ${getStockStatusText(item)}
-        </span>
-      </td>
-      <td>${formatDate(item.ultima_actualizacion)}</td>
-      <td>
-        <button class="btn-icon edit" onclick="editInventoryItem(${item.id})">
-          <i class="fas fa-edit"></i>
-        </button>
-      </td>
-    </tr>
-  `).join('');
-}
-// Función para actualizar campos
-async function updateInventoryField(id, field, value) {
-    try {
-        const { error } = await supabase
-            .from('inventario')
-            .update({ 
-                [field]: parseInt(value),
-                ultima_actualizacion: new Date().toISOString()
-            })
-            .eq('id', id);
-
-        if (error) throw error;
-        
-        showToast('Inventario actualizado', 'success');
-        loadInventario(); // Refrescar datos
-    } catch (error) {
-        console.error('Error actualizando inventario:', error);
-        showToast('Error al actualizar', 'error');
+    const tbody = document.getElementById('inventario-table-body');
+    
+    if (inventario.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading">No hay datos de inventario</td></tr>';
+        return;
     }
-}
 
-
-function getStockStatus(item) {
-    if (item.cantidad_actual === 0) return 'status-out';
-    if (item.cantidad_actual <= item.cantidad_minima) return 'status-low';
-    return 'status-normal';
-}
-
-function getStockStatusText(item) {
-    if (item.cantidad_actual === 0) return 'Sin Stock';
-    if (item.cantidad_actual <= item.cantidad_minima) return 'Stock Bajo';
-    return 'Normal';
+    tbody.innerHTML = inventario.map(item => `
+        <tr>
+            <td>
+                <strong>${item.producto.numero_parte}</strong><br>
+                <small>${item.producto.descripcion}</small>
+            </td>
+            <td><strong>${item.cantidad_actual}</strong></td>
+            <td>${item.cantidad_minima}</td>
+            <td>${item.cantidad_maxima}</td>
+            <td>
+                <span class="status-badge ${getStockStatus(item)}">
+                    ${getStockStatusText(item)}
+                </span>
+            </td>
+            <td>
+                ${currentUser && currentUser.role === 'admin' ? `
+                    <button class="action-btn adjust" onclick="showAdjustModal(${item.producto_id})">
+                        <i class="fas fa-cog"></i> Ajustar
+                    </button>
+                ` : '<span class="text-muted">Solo lectura</span>'}
+            </td>
+        </tr>
+    `).join('');
 }
 
 function updateMovimientosTable() {
@@ -1208,7 +665,537 @@ function updateMovimientosTable() {
     `).join('');
 }
 
-// Utility Functions
+function updateProduccionTable() {
+    const tbody = document.getElementById('produccion-table-body');
+    
+    if (produccion.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading">No hay productos en producción</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = produccion.map(item => `
+        <tr>
+            <td>
+                <strong>${item.producto.numero_parte}</strong><br>
+                <small>${item.producto.descripcion}</small>
+            </td>
+            <td><strong>${item.cantidad_produccion}</strong></td>
+            <td>${formatDate(item.fecha_transferencia)}</td>
+            <td>${item.transferido_por}</td>
+            <td>${item.motivo}</td>
+            <td>
+                ${currentUser && currentUser.role === 'admin' ? `
+                    <button class="action-btn warning" onclick="showReturnToInventoryModal(${item.producto_id})">
+                        <i class="fas fa-undo"></i> Devolver
+                    </button>
+                    <button class="action-btn info" onclick="showAdjustProduccionModal(${item.producto_id})">
+                        <i class="fas fa-cog"></i> Ajustar
+                    </button>
+                ` : '<span class="text-muted">Solo lectura</span>'}
+            </td>
+        </tr>
+    `).join('');
+}
+
+// ===== FUNCIONES DE MOVIMIENTOS Y PRODUCCIÓN =====
+
+async function showMovementModal(type) {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    currentMovementType = type;
+    
+    // Configurar el modal según el tipo
+    const modalTitle = document.getElementById('movement-modal-title');
+    const salidaOptions = document.getElementById('salida-options');
+    
+    if (type === 'ENTRADA') {
+        modalTitle.textContent = 'Registrar Entrada';
+        salidaOptions.style.display = 'none';
+    } else {
+        modalTitle.textContent = 'Registrar Salida';
+        salidaOptions.style.display = 'block';
+    }
+    
+    // Cargar productos en el selector
+    await loadProductosForMovement();
+    
+    // Mostrar modal
+    document.getElementById('modal-overlay').style.display = 'flex';
+    document.getElementById('movement-modal').style.display = 'block';
+    document.getElementById('add-product-modal').style.display = 'none';
+    document.getElementById('edit-product-modal').style.display = 'none';
+    document.getElementById('adjust-modal').style.display = 'none';
+    document.getElementById('return-inventory-modal').style.display = 'none';
+    document.getElementById('adjust-produccion-modal').style.display = 'none';
+}
+
+async function loadProductosForMovement() {
+    try {
+        const { data, error } = await supabase
+            .from('inventario')
+            .select('*, producto:productos_carton(*)')
+            .gt('cantidad_actual', 0); // Solo productos con stock
+        
+        if (error) throw error;
+        
+        const selector = document.getElementById('movement-producto');
+        selector.innerHTML = '<option value="">Selecciona un producto</option>';
+        
+        data.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.producto_id;
+            option.textContent = `${item.producto.numero_parte} - ${item.producto.descripcion}`;
+            option.dataset.stock = item.cantidad_actual;
+            option.dataset.minStock = item.cantidad_minima;
+            selector.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('Error cargando productos:', error);
+        showToast('Error cargando productos', 'error');
+    }
+}
+
+function updateStockInfo() {
+    const selector = document.getElementById('movement-producto');
+    const stockInfo = document.getElementById('stock-info');
+    const currentStockSpan = document.getElementById('current-stock');
+    const minStockSpan = document.getElementById('min-stock');
+    const cantidadInput = document.getElementById('movement-cantidad');
+    const cantidadHelp = document.getElementById('cantidad-help');
+    
+    if (selector.value) {
+        const selectedOption = selector.options[selector.selectedIndex];
+        const stock = parseInt(selectedOption.dataset.stock);
+        const minStock = parseInt(selectedOption.dataset.minStock);
+        
+        currentStockSpan.textContent = stock;
+        minStockSpan.textContent = minStock;
+        stockInfo.style.display = 'block';
+        
+        // Configurar validación de cantidad
+        if (currentMovementType === 'SALIDA') {
+            cantidadInput.max = stock;
+            cantidadHelp.textContent = `Máximo disponible: ${stock} unidades`;
+        } else {
+            cantidadInput.removeAttribute('max');
+            cantidadHelp.textContent = '';
+        }
+    } else {
+        stockInfo.style.display = 'none';
+        cantidadInput.removeAttribute('max');
+        cantidadHelp.textContent = '';
+    }
+}
+
+async function registerMovement() {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    const form = document.getElementById('movement-form');
+    const formData = new FormData(form);
+    
+    const productoId = parseInt(formData.get('producto_id'));
+    const cantidad = parseInt(formData.get('cantidad'));
+    const motivo = formData.get('motivo');
+    const transferToProduction = document.getElementById('transfer-to-production').checked;
+    
+    if (!productoId || !cantidad || !motivo) {
+        showToast('Por favor completa todos los campos', 'error');
+        return;
+    }
+    
+    try {
+        // Obtener información del producto y stock actual
+        const { data: inventarioItem, error: inventarioError } = await supabase
+            .from('inventario')
+            .select('*, producto:productos_carton(*)')
+            .eq('producto_id', productoId)
+            .single();
+        
+        if (inventarioError) throw inventarioError;
+        
+        // Validar stock suficiente para salidas
+        if (currentMovementType === 'SALIDA' && cantidad > inventarioItem.cantidad_actual) {
+            showToast('No hay suficiente stock disponible', 'error');
+            return;
+        }
+        
+        // Calcular nuevo stock
+        let nuevoStock;
+        if (currentMovementType === 'ENTRADA') {
+            nuevoStock = inventarioItem.cantidad_actual + cantidad;
+        } else {
+            nuevoStock = inventarioItem.cantidad_actual - cantidad;
+        }
+        
+        // Iniciar transacción
+        const { error: movimientoError } = await supabase
+            .from('movimientos_inventario')
+            .insert([{
+                producto_id: productoId,
+                tipo_movimiento: currentMovementType,
+                cantidad: cantidad,
+                usuario: currentUser.full_name,
+                motivo: motivo,
+                fecha_movimiento: new Date().toISOString()
+            }]);
+        
+        if (movimientoError) throw movimientoError;
+        
+        // Actualizar inventario
+        const { error: updateError } = await supabase
+            .from('inventario')
+            .update({ cantidad_actual: nuevoStock })
+            .eq('producto_id', productoId);
+        
+        if (updateError) throw updateError;
+        
+        // Si es salida y se debe transferir a producción
+        if (currentMovementType === 'SALIDA' && transferToProduction) {
+            await transferToProduccion(productoId, cantidad, motivo);
+        }
+        
+        showToast(`${currentMovementType.toLowerCase()} registrada exitosamente`, 'success');
+        closeModal();
+        loadSectionData(currentSection);
+        
+    } catch (error) {
+        console.error('Error registrando movimiento:', error);
+        showToast('Error registrando movimiento', 'error');
+    }
+}
+
+async function transferToProduccion(productoId, cantidad, motivo) {
+    try {
+        // Verificar si ya existe el producto en producción
+        const { data: existingProduccion, error: checkError } = await supabase
+            .from('produccion_almacen')
+            .select('*')
+            .eq('producto_id', productoId)
+            .single();
+        
+        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
+            throw checkError;
+        }
+        
+        if (existingProduccion) {
+            // Actualizar cantidad existente
+            const nuevaCantidad = existingProduccion.cantidad_produccion + cantidad;
+            const { error: updateError } = await supabase
+                .from('produccion_almacen')
+                .update({ 
+                    cantidad_produccion: nuevaCantidad,
+                    fecha_transferencia: new Date().toISOString(),
+                    transferido_por: currentUser.full_name,
+                    motivo: motivo
+                })
+                .eq('producto_id', productoId);
+            
+            if (updateError) throw updateError;
+        } else {
+            // Crear nuevo registro en producción
+            const { error: insertError } = await supabase
+                .from('produccion_almacen')
+                .insert([{
+                    producto_id: productoId,
+                    cantidad_produccion: cantidad,
+                    fecha_transferencia: new Date().toISOString(),
+                    transferido_por: currentUser.full_name,
+                    motivo: motivo
+                }]);
+            
+            if (insertError) throw insertError;
+        }
+        
+        console.log('✅ Producto transferido a producción');
+        
+    } catch (error) {
+        console.error('Error transfiriendo a producción:', error);
+        throw error;
+    }
+}
+
+// ===== FUNCIONES DE PRODUCCIÓN =====
+
+async function showReturnToInventoryModal(productoId = null) {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    // Cargar productos en producción
+    await loadProductosForReturn();
+    
+    // Si se especifica un producto, seleccionarlo
+    if (productoId) {
+        document.getElementById('return-producto').value = productoId;
+        updateProduccionStockInfo();
+    }
+    
+    // Mostrar modal
+    document.getElementById('modal-overlay').style.display = 'flex';
+    document.getElementById('return-inventory-modal').style.display = 'block';
+    document.getElementById('movement-modal').style.display = 'none';
+    document.getElementById('add-product-modal').style.display = 'none';
+    document.getElementById('edit-product-modal').style.display = 'none';
+    document.getElementById('adjust-modal').style.display = 'none';
+    document.getElementById('adjust-produccion-modal').style.display = 'none';
+}
+
+async function loadProductosForReturn() {
+    try {
+        const { data, error } = await supabase
+            .from('produccion_almacen')
+            .select('*, producto:productos_carton(*)')
+            .gt('cantidad_produccion', 0);
+        
+        if (error) throw error;
+        
+        const selector = document.getElementById('return-producto');
+        selector.innerHTML = '<option value="">Selecciona un producto</option>';
+        
+        data.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.producto_id;
+            option.textContent = `${item.producto.numero_parte} - ${item.producto.descripcion}`;
+            option.dataset.produccionStock = item.cantidad_produccion;
+            selector.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('Error cargando productos en producción:', error);
+        showToast('Error cargando productos en producción', 'error');
+    }
+}
+
+function updateProduccionStockInfo() {
+    const selector = document.getElementById('return-producto');
+    const stockInfo = document.getElementById('produccion-stock-info');
+    const produccionStockSpan = document.getElementById('produccion-stock');
+    const cantidadInput = document.getElementById('return-cantidad');
+    const cantidadHelp = document.getElementById('return-cantidad-help');
+    
+    if (selector.value) {
+        const selectedOption = selector.options[selector.selectedIndex];
+        const stock = parseInt(selectedOption.dataset.produccionStock);
+        
+        produccionStockSpan.textContent = stock;
+        stockInfo.style.display = 'block';
+        
+        cantidadInput.max = stock;
+        cantidadHelp.textContent = `Máximo disponible: ${stock} unidades`;
+    } else {
+        stockInfo.style.display = 'none';
+        cantidadInput.removeAttribute('max');
+        cantidadHelp.textContent = '';
+    }
+}
+
+async function returnToInventory() {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    const form = document.getElementById('return-inventory-form');
+    const formData = new FormData(form);
+    
+    const productoId = parseInt(formData.get('producto_id'));
+    const cantidad = parseInt(formData.get('cantidad'));
+    const motivo = formData.get('motivo');
+    
+    if (!productoId || !cantidad || !motivo) {
+        showToast('Por favor completa todos los campos', 'error');
+        return;
+    }
+    
+    try {
+        // Obtener información de producción
+        const { data: produccionItem, error: produccionError } = await supabase
+            .from('produccion_almacen')
+            .select('*')
+            .eq('producto_id', productoId)
+            .single();
+        
+        if (produccionError) throw produccionError;
+        
+        // Validar cantidad disponible
+        if (cantidad > produccionItem.cantidad_produccion) {
+            showToast('No hay suficiente cantidad en producción', 'error');
+            return;
+        }
+        
+        // Obtener información del inventario
+        const { data: inventarioItem, error: inventarioError } = await supabase
+            .from('inventario')
+            .select('*')
+            .eq('producto_id', productoId)
+            .single();
+        
+        if (inventarioError) throw inventarioError;
+        
+        // Calcular nuevas cantidades
+        const nuevaCantidadProduccion = produccionItem.cantidad_produccion - cantidad;
+        const nuevaCantidadInventario = inventarioItem.cantidad_actual + cantidad;
+        
+        // Registrar movimiento de entrada
+        const { error: movimientoError } = await supabase
+            .from('movimientos_inventario')
+            .insert([{
+                producto_id: productoId,
+                tipo_movimiento: 'ENTRADA',
+                cantidad: cantidad,
+                usuario: currentUser.full_name,
+                motivo: `Devolución de producción: ${motivo}`,
+                fecha_movimiento: new Date().toISOString()
+            }]);
+        
+        if (movimientoError) throw movimientoError;
+        
+        // Actualizar inventario
+        const { error: updateInventarioError } = await supabase
+            .from('inventario')
+            .update({ cantidad_actual: nuevaCantidadInventario })
+            .eq('producto_id', productoId);
+        
+        if (updateInventarioError) throw updateInventarioError;
+        
+        // Actualizar o eliminar de producción
+        if (nuevaCantidadProduccion > 0) {
+            const { error: updateProduccionError } = await supabase
+                .from('produccion_almacen')
+                .update({ cantidad_produccion: nuevaCantidadProduccion })
+                .eq('producto_id', productoId);
+            
+            if (updateProduccionError) throw updateProduccionError;
+        } else {
+            const { error: deleteProduccionError } = await supabase
+                .from('produccion_almacen')
+                .delete()
+                .eq('producto_id', productoId);
+            
+            if (deleteProduccionError) throw deleteProduccionError;
+        }
+        
+        showToast('Producto devuelto al inventario exitosamente', 'success');
+        closeModal();
+        loadSectionData(currentSection);
+        
+    } catch (error) {
+        console.error('Error devolviendo producto:', error);
+        showToast('Error devolviendo producto al inventario', 'error');
+    }
+}
+
+async function showAdjustProduccionModal(productoId = null) {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    if (productoId) {
+        try {
+            const { data: produccionItem, error } = await supabase
+                .from('produccion_almacen')
+                .select('*, producto:productos_carton(*)')
+                .eq('producto_id', productoId)
+                .single();
+            
+            if (error) throw error;
+            
+            document.getElementById('adjust-produccion-product-id').value = productoId;
+            document.getElementById('adjust-produccion-product-name').textContent = 
+                `${produccionItem.producto.numero_parte} - ${produccionItem.producto.descripcion}`;
+            document.getElementById('adjust-produccion-current-stock').textContent = produccionItem.cantidad_produccion;
+            document.getElementById('adjust-produccion-new-stock').value = produccionItem.cantidad_produccion;
+            
+        } catch (error) {
+            console.error('Error cargando datos de producción:', error);
+            showToast('Error cargando datos de producción', 'error');
+            return;
+        }
+    }
+    
+    // Mostrar modal
+    document.getElementById('modal-overlay').style.display = 'flex';
+    document.getElementById('adjust-produccion-modal').style.display = 'block';
+    document.getElementById('movement-modal').style.display = 'none';
+    document.getElementById('add-product-modal').style.display = 'none';
+    document.getElementById('edit-product-modal').style.display = 'none';
+    document.getElementById('adjust-modal').style.display = 'none';
+    document.getElementById('return-inventory-modal').style.display = 'none';
+}
+
+async function adjustProduccionStock() {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    const form = document.getElementById('adjust-produccion-form');
+    const formData = new FormData(form);
+    
+    const productoId = parseInt(document.getElementById('adjust-produccion-product-id').value);
+    const nuevoStock = parseInt(formData.get('new_stock'));
+    const motivo = formData.get('motivo');
+    
+    if (!productoId || nuevoStock < 0 || !motivo) {
+        showToast('Por favor completa todos los campos correctamente', 'error');
+        return;
+    }
+    
+    try {
+        if (nuevoStock === 0) {
+            // Eliminar de producción
+            const { error: deleteError } = await supabase
+                .from('produccion_almacen')
+                .delete()
+                .eq('producto_id', productoId);
+            
+            if (deleteError) throw deleteError;
+        } else {
+            // Actualizar cantidad
+            const { error: updateError } = await supabase
+                .from('produccion_almacen')
+                .update({ 
+                    cantidad_produccion: nuevoStock,
+                    motivo: motivo
+                })
+                .eq('producto_id', productoId);
+            
+            if (updateError) throw updateError;
+        }
+        
+        showToast('Stock en producción ajustado exitosamente', 'success');
+        closeModal();
+        loadSectionData(currentSection);
+        
+    } catch (error) {
+        console.error('Error ajustando stock en producción:', error);
+        showToast('Error ajustando stock en producción', 'error');
+    }
+}
+
+// ===== FUNCIONES AUXILIARES =====
+
+function getStockStatus(item) {
+    if (item.cantidad_actual === 0) return 'status-out';
+    if (item.cantidad_actual <= item.cantidad_minima) return 'status-low';
+    return 'status-normal';
+}
+
+function getStockStatusText(item) {
+    if (item.cantidad_actual === 0) return 'Sin Stock';
+    if (item.cantidad_actual <= item.cantidad_minima) return 'Stock Bajo';
+    return 'Normal';
+}
+
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', {
@@ -1276,7 +1263,19 @@ function getToastIcon(type) {
     return icons[type] || 'info-circle';
 }
 
-// Modal Functions (solo para admins)
+// Modal Functions
+function closeModal() {
+    const modalOverlay = document.getElementById('modal-overlay');
+    if (modalOverlay) {
+        modalOverlay.style.display = 'none';
+    }
+}
+
+// Funciones adicionales que pueden estar en el código original
+function editProduct(productId) {
+    showEditProductModal(productId);
+}
+
 function showAddProductModal() {
     if (currentUser && currentUser.role !== 'admin') {
         showToast('No tienes permisos para realizar esta acción', 'error');
@@ -1288,6 +1287,8 @@ function showAddProductModal() {
     document.getElementById('edit-product-modal').style.display = 'none';
     document.getElementById('movement-modal').style.display = 'none';
     document.getElementById('adjust-modal').style.display = 'none';
+    document.getElementById('return-inventory-modal').style.display = 'none';
+    document.getElementById('adjust-produccion-modal').style.display = 'none';
 }
 
 async function showEditProductModal(productId) {
@@ -1316,64 +1317,13 @@ async function showEditProductModal(productId) {
         document.getElementById('add-product-modal').style.display = 'none';
         document.getElementById('movement-modal').style.display = 'none';
         document.getElementById('adjust-modal').style.display = 'none';
+        document.getElementById('return-inventory-modal').style.display = 'none';
+        document.getElementById('adjust-produccion-modal').style.display = 'none';
         
     } catch (error) {
         console.error('Error al cargar los datos del producto:', error);
         showToast('Error al cargar los datos del producto', 'error');
     }
-}
-
-function closeModal() {
-    const modalOverlay = document.getElementById('modal-overlay');
-    if (modalOverlay) {
-        modalOverlay.style.display = 'none';
-    }
-}
-
-// Agregar estilos de animación para toasts
-if (!document.getElementById('toast-animations')) {
-    const style = document.createElement('style');
-    style.id = 'toast-animations';
-    style.textContent = `
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(100%);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        @keyframes slideOut {
-            from {
-                opacity: 1;
-                transform: translateX(0);
-            }
-            to {
-                opacity: 0;
-                transform: translateX(100%);
-            }
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-// Funciones adicionales que pueden estar en el código original
-function editProduct(productId) {
-    showEditProductModal(productId);
-}
-
-function showMovementModal(type) {
-    if (currentUser && currentUser.role !== 'admin') {
-        showToast('No tienes permisos para realizar esta acción', 'error');
-        return;
-    }
-    
-    currentMovementType = type;
-    // Implementar lógica del modal de movimientos
-    showToast(`Modal de ${type} - Función por implementar`, 'info');
 }
 
 function showAdjustModal(productId) {
@@ -1405,8 +1355,32 @@ function exportReport() {
     showToast('Exportando reporte - Función por implementar', 'info');
 }
 
-// Hacer funciones disponibles globalmente
-window.editInventoryItem = editInventoryItem;
-window.updateInventoryItem = updateInventoryItem;
-window.deleteInventoryItem = deleteInventoryItem; // Asegúrate de tener esta función definida
-window.closeCustomModal = closeCustomModal;
+// Agregar estilos de animación para toasts
+if (!document.getElementById('toast-animations')) {
+    const style = document.createElement('style');
+    style.id = 'toast-animations';
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
