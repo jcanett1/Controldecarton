@@ -221,7 +221,8 @@ function hideAdminFeatures() {
         'button[onclick*="toggleProductStatus"]',
         'button[onclick*="showAdjustModal"]',
         'button[onclick*="showReturnToInventoryModal"]',
-        'button[onclick*="showAdjustProduccionModal"]'
+        'button[onclick*="showAdjustProduccionModal"]',
+        'button[onclick*="showAddInventoryModal"]'
     ];
     
     adminButtons.forEach(selector => {
@@ -446,7 +447,8 @@ async function loadInventario(filter = 'all') {
     try {
         let query = supabase
             .from('inventario')
-            .select('*, producto:productos_carton(*)');
+            .select('*, producto:productos_carton(*)')
+            .order('created_at', { ascending: false });
         
         if (filter === 'stock-bajo') {
             query = query.lte('cantidad_actual', supabase.rpc('get_cantidad_minima'));
@@ -605,11 +607,12 @@ function updateProductosTable() {
     `).join('');
 }
 
+// ===== FUNCIÓN CORREGIDA: updateInventarioTable con fecha =====
 function updateInventarioTable() {
     const tbody = document.getElementById('inventario-table-body');
     
     if (inventario.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="loading">No hay datos de inventario</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">No hay datos de inventario</td></tr>';
         return;
     }
 
@@ -627,6 +630,7 @@ function updateInventarioTable() {
                     ${getStockStatusText(item)}
                 </span>
             </td>
+            <td>${formatDate(item.created_at || item.fecha_creacion)}</td>
             <td>
                 ${currentUser && currentUser.role === 'admin' ? `
                     <button class="action-btn adjust" onclick="showAdjustModal(${item.producto_id})">
@@ -716,6 +720,170 @@ function showAddProductModal() {
     document.getElementById('adjust-modal').style.display = 'none';
     document.getElementById('return-inventory-modal').style.display = 'none';
     document.getElementById('adjust-produccion-modal').style.display = 'none';
+    document.getElementById('add-inventory-modal').style.display = 'none';
+}
+
+// ===== NUEVA FUNCIÓN: showAddInventoryModal =====
+function showAddInventoryModal() {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    console.log('🔄 Abriendo modal de agregar inventario...');
+    
+    // Limpiar formulario
+    const form = document.getElementById('add-inventory-form');
+    if (form) {
+        form.reset();
+    }
+    
+    // Cargar productos disponibles
+    loadProductosForInventory();
+    
+    // Mostrar modal
+    document.getElementById('modal-overlay').style.display = 'flex';
+    document.getElementById('add-inventory-modal').style.display = 'block';
+    document.getElementById('add-product-modal').style.display = 'none';
+    document.getElementById('edit-product-modal').style.display = 'none';
+    document.getElementById('movement-modal').style.display = 'none';
+    document.getElementById('adjust-modal').style.display = 'none';
+    document.getElementById('return-inventory-modal').style.display = 'none';
+    document.getElementById('adjust-produccion-modal').style.display = 'none';
+    
+    console.log('✅ Modal de agregar inventario abierto');
+}
+
+async function loadProductosForInventory() {
+    try {
+        // Obtener productos que NO tienen inventario
+        const { data: productosConInventario, error: inventarioError } = await supabase
+            .from('inventario')
+            .select('producto_id');
+        
+        if (inventarioError) throw inventarioError;
+        
+        const productosConInventarioIds = productosConInventario.map(item => item.producto_id);
+        
+        let query = supabase
+            .from('productos_carton')
+            .select('*')
+            .eq('activo', true);
+        
+        if (productosConInventarioIds.length > 0) {
+            query = query.not('id', 'in', `(${productosConInventarioIds.join(',')})`);
+        }
+        
+        const { data: productos, error: productosError } = await query;
+        
+        if (productosError) throw productosError;
+        
+        const selector = document.getElementById('inventory-producto');
+        if (selector) {
+            selector.innerHTML = '<option value="">Selecciona un producto</option>';
+            
+            productos.forEach(producto => {
+                const option = document.createElement('option');
+                option.value = producto.id;
+                option.textContent = `${producto.numero_parte} - ${producto.descripcion}`;
+                selector.appendChild(option);
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error cargando productos para inventario:', error);
+        showToast('Error cargando productos disponibles', 'error');
+    }
+}
+
+// ===== NUEVA FUNCIÓN: addInventory =====
+async function addInventory() {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    console.log('🔄 Agregando inventario...');
+    
+    const form = document.getElementById('add-inventory-form');
+    const formData = new FormData(form);
+    
+    const productoId = parseInt(formData.get('producto_id'));
+    const cantidadInicial = parseInt(formData.get('cantidad_inicial')) || 0;
+    const cantidadMinima = parseInt(formData.get('cantidad_minima')) || 10;
+    const cantidadMaxima = parseInt(formData.get('cantidad_maxima')) || 1000;
+    
+    if (!productoId) {
+        showToast('Por favor selecciona un producto', 'error');
+        return;
+    }
+    
+    if (cantidadMaxima <= cantidadMinima) {
+        showToast('La cantidad máxima debe ser mayor que la mínima', 'error');
+        return;
+    }
+    
+    if (cantidadInicial < 0) {
+        showToast('La cantidad inicial no puede ser negativa', 'error');
+        return;
+    }
+    
+    try {
+        // Verificar si ya existe inventario para este producto
+        const { data: existingInventory, error: checkError } = await supabase
+            .from('inventario')
+            .select('producto_id')
+            .eq('producto_id', productoId)
+            .single();
+        
+        if (existingInventory) {
+            showToast('Ya existe inventario para este producto', 'error');
+            return;
+        }
+        
+        // Crear registro en inventario
+        const { error: inventarioError } = await supabase
+            .from('inventario')
+            .insert([{
+                producto_id: productoId,
+                cantidad_actual: cantidadInicial,
+                cantidad_minima: cantidadMinima,
+                cantidad_maxima: cantidadMaxima,
+                created_at: new Date().toISOString()
+            }]);
+        
+        if (inventarioError) throw inventarioError;
+        
+        // Si hay cantidad inicial, registrar movimiento de entrada
+        if (cantidadInicial > 0) {
+            const { error: movimientoError } = await supabase
+                .from('movimientos_inventario')
+                .insert([{
+                    producto_id: productoId,
+                    tipo_movimiento: 'ENTRADA',
+                    cantidad: cantidadInicial,
+                    usuario: currentUser.full_name,
+                    motivo: 'Stock inicial del inventario',
+                    fecha_movimiento: new Date().toISOString()
+                }]);
+            
+            if (movimientoError) throw movimientoError;
+        }
+        
+        showToast('Inventario agregado exitosamente', 'success');
+        closeModal();
+        loadSectionData(currentSection);
+        
+        console.log('✅ Inventario agregado exitosamente');
+        
+    } catch (error) {
+        console.error('Error agregando inventario:', error);
+        if (error.code === '23505') {
+            showToast('Ya existe inventario para este producto', 'error');
+        } else {
+            showToast('Error agregando inventario', 'error');
+        }
+    }
 }
 
 async function addProduct() {
@@ -777,7 +945,8 @@ async function addProduct() {
                 producto_id: newProduct.id,
                 cantidad_actual: cantidadInicial,
                 cantidad_minima: cantidadMinima,
-                cantidad_maxima: cantidadMaxima
+                cantidad_maxima: cantidadMaxima,
+                created_at: new Date().toISOString()
             }]);
         
         if (inventarioError) throw inventarioError;
@@ -840,6 +1009,7 @@ async function showEditProductModal(productId) {
         document.getElementById('adjust-modal').style.display = 'none';
         document.getElementById('return-inventory-modal').style.display = 'none';
         document.getElementById('adjust-produccion-modal').style.display = 'none';
+        document.getElementById('add-inventory-modal').style.display = 'none';
         
     } catch (error) {
         console.error('Error al cargar los datos del producto:', error);
@@ -958,6 +1128,7 @@ async function showMovementModal(type) {
     document.getElementById('adjust-modal').style.display = 'none';
     document.getElementById('return-inventory-modal').style.display = 'none';
     document.getElementById('adjust-produccion-modal').style.display = 'none';
+    document.getElementById('add-inventory-modal').style.display = 'none';
 }
 
 async function loadProductosForMovement() {
@@ -1178,6 +1349,7 @@ async function showReturnToInventoryModal(productoId = null) {
     document.getElementById('edit-product-modal').style.display = 'none';
     document.getElementById('adjust-modal').style.display = 'none';
     document.getElementById('adjust-produccion-modal').style.display = 'none';
+    document.getElementById('add-inventory-modal').style.display = 'none';
 }
 
 async function loadProductosForReturn() {
@@ -1362,6 +1534,7 @@ async function showAdjustProduccionModal(productoId = null) {
     document.getElementById('edit-product-modal').style.display = 'none';
     document.getElementById('adjust-modal').style.display = 'none';
     document.getElementById('return-inventory-modal').style.display = 'none';
+    document.getElementById('add-inventory-modal').style.display = 'none';
 }
 
 async function adjustProduccionStock() {
