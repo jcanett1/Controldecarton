@@ -546,6 +546,44 @@
             </div>
         </div>
 
+<div id="add-inventory-modal" class="modal" style="display: none;">
+    <div class="modal-header">
+        <h3>Agregar Inventario</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+        <form id="add-inventory-form">
+            <div class="form-group">
+                <label for="inventory-producto">Producto</label>
+                <select id="inventory-producto" name="producto_id" required>
+                    <option value="">Selecciona un producto...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="initial-quantity">Cantidad Inicial</label>
+                <input type="number" id="initial-quantity" name="cantidad_inicial" value="0" min="0" required>
+                <small class="form-help">Cantidad de productos disponibles inicialmente</small>
+            </div>
+            <div class="form-group">
+                <label for="min-quantity">Cantidad Mínima</label>
+                <input type="number" id="min-quantity" name="cantidad_minima" value="10" min="0" required>
+                <small class="form-help">Nivel mínimo para alertas de stock bajo</small>
+            </div>
+            <div class="form-group">
+                <label for="max-quantity">Cantidad Máxima</label>
+                <input type="number" id="max-quantity" name="cantidad_maxima" value="1000" min="1" required>
+                <small class="form-help">Capacidad máxima de almacenamiento</small>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="addInventory()">Crear Inventario</button>
+    </div>
+</div>
+
+
+        
         <!-- Adjust Producción Modal -->
         <div id="adjust-produccion-modal" class="modal">
             <div class="modal-header">
