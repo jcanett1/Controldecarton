@@ -26,10 +26,21 @@ let produccion = [];
 let currentUser = null;
 
 // Initialize app
+// En tu DOMContentLoaded o setupEventListeners
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthentication();
+    
+    // Configurar botón de agregar inventario
+    const addInventoryBtn = document.getElementById('add-inventory-btn');
+    if (addInventoryBtn) {
+        addInventoryBtn.addEventListener('click', showAddInventoryModal);
+        console.log('✅ Event listener agregado a add-inventory-btn');
+    } else {
+        console.error('❌ Botón add-inventory-btn no encontrado');
+    }
+    
+    // ... otros event listeners
 });
-
 // ===== FUNCIONES DE AUTENTICACIÓN =====
 
 async function checkAuthentication() {
