@@ -445,45 +445,26 @@ async function loadProductos() {
 
 async function loadInventario(filter = 'all') {
     try {
-        console.log('Loading inventario with filter:', filter);
-        
         let query = supabase
             .from('inventario')
             .select('*, producto:productos_carton(*)')
-            .order('created_at', { ascending: false });
+            .order('ultima_actualizacion', { ascending: false }); // Changed to ultima_actualizacion
         
         if (filter === 'stock-bajo') {
-            // Test if RPC function exists first
-            const { data: minData, error: rpcError } = await supabase
-                .rpc('get_cantidad_minima');
-            
-            if (rpcError) {
-                console.warn('RPC function not available, using fallback');
-                query = query.lte('cantidad_actual', 10);
-            } else {
-                query = query.lte('cantidad_actual', minData);
-            }
+            query = query.lte('cantidad_actual', supabase.rpc('get_cantidad_minima'));
         } else if (filter === 'sin-stock') {
             query = query.eq('cantidad_actual', 0);
         }
         
-        const { data, error, status } = await query;
+        const { data, error } = await query;
         
-        console.log('Query status:', status);
-        
-        if (error) {
-            console.error('Supabase error details:', error);
-            throw error;
-        }
+        if (error) throw error;
         
         inventario = data;
         updateInventarioTable();
-        console.log('Inventario loaded successfully:', data.length, 'items');
-        
     } catch (error) {
         console.error('Error loading inventario:', error);
-        console.error('Error details:', error.message, error.details);
-        showToast('Error cargando inventario: ' + error.message, 'error');
+        showToast('Error cargando inventario', 'error');
     }
 }
 
