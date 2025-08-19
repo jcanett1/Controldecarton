@@ -613,7 +613,7 @@ function updateInventarioTable() {
     const tbody = document.getElementById('inventario-table-body');
     
     if (inventario.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="loading">No hay datos de inventario</td></tr>'; // Cambiado a colspan="8"
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">No hay datos de inventario</td></tr>';
         return;
     }
 
@@ -631,8 +631,7 @@ function updateInventarioTable() {
                     ${getStockStatusText(item)}
                 </span>
             </td>
-            <td>${formatDate(item.created_at || item.fecha_creacion)}</td>
-            <td>${formatDate(item.ultima_actualizacion)}</td> <!-- Nueva columna añadida -->
+            <td>${formatDate(item.ultima_actualizacion)}</td> <!-- Última actualización -->
             <td>
                 ${currentUser && currentUser.role === 'admin' ? `
                     <button class="action-btn adjust" onclick="showAdjustModal(${item.producto_id})">
