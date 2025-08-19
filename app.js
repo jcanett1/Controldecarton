@@ -528,6 +528,39 @@ async function loadInventario(filter = 'all') {
     }
 }
 
+async function loadProductosForMovement() {
+    try {
+        const { data, error } = await supabase
+            .from('inventario')
+            .select('*, producto:productos_carton(*)')
+            .gt('cantidad_actual', 0); // Solo productos con stock
+
+        if (error) throw error;
+
+        const selector = document.getElementById('movement-producto');
+        if (selector) {
+            selector.innerHTML = '<option value="">Selecciona un producto</option>';
+            
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.producto_id;
+                option.textContent = `${item.producto.numero_parte} - ${item.producto.descripcion}`;
+                option.dataset.stock = item.cantidad_actual;
+                option.dataset.minStock = item.cantidad_minima;
+                selector.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error cargando productos:', error);
+        showToast('Error cargando productos', 'error');
+    }
+}
+
+
+
+
+
+
 async function showMovementModal(type) {
     if (currentUser && currentUser.role !== 'admin') {
         showToast('No tienes permisos para realizar esta acción', 'error');
