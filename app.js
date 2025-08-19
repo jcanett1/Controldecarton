@@ -528,6 +528,87 @@ async function loadInventario(filter = 'all') {
     }
 }
 
+async function showMovementModal(type) {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+
+    currentMovementType = type;
+    
+    // Configurar el modal según el tipo
+    const modalTitle = document.getElementById('movement-modal-title');
+    const salidaOptions = document.getElementById('salida-options');
+    
+    if (modalTitle && salidaOptions) {
+        if (type === 'ENTRADA') {
+            modalTitle.textContent = 'Registrar Entrada';
+            salidaOptions.style.display = 'none';
+        } else {
+            modalTitle.textContent = 'Registrar Salida';
+            salidaOptions.style.display = 'block';
+        }
+    }
+
+    // Limpiar formulario
+    const movementForm = document.getElementById('movement-form');
+    if (movementForm) {
+        movementForm.reset();
+    }
+    
+    const stockInfo = document.getElementById('stock-info');
+    if (stockInfo) {
+        stockInfo.style.display = 'none';
+    }
+
+    // Cargar productos en el selector
+    await loadProductosForMovement();
+
+    // Mostrar modal de forma segura
+    const modalOverlay = document.getElementById('modal-overlay');
+    const movementModal = document.getElementById('movement-modal');
+    
+    if (modalOverlay) {
+        modalOverlay.style.display = 'flex';
+    }
+    
+    if (movementModal) {
+        movementModal.style.display = 'block';
+    }
+
+    // Ocultar otros modales de forma segura
+    const otherModals = [
+        'add-product-modal',
+        'edit-product-modal',
+        'adjust-modal',
+        'return-inventory-modal',
+        'adjust-produccion-modal',
+        'add-inventory-modal'
+    ];
+    
+    otherModals.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 async function loadMovimientos() {
     try {
         const { data, error } = await supabase
