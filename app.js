@@ -1758,3 +1758,24 @@ if (!document.getElementById('toast-animations')) {
     `;
     document.head.appendChild(style);
 }
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar botón de agregar inventario
+    const addButton = document.getElementById('add-inventory-btn');
+    if (addButton) {
+        addButton.addEventListener('click', function() {
+            showAddInventoryModal();
+        });
+    }
+    
+    // Otros event listeners que necesites
+    const closeButtons = document.querySelectorAll('.close, .btn-cancel');
+    closeButtons.forEach(button => {
+        button.addEventListener('click', closeAllModals);
+    });
+    
+    // Inicializar la aplicación
+    checkAuthState();
+    loadSection('inventario');
+});
