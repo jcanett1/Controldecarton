@@ -779,14 +779,6 @@ function showAddInventoryModal() {
     console.log('✅ Modal de agregar inventario abierto');
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    const addButton = document.getElementById('add-inventory-btn');
-    if (addButton) {
-        addButton.addEventListener('click', function() {
-            showAddInventoryModal();
-        });
-    }
-});
 
 
 
