@@ -26,11 +26,8 @@ let produccion = [];
 let currentUser = null;
 
 // Initialize app
-// Agrega esto en tu DOMContentLoaded
-document.body.addEventListener('click', function(e) {
-    if (e.target.id === 'add-inventory-btn' || e.target.closest('#add-inventory-btn')) {
-        showAddInventoryModal();
-    }
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuthentication();
 });
 // ===== FUNCIONES DE AUTENTICACIÓN =====
 
