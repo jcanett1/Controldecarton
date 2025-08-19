@@ -642,6 +642,53 @@ function updateMovimientosRecientes() {
     `).join('');
 }
 
+async function updateProduct() {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+
+    const form = document.getElementById('edit-product-form');
+    const formData = new FormData(form);
+
+    const productId = document.getElementById('edit-product-id').value;
+    const numeroParte = formData.get('numero_parte');
+    const descripcion = formData.get('descripcion');
+    const activo = formData.get('activo') === 'true';
+
+    if (!numeroParte || !descripcion) {
+        showToast('Por favor completa todos los campos requeridos', 'error');
+        return;
+    }
+
+    try {
+        const { error } = await supabase
+            .from('productos_carton')
+            .update({
+                numero_parte: numeroParte,
+                descripcion: descripcion,
+                activo: activo
+            })
+            .eq('id', productId);
+
+        if (error) throw error;
+
+        showToast('Producto actualizado exitosamente', 'success');
+        closeModal();
+        loadSectionData(currentSection);
+
+    } catch (error) {
+        console.error('Error actualizando producto:', error);
+        if (error.code === '23505') {
+            showToast('Ya existe un producto con ese número de parte', 'error');
+        } else {
+            showToast('Error actualizando producto', 'error');
+        }
+    }
+}
+
+
+
 function updateProductosTable() {
     const tbody = document.getElementById('productos-table-body');
     if (!tbody) return;
