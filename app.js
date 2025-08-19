@@ -1082,6 +1082,50 @@ function closeModal() {
     closeAllModals();
 }
 
+
+async function showEditProductModal(productId) {
+    if (currentUser && currentUser.role !== 'admin') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+
+    try {
+        const { data: producto, error } = await supabase
+            .from('productos_carton')
+            .select('*')
+            .eq('id', productId)
+            .single();
+
+        if (error) throw error;
+        if (!producto) throw new Error('Producto no encontrado');
+
+        document.getElementById('edit-product-id').value = producto.id;
+        document.getElementById('edit-numero-parte').value = producto.numero_parte;
+        document.getElementById('edit-descripcion').value = producto.descripcion;
+        document.getElementById('edit-activo').value = producto.activo;
+
+        document.getElementById('modal-overlay').style.display = 'flex';
+        document.getElementById('edit-product-modal').style.display = 'block';
+        
+        // Ocultar otros modales
+        document.getElementById('add-product-modal').style.display = 'none';
+        document.getElementById('movement-modal').style.display = 'none';
+        document.getElementById('adjust-modal').style.display = 'none';
+        document.getElementById('return-inventory-modal').style.display = 'none';
+        document.getElementById('adjust-produccion-modal').style.display = 'none';
+        document.getElementById('add-inventory-modal').style.display = 'none';
+
+    } catch (error) {
+        console.error('Error al cargar los datos del producto:', error);
+        showToast('Error al cargar los datos del producto', 'error');
+    }
+}
+
+
+
+
+
+
 // Funciones adicionales que pueden estar en el código original
 function editProduct(productId) {
     showEditProductModal(productId);
