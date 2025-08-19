@@ -27,7 +27,12 @@ let currentUser = null;
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
-    checkAuthentication();
+    const addButton = document.getElementById('add-inventory-btn');
+    if (addButton) {
+        addButton.addEventListener('click', function() {
+            showAddInventoryModal();
+        });
+    }
 });
 
 // ===== FUNCIONES DE AUTENTICACIÓN =====
@@ -747,6 +752,12 @@ function showAddInventoryModal() {
     
     console.log('🔄 Abriendo modal de agregar inventario...');
     
+    // Ocultar TODOS los modales primero
+    const allModals = document.querySelectorAll('.modal-content, .modal');
+    allModals.forEach(modal => {
+        modal.style.display = 'none';
+    });
+    
     // Limpiar formulario
     const form = document.getElementById('add-inventory-form');
     if (form) {
@@ -756,15 +767,14 @@ function showAddInventoryModal() {
     // Cargar productos disponibles
     loadProductosForInventory();
     
-    // Mostrar modal
-    document.getElementById('modal-overlay').style.display = 'flex';
-    document.getElementById('add-inventory-modal').style.display = 'block';
-    document.getElementById('add-product-modal').style.display = 'none';
-    document.getElementById('edit-product-modal').style.display = 'none';
-    document.getElementById('movement-modal').style.display = 'none';
-    document.getElementById('adjust-modal').style.display = 'none';
-    document.getElementById('return-inventory-modal').style.display = 'none';
-    document.getElementById('adjust-produccion-modal').style.display = 'none';
+    // Mostrar solo el modal específico
+    const modalOverlay = document.getElementById('modal-overlay');
+    const addInventoryModal = document.getElementById('add-inventory-modal');
+    
+    if (modalOverlay && addInventoryModal) {
+        modalOverlay.style.display = 'flex';
+        addInventoryModal.style.display = 'block';
+    }
     
     console.log('✅ Modal de agregar inventario abierto');
 }
@@ -1760,22 +1770,3 @@ if (!document.getElementById('toast-animations')) {
 }
 
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Configurar botón de agregar inventario
-    const addButton = document.getElementById('add-inventory-btn');
-    if (addButton) {
-        addButton.addEventListener('click', function() {
-            showAddInventoryModal();
-        });
-    }
-    
-    // Otros event listeners que necesites
-    const closeButtons = document.querySelectorAll('.close, .btn-cancel');
-    closeButtons.forEach(button => {
-        button.addEventListener('click', closeAllModals);
-    });
-    
-    // Inicializar la aplicación
-    checkAuthState();
-    loadSection('inventario');
-});
