@@ -613,15 +613,15 @@ function updateInventarioTable() {
     const tbody = document.getElementById('inventario-table-body');
     
     if (inventario.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading">No hay datos de inventario</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="loading">No hay datos de inventario</td></tr>'; // Cambiado a colspan="8"
         return;
     }
 
     tbody.innerHTML = inventario.map(item => `
         <tr>
             <td>
-                <strong>${item.producto.numero_parte}</strong><br>
-                <small>${item.producto.descripcion}</small>
+                <strong>${item.producto?.numero_parte || 'N/A'}</strong><br>
+                <small>${item.producto?.descripcion || 'Sin descripción'}</small>
             </td>
             <td><strong>${item.cantidad_actual}</strong></td>
             <td>${item.cantidad_minima}</td>
@@ -632,6 +632,7 @@ function updateInventarioTable() {
                 </span>
             </td>
             <td>${formatDate(item.created_at || item.fecha_creacion)}</td>
+            <td>${formatDate(item.ultima_actualizacion)}</td> <!-- Nueva columna añadida -->
             <td>
                 ${currentUser && currentUser.role === 'admin' ? `
                     <button class="action-btn adjust" onclick="showAdjustModal(${item.producto_id})">
@@ -641,6 +642,20 @@ function updateInventarioTable() {
             </td>
         </tr>
     `).join('');
+}
+
+// Función formatDate (si no la tienes)
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 function updateMovimientosTable() {
