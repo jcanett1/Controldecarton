@@ -473,26 +473,58 @@ async function loadProductos() {
 
 async function loadInventario(filter = 'all') {
     try {
+        console.log('Cargando inventario con filtro:', filter);
+        
         let query = supabase
             .from('inventario')
-            .select('*, producto:productos_carton(*)')
-            .order('created_at', { ascending: false });
+            .select(`
+                id,
+                producto_id,
+                cantidad_actual,
+                cantidad_minima,
+                cantidad_maxima,
+                ultima_actualizacion,
+                producto:productos_carton(*)
+            `)
+            .order('ultima_actualizacion', { ascending: false });
         
+        // Manejar filtros de stock
         if (filter === 'stock-bajo') {
-            query = query.lte('cantidad_actual', supabase.rpc('get_cantidad_minima'));
+            try {
+                const { data: minData, error: rpcError } = await supabase
+                    .rpc('get_cantidad_minima');
+                
+                if (!rpcError && minData !== null) {
+                    query = query.lte('cantidad_actual', minData);
+                } else {
+                    // Fallback: filtrar donde cantidad_actual es menor que cantidad_minima
+                    query = query.lt('cantidad_actual', supabase.ref('cantidad_minima'));
+                }
+            } catch (rpcError) {
+                console.warn('Función RPC no disponible, usando filtro alternativo');
+                query = query.lt('cantidad_actual', supabase.ref('cantidad_minima'));
+            }
         } else if (filter === 'sin-stock') {
             query = query.eq('cantidad_actual', 0);
         }
         
-        const { data, error } = await query;
+        const { data, error, status } = await query;
         
-        if (error) throw error;
+        console.log('Estado de la consulta:', status);
+        
+        if (error) {
+            console.error('Detalles del error de Supabase:', error);
+            throw error;
+        }
         
         inventario = data;
         updateInventarioTable();
+        console.log('Inventario cargado exitosamente:', data?.length || 0, 'items');
+        
     } catch (error) {
-        console.error('Error loading inventario:', error);
-        showToast('Error cargando inventario', 'error');
+        console.error('Error cargando inventario:', error);
+        console.error('Detalles del error:', error.message, error.details);
+        showToast('Error cargando inventario: ' + error.message, 'error');
     }
 }
 
