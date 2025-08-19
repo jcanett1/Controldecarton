@@ -1061,7 +1061,7 @@ async function loadProductosForInventory() {
         
         const selector = document.getElementById('inventory-producto');
         if (selector) {
-            selector.innerHTML = '<option value="">Selecciona un producto</option>';
+            selector.innerHTML = '<option value="">Selecciona un producto...</option>';
             
             productos.forEach(producto => {
                 const option = document.createElement('option');
