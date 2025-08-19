@@ -1151,16 +1151,34 @@ async function showEditProductModal(productId) {
         document.getElementById('edit-descripcion').value = producto.descripcion;
         document.getElementById('edit-activo').value = producto.activo;
 
-        document.getElementById('modal-overlay').style.display = 'flex';
-        document.getElementById('edit-product-modal').style.display = 'block';
+        // Mostrar modal overlay
+        const modalOverlay = document.getElementById('modal-overlay');
+        if (modalOverlay) {
+            modalOverlay.style.display = 'flex';
+        }
+
+        // Mostrar modal de edición
+        const editModal = document.getElementById('edit-product-modal');
+        if (editModal) {
+            editModal.style.display = 'block';
+        }
+
+        // Ocultar otros modales de forma segura
+        const modalsToHide = [
+            'add-product-modal',
+            'movement-modal', // Corregí el typo de 'movement-modal'
+            'adjust-modal',
+            'return-inventory-modal',
+            'adjust-produccion-modal',
+            'add-inventory-modal'
+        ];
         
-        // Ocultar otros modales
-        document.getElementById('add-product-modal').style.display = 'none';
-        document.getElementById('movement-modal').style.display = 'none';
-        document.getElementById('adjust-modal').style.display = 'none';
-        document.getElementById('return-inventory-modal').style.display = 'none';
-        document.getElementById('adjust-produccion-modal').style.display = 'none';
-        document.getElementById('add-inventory-modal').style.display = 'none';
+        modalsToHide.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        });
 
     } catch (error) {
         console.error('Error al cargar los datos del producto:', error);
