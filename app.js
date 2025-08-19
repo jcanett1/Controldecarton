@@ -979,6 +979,9 @@ function showAddInventoryModal() {
     const form = document.getElementById('add-inventory-form');
     if (form) {
         form.reset();
+        console.log('✅ Formulario de inventario limpiado');
+    } else {
+        console.error('❌ No se encontró el formulario add-inventory-form');
     }
     
     // Cargar productos disponibles
@@ -991,9 +994,14 @@ function showAddInventoryModal() {
     if (modalOverlay && addInventoryModal) {
         modalOverlay.style.display = 'flex';
         addInventoryModal.style.display = 'block';
+        console.log('✅ Modal de agregar inventario abierto');
+    } else {
+        console.error('❌ No se encontraron los elementos del modal:', {
+            modalOverlay: !!modalOverlay,
+            addInventoryModal: !!addInventoryModal
+        });
+        showToast('Error: Modal no encontrado en el DOM', 'error');
     }
-    
-    console.log('✅ Modal de agregar inventario abierto');
 }
 
 // ===== FUNCIÓN NUEVA: closeAllModals =====
@@ -1023,8 +1031,11 @@ function closeAllModals() {
     });
 }
 
+// ===== FUNCIÓN CORREGIDA: loadProductosForInventory =====
 async function loadProductosForInventory() {
     try {
+        console.log('🔄 Cargando productos disponibles para inventario...');
+        
         // Obtener productos que NO tienen inventario
         const { data: productosConInventario, error: inventarioError } = await supabase
             .from('inventario')
@@ -1057,6 +1068,11 @@ async function loadProductosForInventory() {
                 option.textContent = `${producto.numero_parte} - ${producto.descripcion}`;
                 selector.appendChild(option);
             });
+            
+            console.log(`✅ ${productos.length} productos cargados en el selector`);
+        } else {
+            console.error('❌ No se encontró el elemento inventory-producto');
+            showToast('Error: Selector de productos no encontrado', 'error');
         }
         
     } catch (error) {
@@ -1065,7 +1081,8 @@ async function loadProductosForInventory() {
     }
 }
 
-// ===== NUEVA FUNCIÓN: addInventory =====
+
+// ===== FUNCIÓN CORREGIDA: addInventory =====
 async function addInventory() {
     if (currentUser && currentUser.role !== 'admin') {
         showToast('No tienes permisos para realizar esta acción', 'error');
@@ -1075,14 +1092,29 @@ async function addInventory() {
     console.log('🔄 Agregando inventario...');
     
     const form = document.getElementById('add-inventory-form');
+    if (!form) {
+        console.error('❌ No se encontró el formulario add-inventory-form');
+        showToast('Error: Formulario no encontrado', 'error');
+        return;
+    }
+    
     const formData = new FormData(form);
     
-    const productoId = parseInt(formData.get('producto_id'));
-    const cantidadInicial = parseInt(formData.get('cantidad_inicial')) || 0;
-    const cantidadMinima = parseInt(formData.get('cantidad_minima')) || 10;
-    const cantidadMaxima = parseInt(formData.get('cantidad_maxima')) || 1000;
+    // Revisar nombres de los campos del formulario
+    const productoId = parseInt(formData.get('producto_id')) || parseInt(formData.get('inventory_producto'));
+    const cantidadInicial = parseInt(formData.get('cantidad_inicial')) || parseInt(formData.get('initial_quantity')) || 0;
+    const cantidadMinima = parseInt(formData.get('cantidad_minima')) || parseInt(formData.get('min_quantity')) || 10;
+    const cantidadMaxima = parseInt(formData.get('cantidad_maxima')) || parseInt(formData.get('max_quantity')) || 1000;
     
-    if (!productoId) {
+    console.log('📝 Datos del formulario:', {
+        productoId,
+        cantidadInicial,
+        cantidadMinima,
+        cantidadMaxima
+    });
+    
+    // Validaciones
+    if (!productoId || isNaN(productoId)) {
         showToast('Por favor selecciona un producto', 'error');
         return;
     }
@@ -1103,7 +1135,11 @@ async function addInventory() {
             .from('inventario')
             .select('producto_id')
             .eq('producto_id', productoId)
-            .single();
+            .maybeSingle(); // Usar maybeSingle() en lugar de single()
+        
+        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 es "no rows returned"
+            throw checkError;
+        }
         
         if (existingInventory) {
             showToast('Ya existe inventario para este producto', 'error');
@@ -1118,7 +1154,7 @@ async function addInventory() {
                 cantidad_actual: cantidadInicial,
                 cantidad_minima: cantidadMinima,
                 cantidad_maxima: cantidadMaxima,
-                created_at: new Date().toISOString()
+                ultima_actualizacion: new Date().toISOString()
             }]);
         
         if (inventarioError) throw inventarioError;
@@ -1136,12 +1172,21 @@ async function addInventory() {
                     fecha_movimiento: new Date().toISOString()
                 }]);
             
-            if (movimientoError) throw movimientoError;
+            if (movimientoError) {
+                console.warn('Error registrando movimiento inicial:', movimientoError);
+                // No fallar la operación completa por este error
+            }
         }
         
         showToast('Inventario agregado exitosamente', 'success');
         closeModal();
-        loadSectionData(currentSection);
+        
+        // Recargar datos si estamos en la sección correspondiente
+        if (currentSection === 'inventario') {
+            loadInventario();
+        } else {
+            loadDashboardData();
+        }
         
         console.log('✅ Inventario agregado exitosamente');
         
@@ -1150,7 +1195,7 @@ async function addInventory() {
         if (error.code === '23505') {
             showToast('Ya existe inventario para este producto', 'error');
         } else {
-            showToast('Error agregando inventario', 'error');
+            showToast(`Error agregando inventario: ${error.message}`, 'error');
         }
     }
 }
