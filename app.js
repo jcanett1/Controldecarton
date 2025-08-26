@@ -79,7 +79,7 @@ async function checkAuthentication() {
 
 function redirectToLogin() {
     console.log('🔄 Redirigiendo al login...');
-    window.location.href = 'login.html';
+    window.location.href = 'login_completo.html';
 }
 
 function setupUserInterface() {
@@ -262,7 +262,7 @@ async function handleLogout() {
             currentUser = null;
             
             // Redirigir al login
-            window.location.href = 'login.html';
+            window.location.href = 'login_completo.html';
             
         } catch (error) {
             console.error('Error inesperado cerrando sesión:', error);
