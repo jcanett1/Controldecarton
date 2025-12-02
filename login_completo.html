@@ -400,25 +400,6 @@
         // Variables globales
         let currentUser = null;
 
-        // Verificar si ya hay una sesión activa al cargar la página
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🔍 Verificando sesión existente...');
-            
-            try {
-                const { data: { session }, error } = await supabase.auth.getSession();
-                
-                if (session && !error) {
-                    console.log('✅ Sesión activa encontrada, verificando usuario...');
-                    await verifyUserInTable(session.user.id);
-                    return;
-                }
-                
-                console.log('ℹ️ No hay sesión activa, mostrando login');
-            } catch (error) {
-                console.error('Error verificando sesión:', error);
-            }
-        });
-
         // Llenar datos de prueba
         function fillTestData(role) {
             if (role === 'julio') {
@@ -476,33 +457,14 @@
             }
         }
 
-        // Verificar usuario en la tabla usuarios_carton
-        async function verifyUserInTable(userId) {
-            try {
-                const { data: userData, error } = await supabase
-                    .from('usuarios_carton')
-                    .select('*')
-                    .eq('id', userId)
-                    .single();
-
-                if (error || !userData) {
-                    console.log('Usuario no encontrado en tabla usuarios_carton');
-                    await supabase.auth.signOut();
-                    return;
-                }
-
-                currentUser = userData;
-                console.log('✅ Usuario autenticado:', currentUser);
-                
-                // Guardar datos del usuario
-                localStorage.setItem('current_user', JSON.stringify(currentUser));
-                
-                // Redirigir al dashboard
-                window.location.href = 'index.html';
-
-            } catch (error) {
-                console.error('Error verificando usuario:', error);
-            }
+        // Hash de contraseña simple (para prueba - usar bcrypt en producción)
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hash))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
         }
 
         // Manejar login
@@ -523,35 +485,47 @@
             try {
                 console.log('🔐 Intentando login con:', username);
 
+                // Hash de la contraseña para comparación
+                const passwordHash = await hashPassword(password);
+
                 // Buscar usuario en la tabla usuarios_carton
                 const { data: userData, error: userError } = await supabase
                     .from('usuarios_carton')
                     .select('*')
-                    .eq('usuario', username)
-                    .eq('password', password)
+                    .eq('username', username)
+                    .eq('password_hash', passwordHash)
+                    .eq('activo', true)
                     .single();
 
                 if (userError || !userData) {
                     console.error('Usuario o contraseña incorrectos:', userError);
-                    throw new Error('Usuario o contraseña incorrectos');
+                    
+                    // Intentar sin hash (contraseñas en texto plano para prueba)
+                    const { data: userDataPlain, error: userErrorPlain } = await supabase
+                        .from('usuarios_carton')
+                        .select('*')
+                        .eq('username', username)
+                        .eq('password_hash', password)
+                        .eq('activo', true)
+                        .single();
+
+                    if (userErrorPlain || !userDataPlain) {
+                        throw new Error('Usuario o contraseña incorrectos');
+                    }
+
+                    console.log('✅ Usuario encontrado (texto plano):', userDataPlain);
+                    currentUser = userDataPlain;
+                } else {
+                    console.log('✅ Usuario encontrado:', userData);
+                    currentUser = userData;
                 }
 
-                console.log('✅ Usuario encontrado:', userData);
+                // Actualizar último acceso
+                await supabase
+                    .from('usuarios_carton')
+                    .update({ ultimo_acceso: new Date().toISOString() })
+                    .eq('id', currentUser.id);
 
-                // Crear sesión en Supabase Auth usando email como identificador
-                const email = `${username}@almacen-carton.local`;
-                const authResult = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-
-                if (authResult.error && authResult.error.message !== 'Invalid login credentials') {
-                    // Si hay un error diferente al de credenciales, continuamos
-                    console.warn('Advertencia en autenticación:', authResult.error);
-                }
-
-                currentUser = userData;
-                
                 // Guardar datos del usuario
                 localStorage.setItem('current_user', JSON.stringify(currentUser));
                 
