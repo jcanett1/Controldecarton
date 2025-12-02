@@ -7,8 +7,414 @@
     <title>Sistema de Almacén de Cartón</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            color: white;
+            padding: 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-header {
+            padding: 2rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .logo i {
+            font-size: 2rem;
+            color: #fbbf24;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 1rem 0;
+        }
+
+        .menu-item {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 4px solid transparent;
+        }
+
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-left-color: #fbbf24;
+        }
+
+        .menu-item.active {
+            background: rgba(255, 255, 255, 0.15);
+            border-left-color: #fbbf24;
+            font-weight: 600;
+        }
+
+        .menu-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            background: #f8fafc;
+        }
+
+        .header {
+            background: white;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-left h1 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+        }
+
+        .header-left p {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+
+        .user-profile i {
+            font-size: 1.5rem;
+            color: #64748b;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #1e293b;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: color 0.2s;
+        }
+
+        .logout-btn:hover {
+            color: #ef4444;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Content Area */
+        .content-area {
+            padding: 2rem;
+        }
+
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        /* Dashboard Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .stat-card:nth-child(1) .stat-icon {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+        }
+
+        .stat-card:nth-child(2) .stat-icon {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        }
+
+        .stat-card:nth-child(3) .stat-icon {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .stat-card:nth-child(4) .stat-icon {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .stat-content h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-content p {
+            color: #64748b;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .card-header h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        /* Lists */
+        .producto-item, .inventario-item, .movimiento-item {
+            padding: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background-color 0.2s;
+        }
+
+        .producto-item:hover, .inventario-item:hover, .movimiento-item:hover {
+            background: #f8fafc;
+        }
+
+        .producto-item:last-child, .inventario-item:last-child, .movimiento-item:last-child {
+            border-bottom: none;
+        }
+
+        .producto-item h4, .inventario-item h4, .movimiento-item h4 {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .producto-item p, .inventario-item p {
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+
+        .producto-info, .inventario-info, .movimiento-info {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .movimiento-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .tipo-movimiento {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .tipo-ENTRADA {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .tipo-SALIDA {
+            background: #fef2f2;
+            color: #991b1b;
+        }
+
+        .tipo-TRANSFERENCIA {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .observaciones {
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+
+            .content-area {
+                padding: 1rem;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #64748b;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 
 <body>
@@ -38,6 +444,18 @@
                     <i class="fas fa-exchange-alt"></i>
                     <span>Movimientos</span>
                 </li>
+                <li class="menu-item" data-section="oci-crear">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Crear OCI</span>
+                </li>
+                <li class="menu-item" data-section="oci-revisar">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Revisar OCI</span>
+                </li>
+                <li class="menu-item" data-section="oci-recibido">
+                    <i class="fas fa-truck"></i>
+                    <span>Recibido</span>
+                </li>
                 <li class="menu-item" data-section="produccion">
                     <i class="fas fa-industry"></i>
                     <span>Producción</span>
@@ -58,7 +476,6 @@
                     <p id="page-subtitle">Resumen general del almacén</p>
                 </div>
                 <div class="header-right">
-                    <!-- El contenedor de información del usuario se agregará aquí dinámicamente -->
                     <button class="btn btn-primary" id="refresh-btn">
                         <i class="fas fa-sync-alt"></i>
                         Actualizar
@@ -86,53 +503,25 @@
                             </div>
                             <div class="stat-content">
                                 <h3 id="total-stock">0</h3>
-                                <p>Total Stock</p>
+                                <p>Stock Total</p>
                             </div>
                         </div>
-                        <div class="stat-card warning">
+                        <div class="stat-card">
                             <div class="stat-icon">
                                 <i class="fas fa-exclamation-triangle"></i>
                             </div>
                             <div class="stat-content">
-                                <h3 id="stock-bajo">0</h3>
+                                <h3 id="productos-stock-bajo">0</h3>
                                 <p>Stock Bajo</p>
                             </div>
                         </div>
-                        <div class="stat-card danger">
+                        <div class="stat-card">
                             <div class="stat-icon">
-                                <i class="fas fa-times-circle"></i>
+                                <i class="fas fa-trending-up"></i>
                             </div>
                             <div class="stat-content">
-                                <h3 id="sin-stock">0</h3>
-                                <p>Sin Stock</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="dashboard-grid">
-                        <div class="dashboard-card">
-                            <div class="card-header">
-                                <h3>Productos con Stock Bajo</h3>
-                                <button class="btn btn-sm btn-outline" onclick="showSection('inventario')">
-                                    Ver Todo
-                                </button>
-                            </div>
-                            <div class="card-content">
-                                <div id="stock-bajo-list" class="stock-list">
-                                    <div class="loading">Cargando...</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="dashboard-card">
-                            <div class="card-header">
-                                <h3>Movimientos Recientes</h3>
-                                <button class="btn btn-sm btn-outline" onclick="showSection('movimientos')">
-                                    Ver Todo
-                                </button>
-                            </div>
-                            <div class="card-content">
-                                <div id="movimientos-recientes" class="movements-list">
-                                    <div class="loading">Cargando...</div>
-                                </div>
+                                <h3 id="movimientos-hoy">0</h3>
+                                <p>Movimientos Hoy</p>
                             </div>
                         </div>
                     </div>
@@ -140,205 +529,111 @@
 
                 <!-- Productos Section -->
                 <section id="productos-section" class="content-section">
-                    <div class="section-header">
-                        <div class="section-actions">
-                            <button class="btn btn-primary" onclick="showAddProductModal()">
-                                <i class="fas fa-plus"></i>
-                                Nuevo Producto
-                            </button>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Gestión de Productos</h3>
                         </div>
-                    </div>
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Número de Parte</th>
-                                    <th>Descripción</th>
-                                    <th>Estado</th>
-                                    <th>Fecha Creación</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="productos-table-body">
-                                <tr>
-                                    <td colspan="5" class="loading">Cargando productos...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="card-content">
+                            <div id="productos-list">
+                                <div class="loading">
+                                    <div class="spinner"></div>
+                                    <p>Cargando productos...</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
                 <!-- Inventario Section -->
                 <section id="inventario-section" class="content-section">
-                   <button id="add-inventory-btn" class="btn btn-primary" onclick="showAddInventoryModal()">
-    <i class="fas fa-plus"></i> Agregar Inventario
-</button>
-                    <div class="section-header">
-                        <div class="section-filters">
-                            <select id="inventario-filter" class="form-select">
-                                <option value="all">Todos los productos</option>
-                                <option value="stock-bajo">Solo stock bajo</option>
-                                <option value="sin-stock">Sin stock</option>
-                            </select>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Control de Inventario</h3>
                         </div>
-                    </div>
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Producto</th>
-                                    <th>Stock Actual</th>
-                                    <th>Stock Mínimo</th>
-                                    <th>Stock Máximo</th>
-                                    <th>Estado</th>
-                                    <th>Fecha de alta</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inventario-table-body">
-                                <tr>
-                                    <td colspan="6" class="loading">Cargando inventario...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="card-content">
+                            <div id="inventario-list">
+                                <div class="loading">
+                                    <div class="spinner"></div>
+                                    <p>Cargando inventario...</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
                 <!-- Movimientos Section -->
                 <section id="movimientos-section" class="content-section">
-                    <div class="section-header">
-                        <div class="section-actions">
-                            <button class="btn btn-success" onclick="showMovementModal('ENTRADA')">
-                                <i class="fas fa-arrow-down"></i>
-                                Registrar Entrada
-                            </button>
-                            <button class="btn btn-danger" onclick="showMovementModal('SALIDA')">
-                                <i class="fas fa-arrow-up"></i>
-                                Registrar Salida
-                            </button>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Historial de Movimientos</h3>
+                        </div>
+                        <div class="card-content">
+                            <div id="movimientos-list">
+                                <div class="loading">
+                                    <div class="spinner"></div>
+                                    <p>Cargando movimientos...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Producto</th>
-                                    <th>Tipo</th>
-                                    <th>Cantidad</th>
-                                    <th>Usuario</th>
-                                    <th>Motivo</th>
-                                </tr>
-                            </thead>
-                            <tbody id="movimientos-table-body">
-                                <tr>
-                                    <td colspan="6" class="loading">Cargando movimientos...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                </section>
+
+                <!-- OCI Crear Section -->
+                <section id="oci-crear-section" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Crear Orden de Compra Interna</h3>
+                        </div>
+                        <div class="card-content">
+                            <p>Función en desarrollo. Próximamente disponible.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- OCI Revisar Section -->
+                <section id="oci-revisar-section" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Revisar Órdenes de Compra</h3>
+                        </div>
+                        <div class="card-content">
+                            <p>Función en desarrollo. Próximamente disponible.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- OCI Recibido Section -->
+                <section id="oci-recibido-section" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Confirmar Recepción</h3>
+                        </div>
+                        <div class="card-content">
+                            <p>Función en desarrollo. Próximamente disponible.</p>
+                        </div>
                     </div>
                 </section>
 
                 <!-- Producción Section -->
                 <section id="produccion-section" class="content-section">
-                    <div class="section-header">
-                        <div class="section-info">
-                            <h3>Almacén en Piso - Producción</h3>
-                            <p>Productos que han sido transferidos del inventario principal a producción</p>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Control de Producción</h3>
                         </div>
-                        <div class="section-actions">
-                            <button class="btn btn-warning" onclick="showReturnToInventoryModal()">
-                                <i class="fas fa-undo"></i>
-                                Devolver a Inventario
-                            </button>
-                            <button class="btn btn-info" onclick="showAdjustProduccionModal()">
-                                <i class="fas fa-cog"></i>
-                                Ajustar Stock
-                            </button>
+                        <div class="card-content">
+                            <p>Función en desarrollo. Próximamente disponible.</p>
                         </div>
-                    </div>
-                    <div class="stats-grid-small">
-                        <div class="stat-card-small">
-                            <div class="stat-icon">
-                                <i class="fas fa-boxes"></i>
-                            </div>
-                            <div class="stat-content">
-                                <h3 id="total-productos-produccion">0</h3>
-                                <p>Productos en Producción</p>
-                            </div>
-                        </div>
-                        <div class="stat-card-small">
-                            <div class="stat-icon">
-                                <i class="fas fa-cubes"></i>
-                            </div>
-                            <div class="stat-content">
-                                <h3 id="total-cantidad-produccion">0</h3>
-                                <p>Total Unidades</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Producto</th>
-                                    <th>Cantidad en Producción</th>
-                                    <th>Fecha de Transferencia</th>
-                                    <th>Transferido por</th>
-                                    <th>Motivo</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="produccion-table-body">
-                                <tr>
-                                    <td colspan="6" class="loading">Cargando datos de producción...</td>
-                                </tr>
-                            </tbody>
-                        </table>
                     </div>
                 </section>
 
                 <!-- Reportes Section -->
                 <section id="reportes-section" class="content-section">
-                    <div class="reports-grid">
-                        <div class="report-card" onclick="generateReport('stock-bajo')">
-                            <div class="report-icon">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            </div>
-                            <div class="report-content">
-                                <h3>Reporte de Stock Bajo</h3>
-                                <p>Productos que requieren reabastecimiento</p>
-                            </div>
-                        </div>
-                        <div class="report-card" onclick="generateReport('resumen-inventario')">
-                            <div class="report-icon">
-                                <i class="fas fa-chart-pie"></i>
-                            </div>
-                            <div class="report-content">
-                                <h3>Resumen de Inventario</h3>
-                                <p>Estadísticas generales del almacén</p>
-                            </div>
-                        </div>
-                        <div class="report-card" onclick="generateReport('productos-activos')">
-                            <div class="report-icon">
-                                <i class="fas fa-chart-bar"></i>
-                            </div>
-                            <div class="report-content">
-                                <h3>Productos Más Activos</h3>
-                                <p>Productos con más movimientos</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="report-results" class="report-results" style="display: none;">
+                    <div class="card">
                         <div class="card-header">
-                            <h3 id="report-title">Resultado del Reporte</h3>
-                            <button class="btn btn-sm btn-outline" onclick="exportReport()">
-                                <i class="fas fa-download"></i>
-                                Exportar
-                            </button>
+                            <h3>Reportes y Estadísticas</h3>
                         </div>
-                        <div id="report-content" class="report-content-area">
-                            <!-- Report content will be loaded here -->
+                        <div class="card-content">
+                            <p>Función en desarrollo. Próximamente disponible.</p>
                         </div>
                     </div>
                 </section>
@@ -346,399 +641,7 @@
         </main>
     </div>
 
-    <!-- Modals -->
-    <div id="modal-overlay" class="modal-overlay" style="display: none;">
-        <!-- Add Product Modal -->
-        <div id="add-product-modal" class="modal">
-            <div class="modal-header">
-                <h3>Nuevo Producto</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="add-product-form">
-                    <div class="form-group">
-                        <label for="numero-parte">Número de Parte</label>
-                        <input type="text" id="numero-parte" name="numero_parte" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="descripcion">Descripción</label>
-                        <input type="text" id="descripcion" name="descripcion" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="cantidad-inicial">Cantidad Inicial</label>
-                        <input type="number" id="cantidad-inicial" name="cantidad_inicial" value="0" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="cantidad-minima">Cantidad Mínima</label>
-                        <input type="number" id="cantidad-minima" name="cantidad_minima" value="10" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="cantidad-maxima">Cantidad Máxima</label>
-                        <input type="number" id="cantidad-maxima" name="cantidad_maxima" value="1000" min="1">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-                <button class="btn btn-primary" onclick="addProduct()">Crear Producto</button>
-            </div>
-        </div>
-
-        <!-- Edit Product Modal -->
-        <div id="edit-product-modal" class="modal">
-            <div class="modal-header">
-                <h3>Editar Producto</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="edit-product-form">
-                    <input type="hidden" id="edit-product-id">
-                    <div class="form-group">
-                        <label for="edit-numero-parte">Número de Parte</label>
-                        <input type="text" id="edit-numero-parte" name="numero_parte" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-descripcion">Descripción</label>
-                        <input type="text" id="edit-descripcion" name="descripcion" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-activo">Estado</label>
-                        <select id="edit-activo" name="activo">
-                            <option value="true">Activo</option>
-                            <option value="false">Inactivo</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-                <button class="btn btn-primary" onclick="updateProduct()">Actualizar</button>
-            </div>
-        </div>
-
-        <!-- Movement Modal -->
-        <div id="movement-modal" class="modal">
-            <div class="modal-header">
-                <h3 id="movement-modal-title">Registrar Movimiento</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="movement-form">
-                    <input type="hidden" id="movement-type">
-                    <div class="form-group">
-                        <label for="movement-producto">Producto</label>
-                        <select id="movement-producto" name="producto_id" required onchange="updateStockInfo()">
-                            <option value="">Selecciona un producto</option>
-                        </select>
-                    </div>
-                    <div id="stock-info" class="stock-info" style="display: none;">
-                        <div class="info-card">
-                            <div class="info-item">
-                                <label>Stock Actual:</label>
-                                <span id="current-stock">0</span>
-                            </div>
-                            <div class="info-item">
-                                <label>Stock Mínimo:</label>
-                                <span id="min-stock">0</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="movement-cantidad">Cantidad</label>
-                        <input type="number" id="movement-cantidad" name="cantidad" min="1" required>
-                        <small id="cantidad-help" class="form-help"></small>
-                    </div>
-                    <div class="form-group">
-                        <label for="movement-motivo">Motivo</label>
-                        <input type="text" id="movement-motivo" name="motivo" required>
-                    </div>
-                    <div id="salida-options" class="form-group" style="display: none;">
-                        <label>
-                            <input type="checkbox" id="transfer-to-production" checked>
-                            Transferir a Producción (Almacén en Piso)
-                        </label>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-                <button class="btn btn-primary" onclick="registerMovement()">Registrar</button>
-            </div>
-        </div>
-
-        <!-- Adjust Stock Modal -->
-        <div id="adjust-modal" class="modal">
-            <div class="modal-header">
-                <h3>Ajustar Stock</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="adjust-form">
-                    <input type="hidden" id="adjust-product-id">
-                    <div class="form-group">
-                        <label>Producto</label>
-                        <p id="adjust-product-name" class="form-text"></p>
-                    </div>
-                    <div class="form-group">
-                        <label>Stock Actual</label>
-                        <p id="adjust-current-stock" class="form-text"></p>
-                    </div>
-                    <div class="form-group">
-                        <label for="adjust-new-stock">Nuevo Stock</label>
-                        <input type="number" id="adjust-new-stock" name="new_stock" min="0" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="adjust-min-stock">Stock Mínimo</label>
-                        <input type="number" id="adjust-min-stock" name="min_stock" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="adjust-max-stock">Stock Máximo</label>
-                        <input type="number" id="adjust-max-stock" name="max_stock" min="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="adjust-motivo">Motivo del Ajuste</label>
-                        <input type="text" id="adjust-motivo" name="motivo" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-                <button class="btn btn-primary" onclick="adjustStock()">Ajustar</button>
-            </div>
-        </div>
-
-        <!-- Return to Inventory Modal -->
-        <div id="return-inventory-modal" class="modal">
-            <div class="modal-header">
-                <h3>Devolver a Inventario</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="return-inventory-form">
-                    <div class="form-group">
-                        <label for="return-producto">Producto en Producción</label>
-                        <select id="return-producto" name="producto_id" required onchange="updateProduccionStockInfo()">
-                            <option value="">Selecciona un producto</option>
-                        </select>
-                    </div>
-                    <div id="produccion-stock-info" class="stock-info" style="display: none;">
-                        <div class="info-card">
-                            <div class="info-item">
-                                <label>En Producción:</label>
-                                <span id="produccion-stock">0</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="return-cantidad">Cantidad a Devolver</label>
-                        <input type="number" id="return-cantidad" name="cantidad" min="1" required>
-                        <small id="return-cantidad-help" class="form-help"></small>
-                    </div>
-                    <div class="form-group">
-                        <label for="return-motivo">Motivo de la Devolución</label>
-                        <input type="text" id="return-motivo" name="motivo" required placeholder="Ej: Producto terminado, Material sobrante, etc.">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-                <button class="btn btn-warning" onclick="returnToInventory()">Devolver</button>
-            </div>
-        </div>
-
-<div id="add-inventory-modal" class="modal" style="display: none;">
-    <div class="modal-header">
-        <h3>Agregar Inventario</h3>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-        <form id="add-inventory-form">
-            <div class="form-group">
-                <label for="inventory-producto">Producto</label>
-                <select id="inventory-producto" name="producto_id" required>
-                    <option value="">Selecciona un producto...</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="initial-quantity">Cantidad Inicial</label>
-                <input type="number" id="initial-quantity" name="cantidad_inicial" value="0" min="0" required>
-                <small class="form-help">Cantidad de productos disponibles inicialmente</small>
-            </div>
-            <div class="form-group">
-                <label for="min-quantity">Cantidad Mínima</label>
-                <input type="number" id="min-quantity" name="cantidad_minima" value="10" min="0" required>
-                <small class="form-help">Nivel mínimo para alertas de stock bajo</small>
-            </div>
-            <div class="form-group">
-                <label for="max-quantity">Cantidad Máxima</label>
-                <input type="number" id="max-quantity" name="cantidad_maxima" value="1000" min="1" required>
-                <small class="form-help">Capacidad máxima de almacenamiento</small>
-            </div>
-        </form>
-    </div>
-    <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="addInventory()">Crear Inventario</button>
-    </div>
-</div>
-
-
-        
-        <!-- Adjust Producción Modal -->
-        <div id="adjust-produccion-modal" class="modal">
-            <div class="modal-header">
-                <h3>Ajustar Stock en Producción</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="adjust-produccion-form">
-                    <input type="hidden" id="adjust-produccion-product-id">
-                    <div class="form-group">
-                        <label>Producto</label>
-                        <p id="adjust-produccion-product-name" class="form-text"></p>
-                    </div>
-                    <div class="form-group">
-                        <label>Stock Actual en Producción</label>
-                        <p id="adjust-produccion-current-stock" class="form-text"></p>
-                    </div>
-                    <div class="form-group">
-                        <label for="adjust-produccion-new-stock">Nuevo Stock en Producción</label>
-                        <input type="number" id="adjust-produccion-new-stock" name="new_stock" min="0" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="adjust-produccion-motivo">Motivo del Ajuste</label>
-                        <input type="text" id="adjust-produccion-motivo" name="motivo" required placeholder="Ej: Merma, Producto dañado, Recuento físico, etc.">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-                <button class="btn btn-info" onclick="adjustProduccionStock()">Ajustar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Container -->
-    <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
-
-    <!-- Scripts -->
-    <script src="app.js"></script>
-
-    <!-- Estilos adicionales para Producción -->
-    <style>
-        .stats-grid-small {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .stat-card-small {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        
-        .stat-card-small:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        }
-        
-        .stat-card.success {
-            border-left: 4px solid #10b981;
-        }
-        
-        .stat-card.success .stat-icon {
-            background: linear-gradient(135deg, #10b981, #059669);
-        }
-        
-        .section-info {
-            flex: 1;
-        }
-        
-        .section-info h3 {
-            color: #1e293b;
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-        
-        .section-info p {
-            color: #64748b;
-            font-size: 0.9rem;
-        }
-        
-        .stock-info {
-            margin: 15px 0;
-        }
-        
-        .info-card {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 15px;
-            display: flex;
-            gap: 20px;
-        }
-        
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        
-        .info-item label {
-            font-size: 0.85rem;
-            color: #64748b;
-            font-weight: 500;
-        }
-        
-        .info-item span {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #1e293b;
-        }
-        
-        .form-help {
-            color: #64748b;
-            font-size: 0.8rem;
-            margin-top: 5px;
-            display: block;
-        }
-        
-        .btn-warning {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: white;
-        }
-        
-        .btn-warning:hover {
-            background: linear-gradient(135deg, #d97706, #b45309);
-        }
-        
-        .btn-info {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white;
-        }
-        
-        .btn-info:hover {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        }
-        
-        @media (max-width: 768px) {
-            .stats-grid-small {
-                grid-template-columns: 1fr;
-            }
-            .info-card {
-                flex-direction: column;
-                gap: 10px;
-            }
-        }
-    </style>
+    <script src="app_supabase.js"></script>
 </body>
 
 </html>
