@@ -127,51 +127,6 @@
             font-size: 1rem;
         }
 
-        .form-tabs {
-            display: flex;
-            margin-bottom: 30px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 5px;
-        }
-
-        .tab-button {
-            flex: 1;
-            padding: 12px 20px;
-            border: none;
-            background: transparent;
-            color: #666;
-            font-size: 1rem;
-            font-weight: 500;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .tab-button.active {
-            background: white;
-            color: #667eea;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .form-container {
-            position: relative;
-        }
-
-        .form-panel {
-            display: none;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        .form-panel.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
         .form-group {
             margin-bottom: 25px;
             position: relative;
@@ -185,8 +140,7 @@
             font-size: 0.95rem;
         }
 
-        .form-group input,
-        .form-group select {
+        .form-group input {
             width: 100%;
             padding: 15px 20px;
             border: 2px solid #e1e5e9;
@@ -196,8 +150,7 @@
             background: white;
         }
 
-        .form-group input:focus,
-        .form-group select:focus {
+        .form-group input:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
@@ -316,37 +269,6 @@
             border: 1px solid #f5c6cb;
         }
 
-        .forgot-password {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .forgot-password a {
-            color: #667eea;
-            text-decoration: none;
-            font-size: 0.95rem;
-            transition: color 0.3s ease;
-        }
-
-        .forgot-password a:hover {
-            color: #764ba2;
-            text-decoration: underline;
-        }
-
-        .role-info {
-            background: #e3f2fd;
-            border: 1px solid #bbdefb;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-            color: #1565c0;
-        }
-
-        .role-info i {
-            margin-right: 8px;
-        }
-
         .test-data {
             background: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -407,80 +329,6 @@
                 font-size: 1.5rem;
             }
         }
-
-        .password-strength {
-            margin-top: 5px;
-            font-size: 0.8rem;
-        }
-
-        .strength-bar {
-            height: 4px;
-            background: #e1e5e9;
-            border-radius: 2px;
-            margin-top: 5px;
-            overflow: hidden;
-        }
-
-        .strength-fill {
-            height: 100%;
-            transition: all 0.3s ease;
-            border-radius: 2px;
-        }
-
-        .strength-weak { background: #dc3545; width: 25%; }
-        .strength-fair { background: #ffc107; width: 50%; }
-        .strength-good { background: #28a745; width: 75%; }
-        .strength-strong { background: #007bff; width: 100%; }
-
-        .forgot-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .forgot-modal.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 400px;
-            width: 90%;
-            text-align: center;
-            animation: modalSlideIn 0.3s ease-out;
-            position: relative;
-        }
-
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: scale(0.8);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #999;
-        }
     </style>
 </head>
 <body>
@@ -498,141 +346,45 @@
         <div class="login-right">
             <div class="form-header">
                 <h2>Acceso al Sistema</h2>
-                <p>Inicia sesión o crea una nueva cuenta</p>
+                <p>Inicia sesión con tus credenciales</p>
             </div>
 
-            <div class="form-tabs">
-                <button class="tab-button active" onclick="switchTab('login')">
-                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-                </button>
-                <button class="tab-button" onclick="switchTab('register')">
-                    <i class="fas fa-user-plus"></i> Registrarse
-                </button>
+            <div class="test-data">
+                <strong>Credenciales de Prueba:</strong>
+                <div class="test-buttons">
+                    <button class="btn-test" onclick="fillTestData('julio')">Julio</button>
+                    <button class="btn-test" onclick="fillTestData('admin')">Admin</button>
+                </div>
             </div>
 
             <div id="alert-container"></div>
 
-            <div class="form-container">
-                <!-- Panel de Login -->
-                <div id="login-panel" class="form-panel active">
-                   
-
-                    <form id="login-form">
-                        <div class="form-group">
-                            <label for="login-email">
-                                <i class="fas fa-envelope"></i> Email
-                            </label>
-                            <input type="email" id="login-email" name="email" required 
-                                   placeholder="tu@email.com">
-                        </div>
-
-                        <div class="form-group has-icon">
-                            <label for="login-password">
-                                <i class="fas fa-lock"></i> Contraseña
-                            </label>
-                            <input type="password" id="login-password" name="password" required 
-                                   placeholder="Tu contraseña">
-                            <i class="fas fa-eye" onclick="togglePassword('login-password', this)"></i>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary" id="login-btn">
-                            <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-                        </button>
-
-                        <div class="loading" id="login-loading">
-                            <div class="spinner"></div>
-                            <span>Iniciando sesión...</span>
-                        </div>
-                    </form>
-
-                    <div class="forgot-password">
-                        <a href="#" onclick="showForgotPassword()">
-                            <i class="fas fa-question-circle"></i> ¿Olvidaste tu contraseña?
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Panel de Registro -->
-                <div id="register-panel" class="form-panel">
-                    <div class="role-info">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Roles disponibles:</strong><br>
-                        • <strong>Administrador:</strong> Acceso completo al sistema<br>
-                        • <strong>Visualizador:</strong> Solo lectura de datos
-                    </div>
-
-                    <form id="register-form">
-                        <div class="form-group">
-                            <label for="register-name">
-                                <i class="fas fa-user"></i> Nombre Completo
-                            </label>
-                            <input type="text" id="register-name" name="full_name" required 
-                                   placeholder="Tu nombre completo">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="register-email">
-                                <i class="fas fa-envelope"></i> Email
-                            </label>
-                            <input type="email" id="register-email" name="email" required 
-                                   placeholder="tu@email.com">
-                        </div>
-
-                        <div class="form-group has-icon">
-                            <label for="register-password">
-                                <i class="fas fa-lock"></i> Contraseña
-                            </label>
-                            <input type="password" id="register-password" name="password" required 
-                                   placeholder="Mínimo 6 caracteres" 
-                                   oninput="checkPasswordStrength(this.value)">
-                            <i class="fas fa-eye" onclick="togglePassword('register-password', this)"></i>
-                        </div>
-
-                        <div class="password-strength" id="password-strength" style="display: none;">
-                            <div class="strength-bar">
-                                <div class="strength-fill" id="strength-fill"></div>
-                            </div>
-                            <span id="strength-text">Ingresa una contraseña</span>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="register-role">
-                                <i class="fas fa-user-tag"></i> Rol
-                            </label>
-                            <select id="register-role" name="role" required>
-                                <option value="">Selecciona un rol</option>
-                                <option value="admin">Administrador</option>
-                                <option value="viewer">Visualizador</option>
-                            </select>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary" id="register-btn">
-                            <i class="fas fa-user-plus"></i> Crear Cuenta
-                        </button>
-
-                        <div class="loading" id="register-loading">
-                            <div class="spinner"></div>
-                            <span>Creando cuenta...</span>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Recuperación de Contraseña -->
-    <div id="forgot-modal" class="forgot-modal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeForgotModal()">&times;</button>
-            <h3>Recuperar Contraseña</h3>
-            <p>Ingresa tu email para recibir instrucciones de recuperación</p>
-            <form id="forgot-form">
+            <form id="login-form">
                 <div class="form-group">
-                    <input type="email" id="forgot-email" placeholder="tu@email.com" required>
+                    <label for="login-username">
+                        <i class="fas fa-user"></i> Usuario
+                    </label>
+                    <input type="text" id="login-username" name="username" required 
+                           placeholder="Tu usuario">
                 </div>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i> Enviar
+
+                <div class="form-group has-icon">
+                    <label for="login-password">
+                        <i class="fas fa-lock"></i> Contraseña
+                    </label>
+                    <input type="password" id="login-password" name="password" required 
+                           placeholder="Tu contraseña">
+                    <i class="fas fa-eye" onclick="togglePassword('login-password', this)"></i>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="login-btn">
+                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
                 </button>
+
+                <div class="loading" id="login-loading">
+                    <div class="spinner"></div>
+                    <span>Iniciando sesión...</span>
+                </div>
             </form>
         </div>
     </div>
@@ -643,12 +395,10 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
 
         // Inicializar Supabase
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
-            auth: {
-                persistSession: true,
-                autoRefreshToken: true
-            }
-        });
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Variables globales
+        let currentUser = null;
 
         // Verificar si ya hay una sesión activa al cargar la página
         document.addEventListener('DOMContentLoaded', async function() {
@@ -658,8 +408,8 @@
                 const { data: { session }, error } = await supabase.auth.getSession();
                 
                 if (session && !error) {
-                    console.log('✅ Sesión activa encontrada, redirigiendo...');
-                    window.location.href = 'index.html';
+                    console.log('✅ Sesión activa encontrada, verificando usuario...');
+                    await verifyUserInTable(session.user.id);
                     return;
                 }
                 
@@ -669,31 +419,13 @@
             }
         });
 
-        // Cambiar entre tabs
-        function switchTab(tabName) {
-            // Actualizar botones de tab
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-
-            // Actualizar paneles
-            document.querySelectorAll('.form-panel').forEach(panel => {
-                panel.classList.remove('active');
-            });
-            document.getElementById(`${tabName}-panel`).classList.add('active');
-
-            // Limpiar alertas
-            clearAlerts();
-        }
-
         // Llenar datos de prueba
         function fillTestData(role) {
-            if (role === 'admin') {
-                document.getElementById('login-email').value = 'admin@almacen.com';
-                document.getElementById('login-password').value = 'admin123';
-            } else if (role === 'viewer') {
-                document.getElementById('login-email').value = 'viewer@almacen.com';
+            if (role === 'julio') {
+                document.getElementById('login-username').value = 'julio';
+                document.getElementById('login-password').value = 'Edel1ewy';
+            } else if (role === 'admin') {
+                document.getElementById('login-username').value = 'admin';
                 document.getElementById('login-password').value = 'admin123';
             }
         }
@@ -706,54 +438,6 @@
             
             icon.classList.toggle('fa-eye');
             icon.classList.toggle('fa-eye-slash');
-        }
-
-        // Verificar fortaleza de contraseña
-        function checkPasswordStrength(password) {
-            const strengthContainer = document.getElementById('password-strength');
-            const strengthFill = document.getElementById('strength-fill');
-            const strengthText = document.getElementById('strength-text');
-
-            if (password.length === 0) {
-                strengthContainer.style.display = 'none';
-                return;
-            }
-
-            strengthContainer.style.display = 'block';
-
-            let strength = 0;
-            let text = '';
-            let className = '';
-
-            if (password.length >= 6) strength++;
-            if (password.match(/[a-z]/)) strength++;
-            if (password.match(/[A-Z]/)) strength++;
-            if (password.match(/[0-9]/)) strength++;
-            if (password.match(/[^a-zA-Z0-9]/)) strength++;
-
-            switch (strength) {
-                case 0:
-                case 1:
-                    text = 'Muy débil';
-                    className = 'strength-weak';
-                    break;
-                case 2:
-                    text = 'Débil';
-                    className = 'strength-fair';
-                    break;
-                case 3:
-                    text = 'Buena';
-                    className = 'strength-good';
-                    break;
-                case 4:
-                case 5:
-                    text = 'Fuerte';
-                    className = 'strength-strong';
-                    break;
-            }
-
-            strengthFill.className = `strength-fill ${className}`;
-            strengthText.textContent = text;
         }
 
         // Mostrar alertas
@@ -777,9 +461,9 @@
         }
 
         // Mostrar/ocultar loading
-        function showLoading(formType, show = true) {
-            const button = document.getElementById(`${formType}-btn`);
-            const loading = document.getElementById(`${formType}-loading`);
+        function showLoading(show = true) {
+            const button = document.getElementById('login-btn');
+            const loading = document.getElementById('login-loading');
 
             if (show) {
                 button.disabled = true;
@@ -792,128 +476,86 @@
             }
         }
 
+        // Verificar usuario en la tabla usuarios_carton
+        async function verifyUserInTable(userId) {
+            try {
+                const { data: userData, error } = await supabase
+                    .from('usuarios_carton')
+                    .select('*')
+                    .eq('id', userId)
+                    .single();
+
+                if (error || !userData) {
+                    console.log('Usuario no encontrado en tabla usuarios_carton');
+                    await supabase.auth.signOut();
+                    return;
+                }
+
+                currentUser = userData;
+                console.log('✅ Usuario autenticado:', currentUser);
+                
+                // Guardar datos del usuario
+                localStorage.setItem('current_user', JSON.stringify(currentUser));
+                
+                // Redirigir al dashboard
+                window.location.href = 'index.html';
+
+            } catch (error) {
+                console.error('Error verificando usuario:', error);
+            }
+        }
+
         // Manejar login
         document.getElementById('login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const email = document.getElementById('login-email').value;
+            const username = document.getElementById('login-username').value;
             const password = document.getElementById('login-password').value;
 
-            if (!email || !password) {
+            if (!username || !password) {
                 showAlert('Por favor completa todos los campos');
                 return;
             }
 
-            showLoading('login', true);
+            showLoading(true);
             clearAlerts();
 
             try {
-                console.log('🔐 Intentando login con:', email);
+                console.log('🔐 Intentando login con:', username);
 
-                // Intentar login con Supabase Auth
-                const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-
-                if (authError) {
-                    console.error('Error de autenticación:', authError);
-                    throw new Error('Credenciales incorrectas');
-                }
-
-                console.log('✅ Autenticación exitosa');
-
-                // Verificar usuario en la tabla users
+                // Buscar usuario en la tabla usuarios_carton
                 const { data: userData, error: userError } = await supabase
-                    .from('users')
+                    .from('usuarios_carton')
                     .select('*')
-                    .eq('email', email)
+                    .eq('usuario', username)
+                    .eq('password', password)
                     .single();
 
                 if (userError || !userData) {
-                    console.error('Error obteniendo datos del usuario:', userError);
-                    await supabase.auth.signOut();
-                    throw new Error('Usuario no encontrado en el sistema');
+                    console.error('Usuario o contraseña incorrectos:', userError);
+                    throw new Error('Usuario o contraseña incorrectos');
                 }
 
                 console.log('✅ Usuario encontrado:', userData);
 
-                showAlert('¡Login exitoso! Redirigiendo...', 'success');
-
-                // Redirigir al dashboard después de un breve delay
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 1500);
-
-            } catch (error) {
-                console.error('Error en login:', error);
-                showAlert(error.message || 'Error al iniciar sesión');
-                showLoading('login', false);
-            }
-        });
-
-        // Manejar registro
-        document.getElementById('register-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const fullName = document.getElementById('register-name').value;
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const role = document.getElementById('register-role').value;
-
-            if (!fullName || !email || !password || !role) {
-                showAlert('Por favor completa todos los campos');
-                return;
-            }
-
-            if (password.length < 6) {
-                showAlert('La contraseña debe tener al menos 6 caracteres');
-                return;
-            }
-
-            showLoading('register', true);
-            clearAlerts();
-
-            try {
-                console.log('📝 Registrando usuario:', email);
-
-                // Crear usuario en Supabase Auth
-                const { data: authData, error: authError } = await supabase.auth.signUp({
+                // Crear sesión en Supabase Auth usando email como identificador
+                const email = `${username}@almacen-carton.local`;
+                const authResult = await supabase.auth.signInWithPassword({
                     email: email,
                     password: password
                 });
 
-                if (authError) {
-                    console.error('Error creando usuario:', authError);
-                    throw new Error(authError.message);
+                if (authResult.error && authResult.error.message !== 'Invalid login credentials') {
+                    // Si hay un error diferente al de credenciales, continuamos
+                    console.warn('Advertencia en autenticación:', authResult.error);
                 }
 
-                console.log('✅ Usuario creado en Auth');
-
-                // Crear registro en la tabla users
-                const { data: userData, error: userError } = await supabase
-                    .from('users')
-                    .insert([
-                        {
-                            email: email,
-                            full_name: fullName,
-                            role: role,
-                            created_at: new Date().toISOString()
-                        }
-                    ])
-                    .select()
-                    .single();
-
-                if (userError) {
-                    console.error('Error creando registro de usuario:', userError);
-                    // Si falla la inserción, eliminar el usuario de Auth
-                    await supabase.auth.signOut();
-                    throw new Error('Error creando el perfil de usuario');
-                }
-
-                console.log('✅ Registro completo:', userData);
-
-                showAlert('¡Cuenta creada exitosamente! Redirigiendo...', 'success');
+                currentUser = userData;
+                
+                // Guardar datos del usuario
+                localStorage.setItem('current_user', JSON.stringify(currentUser));
+                
+                showAlert('¡Login exitoso! Redirigiendo...', 'success');
 
                 // Redirigir al dashboard
                 setTimeout(() => {
@@ -921,55 +563,11 @@
                 }, 1500);
 
             } catch (error) {
-                console.error('Error en registro:', error);
-                showAlert(error.message || 'Error al crear la cuenta');
-                showLoading('register', false);
-            }
-        });
-
-        // Modal de recuperación de contraseña
-        function showForgotPassword() {
-            document.getElementById('forgot-modal').classList.add('show');
-        }
-
-        function closeForgotModal() {
-            document.getElementById('forgot-modal').classList.remove('show');
-        }
-
-        // Manejar recuperación de contraseña
-        document.getElementById('forgot-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const email = document.getElementById('forgot-email').value;
-
-            if (!email) {
-                showAlert('Por favor ingresa tu email');
-                return;
-            }
-
-            try {
-                const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                    redirectTo: window.location.origin + '/reset-password.html'
-                });
-
-                if (error) throw error;
-
-                showAlert('Se han enviado las instrucciones a tu email', 'success');
-                closeForgotModal();
-
-            } catch (error) {
-                console.error('Error enviando email de recuperación:', error);
-                showAlert('Error enviando email de recuperación');
-            }
-        });
-
-        // Cerrar modal al hacer clic fuera
-        document.getElementById('forgot-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeForgotModal();
+                console.error('Error en login:', error);
+                showAlert(error.message || 'Error al iniciar sesión');
+                showLoading(false);
             }
         });
     </script>
 </body>
 </html>
-
