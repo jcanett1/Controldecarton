@@ -14,12 +14,12 @@ let inventario = [];
 let movimientos = [];
 let produccion = [];
 let currentUser = null;
+// Variables globales ya declaradas arriba
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthentication();
 });
-
 // ===== FUNCIONES DE AUTENTICACIÓN DEL SISTEMA DE CARTÓN =====
 
 async function checkAuthentication() {
@@ -53,7 +53,7 @@ async function checkAuthentication() {
         }
         
         // Inicializar la aplicación
-        initializeApp();
+        await initializeApp();
         setupUserInterface();
         
     } catch (error) {
@@ -70,6 +70,22 @@ function redirectToLogin() {
 function clearAuthData() {
     localStorage.removeItem('current_user');
     currentUser = null;
+}
+
+function logout() {
+    console.log('🚪 Cerrando sesión...');
+    
+    // Limpiar datos de autenticación
+    clearAuthData();
+    
+    // Cerrar sesión de Supabase si existe
+    supabase.auth.signOut().then(() => {
+        console.log('✅ Sesión cerrada');
+        window.location.href = 'login_supabase.html';
+    }).catch(error => {
+        console.log('⚠️ Error cerrando sesión Supabase:', error);
+        window.location.href = 'login_supabase.html';
+    });
 }
 
 function setupUserInterface() {
@@ -133,62 +149,61 @@ function hideAdminFeatures() {
     });
 }
 
-function logout() {
-    console.log('🚪 Cerrando sesión...');
-    
-    // Limpiar datos de autenticación
-    clearAuthData();
-    
-    // Cerrar sesión de Supabase si existe
-    supabase.auth.signOut().then(() => {
-        console.log('✅ Sesión cerrada');
-        window.location.href = 'login_supabase.html';
-    }).catch(error => {
-        console.log('⚠️ Error cerrando sesión Supabase:', error);
-        window.location.href = 'login_supabase.html';
-    });
+
+
+// ===== FUNCIONES ORIGINALES DEL SISTEMA =====
+
+async function initializeApp() {
+    setupEventListeners();
+    setTimeout(async () => {
+        await loadDashboardData();
+    }, 100);
 }
 
-// ===== FUNCIONES DE NAVEGACIÓN =====
-
-function initializeApp() {
-    console.log('🚀 Inicializando aplicación...');
-    
-    // Configurar navegación del sidebar
-    setupSidebarNavigation();
-    
-    // Configurar botón de actualización
-    setupRefreshButton();
-    
-    // Cargar datos iniciales
-    loadInitialData();
-    
-    // Mostrar sección por defecto
-    showSection('dashboard');
-}
-
-function setupSidebarNavigation() {
-    const menuItems = document.querySelectorAll('.menu-item');
-    
-    menuItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const section = this.getAttribute('data-section');
-            showSection(section);
+function setupEventListeners() {
+    // Sidebar navigation - CORREGIDO
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const section = this.dataset.section;
+            if (section) {
+                showSection(section);
+            }
         });
     });
-}
 
-function setupRefreshButton() {
+    // Refresh button
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) {
-        refreshBtn.addEventListener('click', refreshCurrentSection);
+        refreshBtn.addEventListener('click', function() {
+            refreshCurrentSection();
+        });
+    }
+
+    // Inventory filter
+    const inventarioFilter = document.getElementById('inventario-filter');
+    if (inventarioFilter) {
+        inventarioFilter.addEventListener('change', function() {
+            loadInventario(this.value);
+        });
+    }
+
+    // Modal close events
+    const modalOverlay = document.getElementById('modal-overlay');
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
     }
 }
 
+// Navigation - CORREGIDA
 function showSection(sectionName) {
-    console.log(`📄 Mostrando sección: ${sectionName}`);
+    console.log('🔄 Cambiando a sección:', sectionName);
     
-    // Actualizar navegación
+    // Actualizar menú activo
     document.querySelectorAll('.menu-item').forEach(item => {
         item.classList.remove('active');
     });
@@ -197,8 +212,8 @@ function showSection(sectionName) {
     if (activeMenuItem) {
         activeMenuItem.classList.add('active');
     }
-    
-    // Actualizar contenido
+
+    // Mostrar sección correspondiente
     document.querySelectorAll('.content-section').forEach(section => {
         section.classList.remove('active');
     });
@@ -207,675 +222,1756 @@ function showSection(sectionName) {
     if (targetSection) {
         targetSection.classList.add('active');
     }
-    
-    // Actualizar título de página
-    updatePageTitle(sectionName);
-    
+
+    updateHeader(sectionName);
     currentSection = sectionName;
-    
-    // Cargar datos específicos de la sección
     loadSectionData(sectionName);
+    
+    console.log('✅ Sección cambiada a:', sectionName);
 }
 
-function updatePageTitle(sectionName) {
+function updateHeader(sectionName) {
     const titles = {
-        'dashboard': { title: 'Dashboard', subtitle: 'Resumen general del almacén' },
-        'productos': { title: 'Productos', subtitle: 'Gestión de productos de cartón' },
-        'inventario': { title: 'Inventario', subtitle: 'Control de stock y existencias' },
-        'movimientos': { title: 'Movimientos', subtitle: 'Historial de entradas y salidas' },
-        'oci-crear': { title: 'Crear OCI', subtitle: 'Órdenes de Compra Interna' },
-        'oci-revisar': { title: 'Revisar OCI', subtitle: 'Revisar y aprobar órdenes' },
-        'oci-recibido': { title: 'Recibido', subtitle: 'Confirmar recepción de materiales' },
-        'produccion': { title: 'Producción', subtitle: 'Control de producción' },
-        'reportes': { title: 'Reportes', subtitle: 'Reportes y estadísticas' }
+        dashboard: { title: 'Dashboard', subtitle: 'Resumen general del almacén' },
+        productos: { title: 'Productos', subtitle: 'Gestión de productos de cartón' },
+        inventario: { title: 'Inventario', subtitle: 'Control de stock y niveles' },
+        movimientos: { title: 'Movimientos', subtitle: 'Historial de entradas y salidas' },
+        'oci-crear': { title: 'Crear OCI', subtitle: 'Generar nueva orden de compra interna' },
+        'oci-revisar': { title: 'Revisar OCI', subtitle: 'Aprobar o rechazar órdenes pendientes' },
+        'oci-recibido': { title: 'Recibido', subtitle: 'Confirmar recepción física de materiales' },
+        produccion: { title: 'Producción', subtitle: 'Almacén en piso - Control de producción' },
+        reportes: { title: 'Reportes', subtitle: 'Análisis y estadísticas' }
     };
+
+    const info = titles[sectionName] || { title: 'Sistema', subtitle: 'Gestión de almacén' };
     
-    const titleData = titles[sectionName] || { title: 'Sistema', subtitle: 'Almacén de Cartón' };
+    const titleElement = document.getElementById('page-title');
+    const subtitleElement = document.getElementById('page-subtitle');
     
-    document.getElementById('page-title').textContent = titleData.title;
-    document.getElementById('page-subtitle').textContent = titleData.subtitle;
+    if (titleElement) titleElement.textContent = info.title;
+    if (subtitleElement) subtitleElement.textContent = info.subtitle;
 }
 
-function loadSectionData(sectionName) {
-    switch(sectionName) {
+async function loadSectionData(sectionName) {
+    switch (sectionName) {
         case 'dashboard':
-            loadDashboardData();
+            await loadDashboardData();
             break;
         case 'productos':
-            loadProductos();
+            await loadProductos();
             break;
         case 'inventario':
-            loadInventario();
+            await loadInventario();
             break;
         case 'movimientos':
-            loadMovimientos();
+            await loadMovimientos();
             break;
         case 'oci-crear':
-            loadOCICrear();
+            await initializeOCISection();
             break;
         case 'oci-revisar':
-            loadOCIRevisar();
+            await initializeOCISection();
             break;
         case 'oci-recibido':
-            loadOCIRecibir();
+            await initializeOCISection();
             break;
         case 'produccion':
-            loadProduccion();
+            await loadProduccion();
             break;
         case 'reportes':
-            loadReportes();
             break;
     }
 }
 
-function loadInitialData() {
-    // Cargar datos básicos para el dashboard
-    loadDashboardData();
-}
-
 function refreshCurrentSection() {
-    console.log('🔄 Actualizando sección actual...');
-    loadSectionData(currentSection);
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) {
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Actualizando...';
+    }
+    
+    setTimeout(() => {
+        loadSectionData(currentSection);
+        if (refreshBtn) {
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Actualizar';
+        }
+        showToast('Datos actualizados correctamente', 'success');
+    }, 1000);
 }
 
 // ===== FUNCIONES DE CARGA DE DATOS =====
 
 async function loadDashboardData() {
     try {
-        console.log('📊 Cargando datos del dashboard...');
-        
-        // Cargar estadísticas básicas desde Supabase
-        const [productosResult, inventarioResult] = await Promise.all([
-            supabase.from('productos').select('*'),
-            supabase.from('inventario').select('*')
+        const [
+            { data: productos, error: productosError },
+            { data: inventario, error: inventarioError },
+            { data: movimientos, error: movimientosError },
+            { data: produccion, error: produccionError }
+        ] = await Promise.all([
+            supabase
+                .from('productos_carton')
+                .select('*')
+                .eq('activo', true),
+            supabase
+                .from('inventario')
+                .select('*, producto:productos_carton(*)'),
+            supabase
+                .from('movimientos_inventario')
+                .select('*, producto:productos_carton(*)')
+                .order('fecha_movimiento', { ascending: false })
+                .limit(10),
+            supabase
+                .from('produccion_almacen')
+                .select('*, producto:productos_carton(*)')
         ]);
-        
-        if (productosResult.error) throw productosResult.error;
-        if (inventarioResult.error) throw inventarioResult.error;
-        
-        productos = productosResult.data || [];
-        inventario = inventarioResult.data || [];
-        
-        // Actualizar estadísticas en el dashboard
+
+        if (productosError) throw productosError;
+        if (inventarioError) throw inventarioError;
+        if (movimientosError) throw movimientosError;
+        if (produccionError) throw produccionError;
+
+        window.productos = productos || [];
+        window.inventario = inventario || [];
+        window.movimientos = movimientos || [];
+        window.produccion = produccion || [];
+
         updateDashboardStats();
+        updateStockBajoList();
+        updateMovimientosRecientes();
         
     } catch (error) {
-        console.error('Error cargando dashboard:', error);
+        console.error('Error loading dashboard:', error);
+        showToast('Error cargando datos del dashboard', 'error');
     }
-}
-
-function updateDashboardStats() {
-    // Actualizar contadores en el dashboard
-    const totalProductos = productos.length;
-    const totalStock = inventario.reduce((sum, item) => sum + (item.stock_actual || 0), 0);
-    const productosStockBajo = inventario.filter(item => item.stock_actual <= item.stock_minimo).length;
-    
-    document.getElementById('total-productos').textContent = totalProductos;
-    document.getElementById('total-stock').textContent = totalStock;
-    document.getElementById('productos-stock-bajo').textContent = productosStockBajo;
 }
 
 async function loadProductos() {
     try {
-        console.log('📦 Cargando productos...');
-        
         const { data, error } = await supabase
-            .from('productos')
+            .from('productos_carton')
             .select('*')
             .order('numero_parte');
         
         if (error) throw error;
         
-        productos = data || [];
-        renderProductos();
-        
+        productos = data;
+        updateProductosTable();
     } catch (error) {
-        console.error('Error cargando productos:', error);
+        console.error('Error loading productos:', error);
+        showToast('Error cargando productos', 'error');
     }
 }
 
-function renderProductos() {
-    const container = document.getElementById('productos-list');
-    if (!container) return;
-    
-    if (productos.length === 0) {
-        container.innerHTML = '<p>No hay productos registrados.</p>';
-        return;
-    }
-    
-    container.innerHTML = productos.map(producto => `
-        <div class="producto-item">
-            <h4>${producto.numero_parte}</h4>
-            <p>${producto.descripcion}</p>
-            <div class="producto-info">
-                <span>Stock: ${producto.stock_actual || 0}</span>
-                <span>Mínimo: ${producto.stock_minimo || 0}</span>
-            </div>
-        </div>
-    `).join('');
-}
-
-async function loadInventario() {
+async function loadInventario(filter = 'all') {
     try {
-        console.log('📋 Cargando inventario...');
+        console.log('Cargando inventario con filtro:', filter);
         
-        const { data, error } = await supabase
+        let query = supabase
             .from('inventario')
-            .select('*, productos(*)')
-            .order('fecha_actualizacion', { ascending: false });
+            .select(`
+                id,
+                producto_id,
+                cantidad_actual,
+                cantidad_minima,
+                cantidad_maxima,
+                ultima_actualizacion,
+                producto:productos_carton(*)
+            `)
+            .order('ultima_actualizacion', { ascending: false });
         
-        if (error) throw error;
+        // Manejar filtros de stock
+        if (filter === 'stock-bajo') {
+            try {
+                const { data: minData, error: rpcError } = await supabase
+                    .rpc('get_cantidad_minima');
+                
+                if (!rpcError && minData !== null) {
+                    query = query.lte('cantidad_actual', minData);
+                } else {
+                    // Fallback: filtrar donde cantidad_actual es menor que cantidad_minima
+                    query = query.lt('cantidad_actual', supabase.ref('cantidad_minima'));
+                }
+            } catch (rpcError) {
+                console.warn('Función RPC no disponible, usando filtro alternativo');
+                query = query.lt('cantidad_actual', supabase.ref('cantidad_minima'));
+            }
+        } else if (filter === 'sin-stock') {
+            query = query.eq('cantidad_actual', 0);
+        }
         
-        inventario = data || [];
-        renderInventario();
+        const { data, error, status } = await query;
+        
+        console.log('Estado de la consulta:', status);
+        
+        if (error) {
+            console.error('Detalles del error de Supabase:', error);
+            throw error;
+        }
+        
+        inventario = data;
+        updateInventarioTable();
+        console.log('Inventario cargado exitosamente:', data?.length || 0, 'items');
         
     } catch (error) {
         console.error('Error cargando inventario:', error);
+        console.error('Detalles del error:', error.message, error.details);
+        showToast('Error cargando inventario: ' + error.message, 'error');
     }
 }
 
-function renderInventario() {
-    const container = document.getElementById('inventario-list');
-    if (!container) return;
-    
-    if (inventario.length === 0) {
-        container.innerHTML = '<p>No hay registros de inventario.</p>';
+async function loadProductosForMovement() {
+    try {
+        const { data, error } = await supabase
+            .from('inventario')
+            .select('*, producto:productos_carton(*)')
+            .gt('cantidad_actual', 0); // Solo productos con stock
+
+        if (error) throw error;
+
+        const selector = document.getElementById('movement-producto');
+        if (selector) {
+            selector.innerHTML = '<option value="">Selecciona un producto</option>';
+            
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.producto_id;
+                option.textContent = `${item.producto.numero_parte} - ${item.producto.descripcion}`;
+                option.dataset.stock = item.cantidad_actual;
+                option.dataset.minStock = item.cantidad_minima;
+                selector.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error cargando productos:', error);
+        showToast('Error cargando productos', 'error');
+    }
+}
+
+
+
+
+
+
+async function showMovementModal(type) {
+    if (currentUser && currentUser.rol !== 'ADMIN') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
         return;
     }
+
+    currentMovementType = type;
     
-    container.innerHTML = inventario.map(item => `
-        <div class="inventario-item">
-            <h4>${item.productos?.numero_parte || 'Producto no encontrado'}</h4>
-            <p>${item.productos?.descripcion || ''}</p>
-            <div class="inventario-info">
-                <span>Stock: ${item.stock_actual}</span>
-                <span>Ubicación: ${item.ubicacion || 'No especificada'}</span>
-                <span>Actualizado: ${new Date(item.fecha_actualizacion).toLocaleDateString()}</span>
-            </div>
-        </div>
-    `).join('');
+    // Configurar el modal según el tipo
+    const modalTitle = document.getElementById('movement-modal-title');
+    const salidaOptions = document.getElementById('salida-options');
+    
+    if (modalTitle && salidaOptions) {
+        if (type === 'ENTRADA') {
+            modalTitle.textContent = 'Registrar Entrada';
+            salidaOptions.style.display = 'none';
+        } else {
+            modalTitle.textContent = 'Registrar Salida';
+            salidaOptions.style.display = 'block';
+        }
+    }
+
+    // Limpiar formulario
+    const movementForm = document.getElementById('movement-form');
+    if (movementForm) {
+        movementForm.reset();
+    }
+    
+    const stockInfo = document.getElementById('stock-info');
+    if (stockInfo) {
+        stockInfo.style.display = 'none';
+    }
+
+    // Cargar productos en el selector
+    await loadProductosForMovement();
+
+    // Mostrar modal de forma segura
+    const modalOverlay = document.getElementById('modal-overlay');
+    const movementModal = document.getElementById('movement-modal');
+    
+    if (modalOverlay) {
+        modalOverlay.style.display = 'flex';
+    }
+    
+    if (movementModal) {
+        movementModal.style.display = 'block';
+    }
+
+    // Ocultar otros modales de forma segura
+    const otherModals = [
+        'add-product-modal',
+        'edit-product-modal',
+        'adjust-modal',
+        'return-inventory-modal',
+        'adjust-produccion-modal',
+        'add-inventory-modal'
+    ];
+    
+    otherModals.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 async function loadMovimientos() {
     try {
-        console.log('🔄 Cargando movimientos...');
-        
         const { data, error } = await supabase
-            .from('movimientos')
-            .select('*, productos(*)')
+            .from('movimientos_inventario')
+            .select('*, producto:productos_carton(*)')
             .order('fecha_movimiento', { ascending: false })
             .limit(50);
         
         if (error) throw error;
         
-        movimientos = data || [];
-        renderMovimientos();
-        
+        movimientos = data;
+        updateMovimientosTable();
     } catch (error) {
-        console.error('Error cargando movimientos:', error);
+        console.error('Error loading movimientos:', error);
+        showToast('Error cargando movimientos', 'error');
     }
 }
 
-function renderMovimientos() {
-    const container = document.getElementById('movimientos-list');
-    if (!container) return;
+async function loadProduccion() {
+    try {
+        const { data, error } = await supabase
+            .from('produccion_almacen')
+            .select('*, producto:productos_carton(*)')
+            .order('fecha_transferencia', { ascending: false });
+        
+        if (error) throw error;
+        
+        produccion = data;
+        updateProduccionTable();
+        updateProduccionStats();
+    } catch (error) {
+        console.error('Error loading produccion:', error);
+        showToast('Error cargando datos de producción', 'error');
+    }
+}
+
+// ===== FUNCIONES DE ACTUALIZACIÓN DE UI =====
+
+function updateDashboardStats() {
+    const totalProductos = productos.length;
+    const totalStock = inventario.reduce((sum, item) => sum + item.cantidad_actual, 0);
+    const stockBajo = inventario.filter(item => item.cantidad_actual <= item.cantidad_minima).length;
+    const totalProduccion = produccion.reduce((sum, item) => sum + item.cantidad_produccion, 0);
+
+    const totalProductosEl = document.getElementById('total-productos');
+    const totalStockEl = document.getElementById('total-stock');
+    const stockBajoEl = document.getElementById('stock-bajo');
+    const totalProduccionEl = document.getElementById('total-produccion');
+
+    if (totalProductosEl) totalProductosEl.textContent = totalProductos;
+    if (totalStockEl) totalStockEl.textContent = totalStock.toLocaleString();
+    if (stockBajoEl) stockBajoEl.textContent = stockBajo;
+    if (totalProduccionEl) totalProduccionEl.textContent = totalProduccion.toLocaleString();
+}
+
+function updateProduccionStats() {
+    const totalProductosProduccion = produccion.length;
+    const totalCantidadProduccion = produccion.reduce((sum, item) => sum + item.cantidad_produccion, 0);
+
+    const totalProductosElement = document.getElementById('total-productos-produccion');
+    const totalCantidadElement = document.getElementById('total-cantidad-produccion');
     
-    if (movimientos.length === 0) {
-        container.innerHTML = '<p>No hay movimientos registrados.</p>';
+    if (totalProductosElement) totalProductosElement.textContent = totalProductosProduccion;
+    if (totalCantidadElement) totalCantidadElement.textContent = totalCantidadProduccion.toLocaleString();
+}
+
+function updateStockBajoList() {
+    const stockBajoContainer = document.getElementById('stock-bajo-list');
+    if (!stockBajoContainer) return;
+    
+    const stockBajoItems = inventario
+        .filter(item => item.cantidad_actual <= item.cantidad_minima)
+        .slice(0, 5);
+
+    if (stockBajoItems.length === 0) {
+        stockBajoContainer.innerHTML = '<p class="text-center text-gray-500">No hay productos con stock bajo</p>';
         return;
     }
-    
-    container.innerHTML = movimientos.map(movimiento => `
-        <div class="movimiento-item">
-            <div class="movimiento-header">
-                <h4>${movimiento.productos?.numero_parte || 'Producto no encontrado'}</h4>
-                <span class="tipo-movimiento tipo-${movimiento.tipo_movimiento}">
-                    ${movimiento.tipo_movimiento}
-                </span>
+
+    stockBajoContainer.innerHTML = stockBajoItems.map(item => `
+        <div class="stock-item">
+            <div class="stock-item-info">
+                <h4>${item.producto?.numero_parte || 'N/A'}</h4>
+                <p>${item.producto?.descripcion || 'Sin descripción'}</p>
             </div>
-            <p>${movimiento.cantidad} unidades</p>
-            <div class="movimiento-info">
-                <span>Fecha: ${new Date(movimiento.fecha_movimiento).toLocaleString()}</span>
-                <span>Usuario: ${movimiento.usuario}</span>
+            <div class="stock-quantity ${item.cantidad_actual === 0 ? 'text-danger' : 'text-warning'}">
+                ${item.cantidad_actual} / ${item.cantidad_minima}
             </div>
-            ${movimiento.observaciones ? `<p class="observaciones">${movimiento.observaciones}</p>` : ''}
         </div>
     `).join('');
 }
 
-// Funciones para OCI (se mantienen como placeholder)
-async function loadOCICrear() {
-    console.log('📄 Cargando sección crear OCI...');
-    // Implementar lógica de OCI con Supabase
+function updateMovimientosRecientes() {
+    const movimientosContainer = document.getElementById('movimientos-recientes');
+    if (!movimientosContainer) return;
+    
+    if (movimientos.length === 0) {
+        movimientosContainer.innerHTML = '<p class="text-center text-gray-500">No hay movimientos recientes</p>';
+        return;
+    }
+
+    movimientosContainer.innerHTML = movimientos.slice(0, 5).map(mov => `
+        <div class="movement-item">
+            <div class="movement-item-info">
+                <h4>${mov.producto?.numero_parte || 'N/A'}</h4>
+                <p>${formatDate(mov.fecha_movimiento)} - ${mov.usuario}</p>
+            </div>
+            <div class="movement-${mov.tipo_movimiento.toLowerCase()}">
+                ${mov.tipo_movimiento === 'ENTRADA' ? '+' : '-'}${mov.cantidad}
+            </div>
+        </div>
+    `).join('');
 }
 
-async function loadOCIRevisar() {
-    console.log('🔍 Cargando sección revisar OCI...');
-    // Implementar lógica de OCI con Supabase
+async function updateProduct() {
+    if (currentUser && currentUser.rol !== 'ADMIN') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+
+    const form = document.getElementById('edit-product-form');
+    const formData = new FormData(form);
+
+    const productId = document.getElementById('edit-product-id').value;
+    const numeroParte = formData.get('numero_parte');
+    const descripcion = formData.get('descripcion');
+    const activo = formData.get('activo') === 'true';
+
+    if (!numeroParte || !descripcion) {
+        showToast('Por favor completa todos los campos requeridos', 'error');
+        return;
+    }
+
+    try {
+        const { error } = await supabase
+            .from('productos_carton')
+            .update({
+                numero_parte: numeroParte,
+                descripcion: descripcion,
+                activo: activo
+            })
+            .eq('id', productId);
+
+        if (error) throw error;
+
+        showToast('Producto actualizado exitosamente', 'success');
+        closeModal();
+        loadSectionData(currentSection);
+
+    } catch (error) {
+        console.error('Error actualizando producto:', error);
+        if (error.code === '23505') {
+            showToast('Ya existe un producto con ese número de parte', 'error');
+        } else {
+            showToast('Error actualizando producto', 'error');
+        }
+    }
 }
 
-async function loadOCIRecibir() {
-    console.log('📦 Cargando sección recibir OCI...');
-    // Implementar lógica de OCI con Supabase
+
+
+function updateProductosTable() {
+    const tbody = document.getElementById('productos-table-body');
+    if (!tbody) return;
+    
+    if (productos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">No hay productos registrados</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = productos.map(producto => `
+        <tr>
+            <td><strong>${producto.numero_parte}</strong></td>
+            <td>${producto.descripcion}</td>
+            <td>
+                <span class="status-badge ${producto.activo ? 'status-active' : 'status-inactive'}">
+                    ${producto.activo ? 'Activo' : 'Inactivo'}
+                </span>
+            </td>
+            <td>${formatDate(producto.fecha_creacion || producto.created_at)}</td>
+            <td>
+                ${currentUser && currentUser.rol === 'ADMIN' ? `
+                    <button class="action-btn edit" onclick="editProduct(${producto.id})">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button class="action-btn delete" onclick="toggleProductStatus(${producto.id}, ${producto.activo})">
+                        <i class="fas fa-${producto.activo ? 'ban' : 'check'}"></i> 
+                        ${producto.activo ? 'Desactivar' : 'Activar'}
+                    </button>
+                ` : '<span class="text-muted">Solo lectura</span>'}
+            </td>
+        </tr>
+    `).join('');
 }
 
-async function loadProduccion() {
-    console.log('🏭 Cargando sección producción...');
-    // Implementar lógica de producción con Supabase
+// ===== FUNCIÓN CORREGIDA: updateInventarioTable con fecha =====
+function updateInventarioTable() {
+    const tbody = document.getElementById('inventario-table-body');
+    
+    if (inventario.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">No hay datos de inventario</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = inventario.map(item => `
+        <tr>
+            <td>
+                <strong>${item.producto?.numero_parte || 'N/A'}</strong><br>
+                <small>${item.producto?.descripcion || 'Sin descripción'}</small>
+            </td>
+            <td><strong>${item.cantidad_actual}</strong></td>
+            <td>${item.cantidad_minima}</td>
+            <td>${item.cantidad_maxima}</td>
+            <td>
+                <span class="status-badge ${getStockStatus(item)}">
+                    ${getStockStatusText(item)}
+                </span>
+            </td>
+            <td>${formatDate(item.ultima_actualizacion)}</td> <!-- Usar ultima_actualizacion en lugar de created_at -->
+            <td>
+                ${currentUser && currentUser.rol === 'ADMIN' ? `
+                    <button class="action-btn adjust" onclick="showAdjustModal(${item.producto_id})">
+                        <i class="fas fa-cog"></i> Ajustar
+                    </button>
+                ` : '<span class="text-muted">Solo lectura</span>'}
+            </td>
+        </tr>
+    `).join('');
 }
 
-async function loadReportes() {
-    console.log('📊 Cargando sección reportes...');
-    // Implementar lógica de reportes con Supabase
+function updateMovimientosTable() {
+    const tbody = document.getElementById('movimientos-table-body');
+    if (!tbody) return;
+    
+    if (movimientos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading">No hay movimientos registrados</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = movimientos.map(mov => `
+        <tr>
+            <td>${formatDate(mov.fecha_movimiento)}</td>
+            <td>
+                <strong>${mov.producto?.numero_parte || 'N/A'}</strong><br>
+                <small>${mov.producto?.descripcion || 'Sin descripción'}</small>
+            </td>
+            <td>
+                <span class="movement-${mov.tipo_movimiento.toLowerCase()}">
+                    ${mov.tipo_movimiento}
+                </span>
+            </td>
+            <td><strong>${mov.cantidad}</strong></td>
+            <td>${mov.usuario}</td>
+            <td>${mov.motivo}</td>
+        </tr>
+    `).join('');
+}
+
+function updateProduccionTable() {
+    const tbody = document.getElementById('produccion-table-body');
+    if (!tbody) return;
+    
+    if (produccion.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading">No hay productos en producción</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = produccion.map(item => `
+        <tr>
+            <td>
+                <strong>${item.producto?.numero_parte || 'N/A'}</strong><br>
+                <small>${item.producto?.descripcion || 'Sin descripción'}</small>
+            </td>
+            <td><strong>${item.cantidad_produccion}</strong></td>
+            <td>${formatDate(item.fecha_transferencia)}</td>
+            <td>${item.transferido_por}</td>
+            <td>${item.motivo}</td>
+            <td>
+                ${currentUser && currentUser.rol === 'ADMIN' ? `
+                    <button class="action-btn warning" onclick="showReturnToInventoryModal(${item.producto_id})">
+                        <i class="fas fa-undo"></i> Devolver
+                    </button>
+                    <button class="action-btn info" onclick="showAdjustProduccionModal(${item.producto_id})">
+                        <i class="fas fa-cog"></i> Ajustar
+                    </button>
+                ` : '<span class="text-muted">Solo lectura</span>'}
+            </td>
+        </tr>
+    `).join('');
+}
+
+// ===== FUNCIONES DE PRODUCTOS =====
+
+function showAddProductModal() {
+    if (currentUser && currentUser.rol !== 'ADMIN') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    console.log('🔄 Abriendo modal de agregar producto...');
+    
+    // Cerrar todos los modales primero
+    closeAllModals();
+    
+    // Limpiar formulario
+    const form = document.getElementById('add-product-form');
+    if (form) {
+        form.reset();
+    }
+    
+    // Mostrar modal específico
+    const modalOverlay = document.getElementById('modal-overlay');
+    const addProductModal = document.getElementById('add-product-modal');
+    
+    if (modalOverlay && addProductModal) {
+        modalOverlay.style.display = 'flex';
+        addProductModal.style.display = 'block';
+    }
+    
+    console.log('✅ Modal de agregar producto abierto');
+}
+
+// ===== FUNCIÓN CORREGIDA: showAddInventoryModal =====
+async function showAddInventoryModal() {
+    if (currentUser && currentUser.rol !== 'ADMIN') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    console.log('🔄 Abriendo modal de agregar inventario...');
+    
+    // Cerrar todos los modales primero
+    closeAllModals();
+    
+    // Limpiar formulario
+    const form = document.getElementById('add-inventory-form');
+    if (form) {
+        form.reset();
+        console.log('✅ Formulario de inventario limpiado');
+    } else {
+        console.error('❌ No se encontró el formulario add-inventory-form');
+    }
+    
+    // Cargar productos disponibles
+    await loadProductosForInventory();
+    
+    // Mostrar modal específico
+    const modalOverlay = document.getElementById('modal-overlay');
+    const addInventoryModal = document.getElementById('add-inventory-modal');
+    
+    if (modalOverlay && addInventoryModal) {
+        modalOverlay.style.display = 'flex';
+        addInventoryModal.style.display = 'block';
+        console.log('✅ Modal de agregar inventario abierto');
+    } else {
+        console.error('❌ No se encontraron los elementos del modal:', {
+            modalOverlay: !!modalOverlay,
+            addInventoryModal: !!addInventoryModal
+        });
+        showToast('Error: Modal no encontrado en el DOM', 'error');
+    }
+}
+
+// ===== FUNCIÓN NUEVA: closeAllModals =====
+function closeAllModals() {
+    // Ocultar overlay
+    const modalOverlay = document.getElementById('modal-overlay');
+    if (modalOverlay) {
+        modalOverlay.style.display = 'none';
+    }
+    
+    // Ocultar todos los modales específicos
+    const modals = [
+        'add-product-modal',
+        'add-inventory-modal',
+        'edit-product-modal',
+        'movement-modal',
+        'adjust-modal',
+        'return-inventory-modal',
+        'adjust-produccion-modal'
+    ];
+    
+    modals.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+
+// ===== FUNCIÓN CORREGIDA: loadProductosForInventory =====
+async function loadProductosForInventory() {
+    try {
+        console.log('🔄 Cargando productos disponibles para inventario...');
+        
+        // Obtener productos que NO tienen inventario
+        const { data: productosConInventario, error: inventarioError } = await supabase
+            .from('inventario')
+            .select('producto_id');
+        
+        if (inventarioError) throw inventarioError;
+        
+        const productosConInventarioIds = productosConInventario.map(item => item.producto_id);
+        
+        let query = supabase
+            .from('productos_carton')
+            .select('*')
+            .eq('activo', true);
+        
+        if (productosConInventarioIds.length > 0) {
+            query = query.not('id', 'in', `(${productosConInventarioIds.join(',')})`);
+        }
+        
+        const { data: productos, error: productosError } = await query;
+        
+        if (productosError) throw productosError;
+        
+        const selector = document.getElementById('inventory-producto');
+        if (selector) {
+            selector.innerHTML = '<option value="">Selecciona un producto...</option>';
+            
+            productos.forEach(producto => {
+                const option = document.createElement('option');
+                option.value = producto.id;
+                option.textContent = `${producto.numero_parte} - ${producto.descripcion}`;
+                selector.appendChild(option);
+            });
+            
+            console.log(`✅ ${productos.length} productos cargados en el selector`);
+        } else {
+            console.error('❌ No se encontró el elemento inventory-producto');
+            showToast('Error: Selector de productos no encontrado', 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error cargando productos para inventario:', error);
+        showToast('Error cargando productos disponibles', 'error');
+    }
+}
+
+
+// ===== FUNCIÓN CORREGIDA: addInventory =====
+async function addInventory() {
+    if (currentUser && currentUser.rol !== 'ADMIN') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+    
+    console.log('🔄 Agregando inventario...');
+    
+    const form = document.getElementById('add-inventory-form');
+    if (!form) {
+        console.error('❌ No se encontró el formulario add-inventory-form');
+        showToast('Error: Formulario no encontrado', 'error');
+        return;
+    }
+    
+    const formData = new FormData(form);
+    
+    // Revisar nombres de los campos del formulario
+    const productoId = parseInt(formData.get('producto_id')) || parseInt(formData.get('inventory_producto'));
+    const cantidadInicial = parseInt(formData.get('cantidad_inicial')) || parseInt(formData.get('initial_quantity')) || 0;
+    const cantidadMinima = parseInt(formData.get('cantidad_minima')) || parseInt(formData.get('min_quantity')) || 10;
+    const cantidadMaxima = parseInt(formData.get('cantidad_maxima')) || parseInt(formData.get('max_quantity')) || 1000;
+    
+    console.log('📝 Datos del formulario:', {
+        productoId,
+        cantidadInicial,
+        cantidadMinima,
+        cantidadMaxima
+    });
+    
+    // Validaciones
+    if (!productoId || isNaN(productoId)) {
+        showToast('Por favor selecciona un producto', 'error');
+        return;
+    }
+    
+    if (cantidadMaxima <= cantidadMinima) {
+        showToast('La cantidad máxima debe ser mayor que la mínima', 'error');
+        return;
+    }
+    
+    if (cantidadInicial < 0) {
+        showToast('La cantidad inicial no puede ser negativa', 'error');
+        return;
+    }
+    
+    try {
+        // Verificar si ya existe inventario para este producto
+        const { data: existingInventory, error: checkError } = await supabase
+            .from('inventario')
+            .select('producto_id')
+            .eq('producto_id', productoId)
+            .maybeSingle(); // Usar maybeSingle() en lugar de single()
+        
+        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 es "no rows returned"
+            throw checkError;
+        }
+        
+        if (existingInventory) {
+            showToast('Ya existe inventario para este producto', 'error');
+            return;
+        }
+        
+        // Crear registro en inventario
+        const { error: inventarioError } = await supabase
+            .from('inventario')
+            .insert([{
+                producto_id: productoId,
+                cantidad_actual: cantidadInicial,
+                cantidad_minima: cantidadMinima,
+                cantidad_maxima: cantidadMaxima,
+                ultima_actualizacion: new Date().toISOString()
+            }]);
+        
+        if (inventarioError) throw inventarioError;
+        
+        // Si hay cantidad inicial, registrar movimiento de entrada
+        if (cantidadInicial > 0) {
+            const { error: movimientoError } = await supabase
+                .from('movimientos_inventario')
+                .insert([{
+                    producto_id: productoId,
+                    tipo_movimiento: 'ENTRADA',
+                    cantidad: cantidadInicial,
+                    usuario: currentUser.nombre_completo,
+                    motivo: 'Stock inicial del inventario',
+                    fecha_movimiento: new Date().toISOString()
+                }]);
+            
+            if (movimientoError) {
+                console.warn('Error registrando movimiento inicial:', movimientoError);
+                // No fallar la operación completa por este error
+            }
+        }
+        
+        showToast('Inventario agregado exitosamente', 'success');
+        closeModal();
+        
+        // Recargar datos si estamos en la sección correspondiente
+        if (currentSection === 'inventario') {
+            loadInventario();
+        } else {
+            loadDashboardData();
+        }
+        
+        console.log('✅ Inventario agregado exitosamente');
+        
+    } catch (error) {
+        console.error('Error agregando inventario:', error);
+        if (error.code === '23505') {
+            showToast('Ya existe inventario para este producto', 'error');
+        } else {
+            showToast(`Error agregando inventario: ${error.message}`, 'error');
+        }
+    }
 }
 
 // ===== FUNCIONES AUXILIARES =====
 
+function getStockStatus(item) {
+    if (item.cantidad_actual === 0) return 'status-out';
+    if (item.cantidad_actual <= item.cantidad_minima) return 'status-low';
+    return 'status-normal';
+}
+
+function getStockStatusText(item) {
+    if (item.cantidad_actual === 0) return 'Sin Stock';
+    if (item.cantidad_actual <= item.cantidad_minima) return 'Stock Bajo';
+    return 'Normal';
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
 function showToast(message, type = 'info') {
-    // Crear elemento toast
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
-    `;
-    
-    // Agregar estilos si no existen
-    if (!document.getElementById('toast-styles')) {
-        const styles = document.createElement('style');
-        styles.id = 'toast-styles';
-        styles.textContent = `
-            .toast {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 12px 20px;
-                border-radius: 8px;
-                color: white;
-                font-weight: 500;
-                z-index: 10000;
-                animation: slideInRight 0.3s ease-out;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                min-width: 300px;
-            }
-            .toast-success { background: #10b981; }
-            .toast-error { background: #ef4444; }
-            .toast-info { background: #3b82f6; }
-            .toast-warning { background: #f59e0b; }
-            @keyframes slideInRight {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
+    // Crear contenedor de toasts si no existe
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         `;
-        document.head.appendChild(styles);
+        document.body.appendChild(container);
     }
     
-    document.body.appendChild(toast);
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.style.cssText = `
+        background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
+        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
+        border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'error' ? '#f5c6cb' : '#bee5eb'};
+        border-radius: 8px;
+        padding: 12px 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        animation: slideIn 0.3s ease-out;
+        max-width: 300px;
+    `;
     
-    // Remover después de 5 segundos
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-${getToastIcon(type)}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    container.appendChild(toast);
+    
     setTimeout(() => {
-        toast.remove();
+        toast.style.animation = 'slideOut 0.3s ease-in forwards';
+        setTimeout(() => toast.remove(), 300);
     }, 5000);
 }
 
-console.log('✅ Sistema de cartón con Supabase cargado correctamente');
-
-
-// ========================================
-// FUNCIONES PARA NAVEGACIÓN DE OCI
-// Agregar estas funciones al final del archivo app.js
-// ========================================
-
-// Función para abrir la página de crear OCI
-function abrirOCI() {
-    // Cambiar a la sección de OCI
-    showSection('oci-crear');
-    
-    // Cargar la página OCI en la sección
-    cargarContenidoOCI();
+function getToastIcon(type) {
+    const icons = {
+        success: 'check-circle',
+        error: 'exclamation-circle',
+        warning: 'exclamation-triangle',
+        info: 'info-circle'
+    };
+    return icons[type] || 'info-circle';
 }
 
-// Función para abrir la lista de OCI
-function abrirListaOCI() {
-    // Cambiar a la sección de lista OCI
-    showSection('oci-revisar');
-    
-    // Cargar el contenido de lista OCI
-    cargarContenidoListaOCI();
+// Modal Functions - CORREGIDAS
+function closeModal() {
+    closeAllModals();
 }
 
-// Cargar el contenido HTML de OCI en la sección
-function cargarContenidoOCI() {
-    // Mostrar usuario actual
-    const usuarioSpan = document.getElementById('usuario-actual-oci');
-    if (usuarioSpan && window.usuarioActual) {
-        usuarioSpan.textContent = `Usuario: ${window.usuarioActual.username}`;
-    } else if (usuarioSpan) {
-        usuarioSpan.textContent = `Usuario: julio`; // Usuario por defecto
+
+async function showEditProductModal(productId) {
+    if (currentUser && currentUser.rol !== 'ADMIN') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
+    }
+
+    try {
+        const { data: producto, error } = await supabase
+            .from('productos_carton')
+            .select('*')
+            .eq('id', productId)
+            .single();
+
+        if (error) throw error;
+        if (!producto) throw new Error('Producto no encontrado');
+
+        document.getElementById('edit-product-id').value = producto.id;
+        document.getElementById('edit-numero-parte').value = producto.numero_parte;
+        document.getElementById('edit-descripcion').value = producto.descripcion;
+        document.getElementById('edit-activo').value = producto.activo;
+
+        // Mostrar modal overlay
+        const modalOverlay = document.getElementById('modal-overlay');
+        if (modalOverlay) {
+            modalOverlay.style.display = 'flex';
+        }
+
+        // Mostrar modal de edición
+        const editModal = document.getElementById('edit-product-modal');
+        if (editModal) {
+            editModal.style.display = 'block';
+        }
+
+        // Ocultar otros modales de forma segura
+        const modalsToHide = [
+            'add-product-modal',
+            'movement-modal', // Corregí el typo de 'movement-modal'
+            'adjust-modal',
+            'return-inventory-modal',
+            'adjust-produccion-modal',
+            'add-inventory-modal'
+        ];
+        
+        modalsToHide.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+    } catch (error) {
+        console.error('Error al cargar los datos del producto:', error);
+        showToast('Error al cargar los datos del producto', 'error');
+    }
+}
+
+
+
+
+
+
+// Funciones adicionales que pueden estar en el código original
+function editProduct(productId) {
+    showEditProductModal(productId);
+}
+
+function showAdjustModal(productId) {
+    if (currentUser && currentUser.rol !== 'ADMIN') {
+        showToast('No tienes permisos para realizar esta acción', 'error');
+        return;
     }
     
-    // Configurar fecha actual
-    const fechaInput = document.getElementById('fecha-oci');
-    if (fechaInput) {
-        fechaInput.value = new Date().toISOString().split('T')[0];
+    // Implementar lógica del modal de ajuste
+    showToast('Modal de ajuste - Función por implementar', 'info');
+}
+
+function generateReport(reportType) {
+    showToast(`Generando reporte: ${reportType}`, 'info');
+    // Implementar lógica de reportes
+}
+
+function exportReport() {
+    showToast('Exportando reporte - Función por implementar', 'info');
+}
+
+// Agregar estilos de animación para toasts
+if (!document.getElementById('toast-animations')) {
+    const style = document.createElement('style');
+    style.id = 'toast-animations';
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// ===== FUNCIONES PARA OCI (ORDENES DE COMPRA INTERNAS) =====
+
+// Variables globales para OCI
+let detallesOCI = [];
+let facturaFile = null;
+
+// Inicializar sección OCI
+async function initializeOCISection() {
+    if (currentSection === 'oci-crear') {
+        // Establecer fecha actual
+        const now = new Date();
+        const fechaISO = now.toISOString().slice(0, 16);
+        document.getElementById('oci-fecha').value = fechaISO;
+        
+        // Limpiar detalles
+        detallesOCI = [];
+        actualizarListaDetallesOCI();
+    } else if (currentSection === 'oci-revisar') {
+        await cargarOCIPendientes();
+    } else if (currentSection === 'oci-recibido') {
+        await cargarOCIPendientesRecibir();
+    }
+}
+
+// Función para agregar detalle OCI
+async function agregarDetalleOCI() {
+    const container = document.getElementById('detalles-oci-container');
+    
+    // Eliminar estado vacío si existe
+    const emptyState = container.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.remove();
     }
     
-    // Cargar materiales
-    cargarMaterialesOCI();
+    const detalleId = Date.now(); // ID temporal
     
-    // Cargar órdenes recientes
-    cargarOrdenesRecientes();
+    const detalleHTML = `
+        <div class="detalle-oci-item" id="detalle-${detalleId}">
+            <div class="detalle-header">
+                <div class="detalle-producto">Producto</div>
+                <div class="detalle-controls">
+                    <button type="button" class="btn btn-sm btn-outline" onclick="eliminarDetalleOCI(${detalleId})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="detalle-grid">
+                <div class="form-group">
+                    <label>Producto</label>
+                    <select id="producto-${detalleId}" class="form-control" required>
+                        <option value="">Seleccionar producto...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cantidad Tarimas</label>
+                    <input type="number" id="tarimas-${detalleId}" class="form-control" 
+                           min="1" value="1" required onchange="calcularTotalOCI(${detalleId})">
+                </div>
+                <div class="form-group">
+                    <label>Unidades/Tarima</label>
+                    <input type="number" id="unidades-tarima-${detalleId}" class="form-control" 
+                           value="250" min="1" required onchange="calcularTotalOCI(${detalleId})">
+                </div>
+                <div class="form-group">
+                    <label>Total Unidades</label>
+                    <input type="number" id="total-unidades-${detalleId}" class="form-control" 
+                           readonly>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Observaciones</label>
+                <textarea id="observaciones-${detalleId}" class="form-control" 
+                         rows="2" placeholder="Comentarios para este producto..."></textarea>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', detalleHTML);
+    await cargarProductosParaDetalle(detalleId);
 }
 
-// Cargar el contenido de lista OCI
-function cargarContenidoListaOCI() {
-    // Cargar las órdenes existentes
-    cargarOrdenesExistentes();
+// Función para cargar productos en select
+async function cargarProductosParaDetalle(detalleId) {
+    const select = document.getElementById(`producto-${detalleId}`);
+    
+    if (productos.length === 0) {
+        // Cargar productos si no están cargados
+        await loadProductos();
+        populateSelect(select);
+    } else {
+        populateSelect(select);
+    }
+    
+    function populateSelect(selectElement) {
+        selectElement.innerHTML = '<option value="">Seleccionar producto...</option>';
+        productos.filter(p => p.activo).forEach(producto => {
+            const option = document.createElement('option');
+            option.value = producto.id;
+            option.textContent = `${producto.numero_parte} - ${producto.descripcion}`;
+            selectElement.appendChild(option);
+        });
+    }
 }
 
-// Función para cargar materiales (aquí están los 17 materiales exactos)
-function cargarMaterialesOCI() {
-    const gridMateriales = document.getElementById('grid-materiales');
+// Función para calcular total unidades
+function calcularTotalOCI(detalleId) {
+    const tarimas = parseInt(document.getElementById(`tarimas-${detalleId}`).value) || 0;
+    const unidadesTarima = parseInt(document.getElementById(`unidades-tarima-${detalleId}`).value) || 0;
+    const total = tarimas * unidadesTarima;
     
-    if (!gridMateriales) return;
+    document.getElementById(`total-unidades-${detalleId}`).value = total;
+}
+
+// Función para eliminar detalle OCI
+function eliminarDetalleOCI(detalleId) {
+    const elemento = document.getElementById(`detalle-${detalleId}`);
+    if (elemento) {
+        elemento.remove();
+        
+        // Mostrar estado vacío si no hay más detalles
+        const container = document.getElementById('detalles-oci-container');
+        if (container.children.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-plus-circle"></i>
+                    <p>No hay productos agregados</p>
+                    <small>Haga clic en "Agregar Producto" para comenzar</small>
+                </div>
+            `;
+        }
+    }
+}
+
+// Función para actualizar lista de detalles
+function actualizarListaDetallesOCI() {
+    // Esta función ya está implementada en las otras funciones
+}
+
+// Función para manejar subida de factura
+function handleFacturaUpload() {
+    const fileInput = document.getElementById('oci-factura');
+    const file = fileInput.files[0];
     
-    const materiales = [
-        { numero: '1482388', descripcion: 'Material cartón 1482388', piezas: 760 },
-        { numero: '1482387', descripcion: 'Material cartón 1482387', piezas: 350 },
-        { numero: '1482389', descripcion: 'Material cartón 1482389', piezas: 700 },
-        { numero: '1482396', descripcion: 'Material cartón 1482396', piezas: 350 },
-        { numero: '1482874', descripcion: 'Material cartón 1482874', piezas: 2000 },
-        { numero: '1522048', descripcion: 'Material cartón 1522048', piezas: 270 },
-        { numero: '632545', descripcion: 'Material cartón 632545 (10 x Caja)', piezas: 10 },
-        { numero: '1479785', descripcion: 'Material cartón 1479785', piezas: 1200 },
-        { numero: '1491480', descripcion: 'Material cartón 1491480', piezas: 900 },
-        { numero: '1572515', descripcion: 'Material cartón 1572515', piezas: 200 },
-        { numero: '1583803', descripcion: 'Material cartón 1583803', piezas: 500 },
-        { numero: '1564742', descripcion: 'Material cartón 1564742', piezas: 700 },
-        { numero: '1550683', descripcion: 'Material cartón 1550683', piezas: 375 },
-        { numero: '1574769', descripcion: 'Material cartón 1574769', piezas: 500 },
-        { numero: '1574771', descripcion: 'Material cartón 1574771', piezas: 500 },
-        { numero: '1517173', descripcion: 'Material cartón 1517173', piezas: 450 },
-        { numero: '1586785', descripcion: 'Material cartón 1586785', piezas: 500 }
-    ];
+    if (file) {
+        if (file.type !== 'application/pdf') {
+            showToast('Solo se permiten archivos PDF', 'error');
+            fileInput.value = '';
+            return;
+        }
+        
+        if (file.size > 10 * 1024 * 1024) { // 10MB
+            showToast('El archivo no puede ser mayor a 10MB', 'error');
+            fileInput.value = '';
+            return;
+        }
+        
+        facturaFile = file;
+        document.getElementById('factura-name').textContent = file.name;
+        document.getElementById('factura-info').style.display = 'block';
+        showToast('Factura seleccionada correctamente', 'success');
+    }
+}
+
+// Función para remover factura
+function removerFactura() {
+    document.getElementById('oci-factura').value = '';
+    document.getElementById('factura-info').style.display = 'none';
+    facturaFile = null;
+    showToast('Factura removida', 'info');
+}
+
+// Función para crear OCI
+async function crearOCI() {
+    const usuario = document.getElementById('oci-usuario').value.trim();
+    const observaciones = document.getElementById('oci-observaciones').value.trim();
     
-    gridMateriales.innerHTML = materiales.map(material => `
-        <div class="material-card" onclick="seleccionarMaterial('${material.numero}', '${material.descripcion}', ${material.piezas})">
-            <h4>${material.numero}</h4>
-            <p>${material.piezas} piezas por pallet</p>
+    if (!usuario) {
+        showToast('El usuario creador es requerido', 'error');
+        return;
+    }
+    
+    // Recopilar detalles
+    const detalles = [];
+    const detalleItems = document.querySelectorAll('.detalle-oci-item');
+    
+    if (detalleItems.length === 0) {
+        showToast('Debe agregar al menos un producto', 'error');
+        return;
+    }
+    
+    detalleItems.forEach(item => {
+        const id = item.id.replace('detalle-', '');
+        const productoId = document.getElementById(`producto-${id}`).value;
+        const cantidadTarimas = parseInt(document.getElementById(`tarimas-${id}`).value);
+        const unidadesPorTarima = parseInt(document.getElementById(`unidades-tarima-${id}`).value);
+        const observacionesDetalle = document.getElementById(`observaciones-${id}`).value.trim();
+        
+        if (!productoId || !cantidadTarimas || !unidadesPorTarima) {
+            showToast('Todos los campos de productos son requeridos', 'error');
+            return;
+        }
+        
+        detalles.push({
+            producto_id: parseInt(productoId),
+            cantidad_tarimas: cantidadTarimas,
+            cantidad_unidades_por_tarima: unidadesPorTarima,
+            observaciones: observacionesDetalle
+        });
+    });
+    
+    try {
+        const data = {
+            usuario_creador: usuario,
+            observaciones: observaciones,
+            detalles: detalles
+        };
+        
+        const response = await fetch('/api/oci', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('OCI creada exitosamente', 'success');
+            
+            // Si hay factura, subirla
+            if (facturaFile) {
+                await subirFacturaOCI(result.data.id);
+            }
+            
+            // Limpiar formulario
+            limpiarFormularioOCI();
+        } else {
+            showToast(`Error: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error creando OCI:', error);
+        showToast('Error de conexión al crear OCI', 'error');
+    }
+}
+
+// Función para subir factura OCI
+async function subirFacturaOCI(ociId) {
+    try {
+        const formData = new FormData();
+        formData.append('factura', facturaFile);
+        formData.append('usuario', document.getElementById('oci-usuario').value.trim());
+        
+        const response = await fetch(`/api/oci/${ociId}/factura`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('Factura subida exitosamente', 'success');
+        } else {
+            showToast(`Error subiendo factura: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error subiendo factura:', error);
+        showToast('Error de conexión al subir factura', 'error');
+    }
+}
+
+// Función para limpiar formulario OCI
+function limpiarFormularioOCI() {
+    document.getElementById('oci-form').reset();
+    document.getElementById('detalles-oci-container').innerHTML = `
+        <div class="empty-state">
+            <i class="fas fa-plus-circle"></i>
+            <p>No hay productos agregados</p>
+            <small>Haga clic en "Agregar Producto" para comenzar</small>
+        </div>
+    `;
+    removerFactura();
+    detallesOCI = [];
+}
+
+// Función para cargar OCI pendientes
+async function cargarOCIPendientes() {
+    const container = document.getElementById('oci-pendientes-container');
+    
+    try {
+        const response = await fetch('/api/oci/pendientes');
+        const result = await response.json();
+        
+        if (result.success) {
+            mostrarListaOCIPendientes(result.data);
+            actualizarEstadisticasOCI(result.data);
+        } else {
+            showToast(`Error cargando OCI: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error cargando OCI pendientes:', error);
+        showToast('Error de conexión', 'error');
+    }
+}
+
+// Función para mostrar lista OCI pendientes
+function mostrarListaOCIPendientes(ociList) {
+    const container = document.getElementById('oci-pendientes-container');
+    
+    if (ociList.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <p>No hay OCI pendientes</p>
+                <small>Todas las órdenes han sido procesadas</small>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = ociList.map(oci => `
+        <div class="oci-card">
+            <div class="oci-header">
+                <div class="oci-info">
+                    <div class="oci-numero">${oci.numero_oci}</div>
+                    <div class="oci-meta">
+                        Creado por: ${oci.usuario_creador} | 
+                        Fecha: ${new Date(oci.fecha_creacion).toLocaleString()} |
+                        Productos: ${oci.detalles.length}
+                    </div>
+                </div>
+                <div class="oci-actions">
+                    <button class="btn btn-sm btn-info" onclick="verDetalleOCI(${oci.id})">
+                        <i class="fas fa-eye"></i> Ver
+                    </button>
+                </div>
+            </div>
+            ${oci.observaciones ? `<div class="oci-observaciones"><strong>Observaciones:</strong> ${oci.observaciones}</div>` : ''}
+            <div class="oci-detalles">
+                <h4>Productos Solicitados:</h4>
+                ${oci.detalles.map(detalle => `
+                    <div class="detalle-item">
+                        <div><strong>${detalle.producto.numero_parte}</strong></div>
+                        <div>${detalle.producto.descripcion}</div>
+                        <div>${detalle.cantidad_tarimas} tarimas</div>
+                        <div>${detalle.total_unidades} unidades</div>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-danger" onclick="rechazarOCI(${oci.id})">
+                    <i class="fas fa-times"></i> Rechazar
+                </button>
+                <button class="btn btn-success" onclick="aceptarOCI(${oci.id})">
+                    <i class="fas fa-check"></i> Aceptar
+                </button>
+            </div>
         </div>
     `).join('');
 }
 
-// Variables para tracking de materiales seleccionados
-if (typeof window.materialesSeleccionados === 'undefined') {
-    window.materialesSeleccionados = {};
-}
-
-// Función para seleccionar material
-function seleccionarMaterial(numero, descripcion, piezas) {
-    if (window.materialesSeleccionados[numero]) {
-        delete window.materialesSeleccionados[numero];
-    } else {
-        window.materialesSeleccionados[numero] = {
-            numero: numero,
-            descripcion: descripcion,
-            piezas: piezas,
-            cantidad: 1
-        };
-    }
+// Función para aceptar OCI
+async function aceptarOCI(ociId) {
+    const usuario = prompt('Ingrese su nombre para firmar la aprobación:');
+    if (!usuario) return;
     
-    actualizarResumenOCI();
-    actualizarSeleccionVisual();
-}
-
-// Actualizar la selección visual
-function actualizarSeleccionVisual() {
-    const cards = document.querySelectorAll('.material-card');
-    cards.forEach(card => {
-        const numero = card.querySelector('h4').textContent;
-        if (window.materialesSeleccionados[numero]) {
-            card.classList.add('seleccionado');
+    const observaciones = prompt('Observaciones (opcional):') || '';
+    
+    try {
+        const response = await fetch(`/api/oci/${ociId}/firmar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                usuario_revisor: usuario,
+                accion: 'aceptar',
+                observaciones: observaciones
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('OCI aceptada exitosamente', 'success');
+            await cargarOCIPendientes();
         } else {
-            card.classList.remove('seleccionado');
+            showToast(`Error: ${result.error}`, 'error');
         }
-    });
+    } catch (error) {
+        console.error('Error aceptando OCI:', error);
+        showToast('Error de conexión', 'error');
+    }
 }
 
-// Actualizar resumen de OCI
-function actualizarResumenOCI() {
-    const contenedor = document.getElementById('materiales-seleccionados');
-    const totalSpan = document.getElementById('total-piezas');
+// Función para rechazar OCI
+async function rechazarOCI(ociId) {
+    const usuario = prompt('Ingrese su nombre para firmar el rechazo:');
+    if (!usuario) return;
     
-    if (!contenedor || !totalSpan) return;
-    
-    let html = '';
-    let total = 0;
-    
-    Object.values(window.materialesSeleccionados).forEach(material => {
-        const subtotal = material.piezas * material.cantidad;
-        total += subtotal;
-        html += `
-            <div class="material-seleccionado">
-                <span>${material.numero} - ${material.descripcion}</span>
-                <span>Cantidad: ${material.cantidad} pallets (${subtotal} piezas)</span>
-                <button onclick="eliminarMaterial('${material.numero}')">×</button>
-            </div>
-        `;
-    });
-    
-    contenedor.innerHTML = html;
-    totalSpan.textContent = total.toLocaleString();
-}
-
-// Función para eliminar material
-function eliminarMaterial(numero) {
-    delete window.materialesSeleccionados[numero];
-    actualizarResumenOCI();
-    actualizarSeleccionVisual();
-}
-
-// Función para limpiar formulario
-function limpiarFormularioOCI() {
-    window.materialesSeleccionados = {};
-    actualizarResumenOCI();
-    actualizarSeleccionVisual();
-}
-
-// Función para guardar OCI (aquí integrarías con Supabase)
-async function guardarOCI() {
-    if (Object.keys(window.materialesSeleccionados).length === 0) {
-        alert('Debe seleccionar al menos un material');
+    const observaciones = prompt('Motivo del rechazo:');
+    if (!observaciones) {
+        showToast('El motivo del rechazo es requerido', 'error');
         return;
     }
     
     try {
-        const usuario = window.usuarioActual?.username || 'julio'; // Usuario por defecto
+        const response = await fetch(`/api/oci/${ociId}/firmar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                usuario_revisor: usuario,
+                accion: 'rechazar',
+                observaciones: observaciones
+            })
+        });
         
-        // Crear las órdenes para cada material seleccionado
-        for (const material of Object.values(window.materialesSeleccionados)) {
-            const orden = {
-                usuario_solicitante: usuario,
-                material_numero: material.numero,
-                material_descripcion: material.descripcion,
-                piezas_por_pallet: material.piezas,
-                cantidad_pallets: material.cantidad,
-                total_piezas: material.piezas * material.cantidad,
-                estado: 'pendiente',
-                observaciones: ''
-            };
-            
-            // Guardar en Supabase
-            const { error } = await supabase
-                .from('ordenes_compra')
-                .insert([orden]);
-            
-            if (error) {
-                console.error('Error al guardar orden:', error);
-                alert('Error al guardar la orden: ' + error.message);
-                return;
-            }
-            
-            console.log('Orden guardada:', orden);
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('OCI rechazada', 'info');
+            await cargarOCIPendientes();
+        } else {
+            showToast(`Error: ${result.error}`, 'error');
         }
-        
-        alert('OCI guardada exitosamente');
-        limpiarFormularioOCI();
-        cargarOrdenesRecientes();
-        
     } catch (error) {
-        console.error('Error al guardar OCI:', error);
-        alert('Error al guardar la OCI: ' + error.message);
+        console.error('Error rechazando OCI:', error);
+        showToast('Error de conexión', 'error');
     }
 }
 
-// Función para cargar órdenes recientes
-function cargarOrdenesRecientes() {
-    const contenedor = document.getElementById('lista-ordenes-recientes');
-    if (!contenedor) return;
-    
-    contenedor.innerHTML = '<p>No hay órdenes recientes</p>';
+// Función para cargar OCI pendientes de recibir
+async function cargarOCIPendientesRecibir() {
+    const container = document.getElementById('oci-recibir-container');
     
     try {
-        const { data, error } = await supabase
-            .from('ordenes_compra')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(5);
-            
-        if (error) {
-            console.error('Error al cargar órdenes recientes:', error);
-            return;
-        }
+        const response = await fetch('/api/recibido/aceptados');
+        const result = await response.json();
         
-        let html = '';
-        data.forEach(orden => {
-            html += `
-                <div class="orden-reciente">
-                    <strong>OCI #${orden.numero_oci}</strong> - ${orden.material_numero}
-                    <br>
-                    <small>${orden.usuario_solicitante} - ${orden.fecha_creacion}</small>
+        if (result.success) {
+            mostrarListaOCIAceptadas(result.data);
+            actualizarEstadisticasRecibido(result.data);
+        } else {
+            showToast(`Error cargando OCI: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error cargando OCI para recibir:', error);
+        showToast('Error de conexión', 'error');
+    }
+}
+
+// Función para mostrar lista OCI aceptadas
+function mostrarListaOCIAceptadas(ociList) {
+    const container = document.getElementById('oci-recibir-container');
+    
+    if (ociList.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-truck"></i>
+                <p>No hay OCI pendientes de recibir</p>
+                <small>Todas las órdenes aceptadas han sido procesadas</small>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = ociList.map(oci => `
+        <div class="oci-card">
+            <div class="oci-header">
+                <div class="oci-info">
+                    <div class="oci-numero">${oci.numero_oci}</div>
+                    <div class="oci-meta">
+                        Creado por: ${oci.usuario_creador} | 
+                        Aceptado por: ${oci.usuario_revisor} | 
+                        Fecha: ${new Date(oci.fecha_revision).toLocaleString()}
+                    </div>
+                </div>
+                <div class="oci-actions">
+                    <button class="btn btn-sm btn-info" onclick="verDetalleOCI(${oci.id})">
+                        <i class="fas fa-eye"></i> Ver
+                    </button>
+                </div>
+            </div>
+            <div class="oci-detalles">
+                <h4>Productos a Recibir:</h4>
+                ${oci.detalles.map(detalle => `
+                    <div class="detalle-item">
+                        <div><strong>${detalle.producto.numero_parte}</strong></div>
+                        <div>${detalle.producto.descripcion}</div>
+                        <div>${detalle.cantidad_tarimas} tarimas</div>
+                        <div>${detalle.total_unidades} unidades</div>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="recibir-form" id="recibir-form-${oci.id}">
+                <h4><i class="fas fa-check-double"></i> Confirmar Recepción</h4>
+                <div class="cantidad-recibida">
+                    ${oci.detalles.map((detalle, index) => `
+                        <div class="form-group">
+                            <label>${detalle.producto.numero_parte}</label>
+                            <input type="number" id="cantidad-recibida-${oci.id}-${index}" 
+                                   class="form-control" min="0" max="${detalle.total_unidades}" 
+                                   value="${detalle.total_unidades}" required>
+                            <small class="form-help">Stock actual: ${detalle.inventario_actual ? detalle.inventario_actual.cantidad_actual : 0}</small>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="form-group">
+                    <label>Observaciones de Recepción</label>
+                    <textarea id="observaciones-recepcion-${oci.id}" class="form-control" 
+                             rows="2" placeholder="Estado de los materiales recibidos..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" onclick="confirmarRecepcionOCI(${oci.id})">
+                        <i class="fas fa-check-double"></i> Confirmar Recepción
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Función para confirmar recepción OCI
+async function confirmarRecepcionOCI(ociId) {
+    const usuario = prompt('Ingrese su nombre para confirmar la recepción:');
+    if (!usuario) return;
+    
+    const observaciones = document.getElementById(`observaciones-recepcion-${ociId}`).value;
+    
+    // Recopilar cantidades recibidas
+    const detallesRecibidos = [];
+    const form = document.getElementById(`recibir-form-${ociId}`);
+    const cantidadInputs = form.querySelectorAll('input[id^="cantidad-recibida-"]');
+    
+    cantidadInputs.forEach((input, index) => {
+        const cantidad = parseInt(input.value) || 0;
+        if (cantidad > 0) {
+            detallesRecibidos.push({
+                detalle_id: index + 1, // Esto debería ser el ID real del detalle
+                cantidad_recibida: cantidad
+            });
+        }
+    });
+    
+    if (detallesRecibidos.length === 0) {
+        showToast('Debe especificar al menos una cantidad recibida', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/recibido/${ociId}/confirmar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                usuario_receptor: usuario,
+                observaciones: observaciones,
+                detalles_recibidos: detallesRecibidos,
+                verificar_fisicamente: true
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('Recepción confirmada exitosamente', 'success');
+            await cargarOCIPendientesRecibir();
+        } else {
+            showToast(`Error: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error confirmando recepción:', error);
+        showToast('Error de conexión', 'error');
+    }
+}
+
+// Función para ver detalle OCI
+async function verDetalleOCI(ociId) {
+    try {
+        const response = await fetch(`/api/oci/${ociId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const oci = result.data;
+            let detalleHTML = `
+                <div class="modal" style="display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+                    <div style="background: white; margin: 50px auto; padding: 20px; max-width: 800px; max-height: 80vh; overflow-y: auto; border-radius: 8px;">
+                        <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 20px;">
+                            <h3>OCI ${oci.numero_oci}</h3>
+                            <button onclick="cerrarModalDetalle()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                        </div>
+                        <div><strong>Estado:</strong> <span class="estado-badge estado-${oci.estado.toLowerCase()}">${oci.estado}</span></div>
+                        <div><strong>Creado por:</strong> ${oci.usuario_creador}</div>
+                        <div><strong>Fecha creación:</strong> ${new Date(oci.fecha_creacion).toLocaleString()}</div>
+                        ${oci.usuario_revisor ? `<div><strong>Revisado por:</strong> ${oci.usuario_revisor}</div>` : ''}
+                        ${oci.usuario_receptor ? `<div><strong>Recibido por:</strong> ${oci.usuario_receptor}</div>` : ''}
+                        ${oci.observaciones ? `<div><strong>Observaciones:</strong> ${oci.observaciones}</div>` : ''}
+                        
+                        <h4 style="margin-top: 20px;">Detalles:</h4>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f1f5f9;">
+                                    <th style="padding: 8px; border: 1px solid #e2e8f0;">Producto</th>
+                                    <th style="padding: 8px; border: 1px solid #e2e8f0;">Tarimas</th>
+                                    <th style="padding: 8px; border: 1px solid #e2e8f0;">Unidades/Tarima</th>
+                                    <th style="padding: 8px; border: 1px solid #e2e8f0;">Total Unidades</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${oci.detalles.map(detalle => `
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #e2e8f0;">
+                                            <strong>${detalle.producto.numero_parte}</strong><br>
+                                            <small>${detalle.producto.descripcion}</small>
+                                        </td>
+                                        <td style="padding: 8px; border: 1px solid #e2e8f0;">${detalle.cantidad_tarimas}</td>
+                                        <td style="padding: 8px; border: 1px solid #e2e8f0;">${detalle.cantidad_unidades_por_tarima}</td>
+                                        <td style="padding: 8px; border: 1px solid #e2e8f0;">${detalle.total_unidades}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        
+                        ${oci.facturas && oci.facturas.length > 0 ? `
+                            <h4 style="margin-top: 20px;">Facturas:</h4>
+                            ${oci.facturas.map(factura => `
+                                <div style="background: #f1f5f9; padding: 10px; margin: 5px 0; border-radius: 4px;">
+                                    <i class="fas fa-file-pdf" style="color: #dc2626;"></i>
+                                    <a href="/uploads/${factura.nombre_archivo}" target="_blank">${factura.nombre_original}</a>
+                                    <small>Subida por: ${factura.usuario_subida}</small>
+                                </div>
+                            `).join('')}
+                        ` : ''}
+                    </div>
                 </div>
             `;
-        });
-        
-        if (html) {
-            contenedor.innerHTML = html;
-        }
-        
-    } catch (error) {
-        console.error('Error al cargar órdenes recientes:', error);
-    }
-}
-
-// Función para cargar órdenes existentes (para la lista)
-async function cargarOrdenesExistentes() {
-    const tbody = document.getElementById('cuerpo-tabla-ordenes');
-    if (!tbody) return;
-    
-    // Mostrar carga
-    tbody.innerHTML = `
-        <tr>
-            <td colspan="7" class="cargando">
-                <div class="spinner-oci"></div>
-                <p>Cargando órdenes...</p>
-            </td>
-        </tr>
-    `;
-    
-    try {
-        const { data, error } = await supabase
-            .from('ordenes_compra')
-            .select('*')
-            .order('created_at', { ascending: false });
             
-        if (error) {
-            console.error('Error al cargar órdenes:', error);
-            tbody.innerHTML = '<tr><td colspan="7">Error al cargar las órdenes</td></tr>';
-            return;
+            document.body.insertAdjacentHTML('beforeend', detalleHTML);
+        } else {
+            showToast(`Error cargando detalle: ${result.error}`, 'error');
         }
-        
-        let html = '';
-        data.forEach(orden => {
-            const estadoClass = `estado-${orden.estado}`;
-            html += `
-                <tr>
-                    <td>${orden.numero_oci}</td>
-                    <td>${orden.fecha_creacion}</td>
-                    <td>${orden.usuario_solicitante}</td>
-                    <td>${orden.material_numero}</td>
-                    <td>${orden.total_piezas} piezas</td>
-                    <td><span class="icono-estado ${estadoClass}">${orden.estado}</span></td>
-                    <td>
-                        <button onclick="editarOrden(${orden.id})" class="btn-small">Editar</button>
-                        <button onclick="eliminarOrden(${orden.id})" class="btn-small btn-danger">Eliminar</button>
-                    </td>
-                </tr>
-            `;
-        });
-        
-        tbody.innerHTML = html;
-        
     } catch (error) {
-        console.error('Error al cargar órdenes:', error);
-        tbody.innerHTML = '<tr><td colspan="7">Error al cargar las órdenes</td></tr>';
-    }
-    
-    // Por ahora, mostrar mensaje temporal
-    setTimeout(() => {
-        tbody.innerHTML = '<tr><td colspan="7">No hay órdenes registradas aún</td></tr>';
-    }, 1000);
-}
-
-// Función para filtrar órdenes
-async function filtrarOrdenes() {
-    const filtroBusqueda = document.getElementById('filtro-busqueda').value.toLowerCase();
-    const filtroEstado = document.getElementById('filtro-estado').value;
-    
-    // Aquí implementarías la lógica de filtrado
-    console.log('Filtrando órdenes...', { filtroBusqueda, filtroEstado });
-    
-    // Si tienes Supabase, usarías algo como:
-    let query = supabase.from('ordenes_compra').select('*');
-    
-    if (filtroBusqueda) {
-        query = query.or(`numero_oci.ilike.%${filtroBusqueda}%,usuario_solicitante.ilike.%${filtroBusqueda}%`);
-    }
-    
-    if (filtroEstado) {
-        query = query.eq('estado', filtroEstado);
-    }
-    
-    const { data, error } = await query.order('created_at', { ascending: false });
-    // Actualizar tabla...
-}
-
-// Funciones adicionales para editar/eliminar órdenes
-function editarOrden(id) {
-    alert('Función de editar orden: ' + id + ' (implementar según necesidades)');
-}
-
-async function eliminarOrden(id) {
-    if (confirm('¿Está seguro de eliminar esta orden?')) {
-        // Aquí implementarías la eliminación con Supabase
-        console.log('Eliminando orden:', id);
-        
-        const { error } = await supabase
-            .from('ordenes_compra')
-            .delete()
-            .eq('id', id);
-            
-        if (!error) {
-            cargarOrdenesExistentes();
-        }
+        console.error('Error cargando detalle OCI:', error);
+        showToast('Error de conexión', 'error');
     }
 }
 
-// ========================================
-// FIN DE FUNCIONES PARA OCI
-// ========================================
+// Función para cerrar modal detalle
+function cerrarModalDetalle() {
+    const modal = document.querySelector('.modal[style*="display: block"]');
+    if (modal) {
+        modal.remove();
+    }
+}
 
-// NOTA: Este archivo ya incluye la integración completa con Supabase para el sistema OCI.
-// Todos los errores de sintaxis han sido corregidos: comentarios y funciones async.
+// Función para actualizar estadísticas OCI
+function actualizarEstadisticasOCI(ociList) {
+    // Implementar lógica para actualizar contadores
+    const pendientes = ociList.filter(oci => oci.estado === 'PENDIENTE').length;
+    document.getElementById('oci-pendientes-count').textContent = pendientes;
+}
+
+// Función para actualizar estadísticas recibido
+function actualizarEstadisticasRecibido(ociList) {
+    // Implementar lógica para actualizar contadores
+    const pendientes = ociList.length;
+    document.getElementById('oci-pendientes-recibir-count').textContent = pendientes;
+}
+
+// Función para refrescar listas OCI
+async function refrescarListaOCI() {
+    await cargarOCIPendientes();
+}
+
+async function refrescarListaRecibidos() {
+    await cargarOCIPendientesRecibir();
+}
