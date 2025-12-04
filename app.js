@@ -64,7 +64,7 @@ async function checkAuthentication() {
 
 function redirectToLogin() {
     console.log('🔄 Redirigiendo al login...');
-    window.location.href = 'login_completo.html';
+    window.location.href = 'login_supabase.html';
 }
 
 function clearAuthData() {
@@ -142,10 +142,10 @@ function logout() {
     // Cerrar sesión de Supabase si existe
     supabase.auth.signOut().then(() => {
         console.log('✅ Sesión cerrada');
-        window.location.href = 'login_completo.html';
+        window.location.href = 'login_supabase.html';
     }).catch(error => {
         console.log('⚠️ Error cerrando sesión Supabase:', error);
-        window.location.href = 'login_completo.html';
+        window.location.href = 'login_supabase.html';
     });
 }
 
