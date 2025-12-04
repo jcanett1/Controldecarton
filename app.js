@@ -521,3 +521,377 @@ function showToast(message, type = 'info') {
 }
 
 console.log('✅ Sistema de cartón con Supabase cargado correctamente');
+
+
+// ========================================
+// FUNCIONES PARA NAVEGACIÓN DE OCI
+// Agregar estas funciones al final del archivo app.js
+// ========================================
+
+// Función para abrir la página de crear OCI
+function abrirOCI() {
+    // Cambiar a la sección de OCI
+    showSection('oci-crear');
+    
+    // Cargar la página OCI en la sección
+    cargarContenidoOCI();
+}
+
+// Función para abrir la lista de OCI
+function abrirListaOCI() {
+    // Cambiar a la sección de lista OCI
+    showSection('oci-revisar');
+    
+    // Cargar el contenido de lista OCI
+    cargarContenidoListaOCI();
+}
+
+// Cargar el contenido HTML de OCI en la sección
+function cargarContenidoOCI() {
+    // Mostrar usuario actual
+    const usuarioSpan = document.getElementById('usuario-actual-oci');
+    if (usuarioSpan && window.usuarioActual) {
+        usuarioSpan.textContent = `Usuario: ${window.usuarioActual.username}`;
+    } else if (usuarioSpan) {
+        usuarioSpan.textContent = `Usuario: julio`; // Usuario por defecto
+    }
+    
+    // Configurar fecha actual
+    const fechaInput = document.getElementById('fecha-oci');
+    if (fechaInput) {
+        fechaInput.value = new Date().toISOString().split('T')[0];
+    }
+    
+    // Cargar materiales
+    cargarMaterialesOCI();
+    
+    // Cargar órdenes recientes
+    cargarOrdenesRecientes();
+}
+
+// Cargar el contenido de lista OCI
+function cargarContenidoListaOCI() {
+    // Cargar las órdenes existentes
+    cargarOrdenesExistentes();
+}
+
+// Función para cargar materiales (aquí están los 17 materiales exactos)
+function cargarMaterialesOCI() {
+    const gridMateriales = document.getElementById('grid-materiales');
+    
+    if (!gridMateriales) return;
+    
+    const materiales = [
+        { numero: '1482388', descripcion: 'Material cartón 1482388', piezas: 760 },
+        { numero: '1482387', descripcion: 'Material cartón 1482387', piezas: 350 },
+        { numero: '1482389', descripcion: 'Material cartón 1482389', piezas: 700 },
+        { numero: '1482396', descripcion: 'Material cartón 1482396', piezas: 350 },
+        { numero: '1482874', descripcion: 'Material cartón 1482874', piezas: 2000 },
+        { numero: '1522048', descripcion: 'Material cartón 1522048', piezas: 270 },
+        { numero: '632545', descripcion: 'Material cartón 632545 (10 x Caja)', piezas: 10 },
+        { numero: '1479785', descripcion: 'Material cartón 1479785', piezas: 1200 },
+        { numero: '1491480', descripcion: 'Material cartón 1491480', piezas: 900 },
+        { numero: '1572515', descripcion: 'Material cartón 1572515', piezas: 200 },
+        { numero: '1583803', descripcion: 'Material cartón 1583803', piezas: 500 },
+        { numero: '1564742', descripcion: 'Material cartón 1564742', piezas: 700 },
+        { numero: '1550683', descripcion: 'Material cartón 1550683', piezas: 375 },
+        { numero: '1574769', descripcion: 'Material cartón 1574769', piezas: 500 },
+        { numero: '1574771', descripcion: 'Material cartón 1574771', piezas: 500 },
+        { numero: '1517173', descripcion: 'Material cartón 1517173', piezas: 450 },
+        { numero: '1586785', descripcion: 'Material cartón 1586785', piezas: 500 }
+    ];
+    
+    gridMateriales.innerHTML = materiales.map(material => `
+        <div class="material-card" onclick="seleccionarMaterial('${material.numero}', '${material.descripcion}', ${material.piezas})">
+            <h4>${material.numero}</h4>
+            <p>${material.piezas} piezas por pallet</p>
+        </div>
+    `).join('');
+}
+
+// Variables para tracking de materiales seleccionados
+if (typeof window.materialesSeleccionados === 'undefined') {
+    window.materialesSeleccionados = {};
+}
+
+// Función para seleccionar material
+function seleccionarMaterial(numero, descripcion, piezas) {
+    if (window.materialesSeleccionados[numero]) {
+        delete window.materialesSeleccionados[numero];
+    } else {
+        window.materialesSeleccionados[numero] = {
+            numero: numero,
+            descripcion: descripcion,
+            piezas: piezas,
+            cantidad: 1
+        };
+    }
+    
+    actualizarResumenOCI();
+    actualizarSeleccionVisual();
+}
+
+// Actualizar la selección visual
+function actualizarSeleccionVisual() {
+    const cards = document.querySelectorAll('.material-card');
+    cards.forEach(card => {
+        const numero = card.querySelector('h4').textContent;
+        if (window.materialesSeleccionados[numero]) {
+            card.classList.add('seleccionado');
+        } else {
+            card.classList.remove('seleccionado');
+        }
+    });
+}
+
+// Actualizar resumen de OCI
+function actualizarResumenOCI() {
+    const contenedor = document.getElementById('materiales-seleccionados');
+    const totalSpan = document.getElementById('total-piezas');
+    
+    if (!contenedor || !totalSpan) return;
+    
+    let html = '';
+    let total = 0;
+    
+    Object.values(window.materialesSeleccionados).forEach(material => {
+        const subtotal = material.piezas * material.cantidad;
+        total += subtotal;
+        html += `
+            <div class="material-seleccionado">
+                <span>${material.numero} - ${material.descripcion}</span>
+                <span>Cantidad: ${material.cantidad} pallets (${subtotal} piezas)</span>
+                <button onclick="eliminarMaterial('${material.numero}')">×</button>
+            </div>
+        `;
+    });
+    
+    contenedor.innerHTML = html;
+    totalSpan.textContent = total.toLocaleString();
+}
+
+// Función para eliminar material
+function eliminarMaterial(numero) {
+    delete window.materialesSeleccionados[numero];
+    actualizarResumenOCI();
+    actualizarSeleccionVisual();
+}
+
+// Función para limpiar formulario
+function limpiarFormularioOCI() {
+    window.materialesSeleccionados = {};
+    actualizarResumenOCI();
+    actualizarSeleccionVisual();
+}
+
+// Función para guardar OCI (aquí integrarías con Supabase)
+async function guardarOCI() {
+    if (Object.keys(window.materialesSeleccionados).length === 0) {
+        alert('Debe seleccionar al menos un material');
+        return;
+    }
+    
+    try {
+        const usuario = window.usuarioActual?.username || 'julio'; // Usuario por defecto
+        
+        // Crear las órdenes para cada material seleccionado
+        for (const material of Object.values(window.materialesSeleccionados)) {
+            const orden = {
+                usuario_solicitante: usuario,
+                material_numero: material.numero,
+                material_descripcion: material.descripcion,
+                piezas_por_pallet: material.piezas,
+                cantidad_pallets: material.cantidad,
+                total_piezas: material.piezas * material.cantidad,
+                estado: 'pendiente',
+                observaciones: ''
+            };
+            
+            // Si tienes acceso a supabase, descomenta esto:
+            
+            const { error } = await supabase
+                .from('ordenes_compra')
+                .insert([orden]);
+            
+            if (error) {
+                console.error('Error al guardar orden:', error);
+                alert('Error al guardar la orden: ' + error.message);
+                return;
+            }
+            */
+            
+            // Por ahora, solo simulamos el guardado
+            console.log('Orden guardada:', orden);
+        }
+        
+        alert('OCI guardada exitosamente');
+        limpiarFormularioOCI();
+        cargarOrdenesRecientes();
+        
+    } catch (error) {
+        console.error('Error al guardar OCI:', error);
+        alert('Error al guardar la OCI: ' + error.message);
+    }
+}
+
+// Función para cargar órdenes recientes
+function cargarOrdenesRecientes() {
+    const contenedor = document.getElementById('lista-ordenes-recientes');
+    if (!contenedor) return;
+    
+    contenedor.innerHTML = '<p>No hay órdenes recientes</p>';
+    
+    // Si tienes acceso a supabase, descomenta esto:
+    
+    try {
+        const { data, error } = await supabase
+            .from('ordenes_compra')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(5);
+            
+        if (error) {
+            console.error('Error al cargar órdenes recientes:', error);
+            return;
+        }
+        
+        let html = '';
+        data.forEach(orden => {
+            html += `
+                <div class="orden-reciente">
+                    <strong>OCI #${orden.numero_oci}</strong> - ${orden.material_numero}
+                    <br>
+                    <small>${orden.usuario_solicitante} - ${orden.fecha_creacion}</small>
+                </div>
+            `;
+        });
+        
+        if (html) {
+            contenedor.innerHTML = html;
+        }
+        
+    } catch (error) {
+        console.error('Error al cargar órdenes recientes:', error);
+    }
+    */
+}
+
+// Función para cargar órdenes existentes (para la lista)
+async function cargarOrdenesExistentes() {
+    const tbody = document.getElementById('cuerpo-tabla-ordenes');
+    if (!tbody) return;
+    
+    // Mostrar carga
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="7" class="cargando">
+                <div class="spinner-oci"></div>
+                <p>Cargando órdenes...</p>
+            </td>
+        </tr>
+    `;
+    
+    // Si tienes acceso a supabase, descomenta esto:
+    
+    try {
+        const { data, error } = await supabase
+            .from('ordenes_compra')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+        if (error) {
+            console.error('Error al cargar órdenes:', error);
+            tbody.innerHTML = '<tr><td colspan="7">Error al cargar las órdenes</td></tr>';
+            return;
+        }
+        
+        let html = '';
+        data.forEach(orden => {
+            const estadoClass = `estado-${orden.estado}`;
+            html += `
+                <tr>
+                    <td>${orden.numero_oci}</td>
+                    <td>${orden.fecha_creacion}</td>
+                    <td>${orden.usuario_solicitante}</td>
+                    <td>${orden.material_numero}</td>
+                    <td>${orden.total_piezas} piezas</td>
+                    <td><span class="icono-estado ${estadoClass}">${orden.estado}</span></td>
+                    <td>
+                        <button onclick="editarOrden(${orden.id})" class="btn-small">Editar</button>
+                        <button onclick="eliminarOrden(${orden.id})" class="btn-small btn-danger">Eliminar</button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error al cargar órdenes:', error);
+        tbody.innerHTML = '<tr><td colspan="7">Error al cargar las órdenes</td></tr>';
+    }
+    */
+    
+    // Por ahora, mostrar mensaje temporal
+    setTimeout(() => {
+        tbody.innerHTML = '<tr><td colspan="7">No hay órdenes registradas aún</td></tr>';
+    }, 1000);
+}
+
+// Función para filtrar órdenes
+function filtrarOrdenes() {
+    const filtroBusqueda = document.getElementById('filtro-busqueda').value.toLowerCase();
+    const filtroEstado = document.getElementById('filtro-estado').value;
+    
+    // Aquí implementarías la lógica de filtrado
+    console.log('Filtrando órdenes...', { filtroBusqueda, filtroEstado });
+    
+    // Si tienes Supabase, usarías algo como:
+    
+    let query = supabase.from('ordenes_compra').select('*');
+    
+    if (filtroBusqueda) {
+        query = query.or(`numero_oci.ilike.%${filtroBusqueda}%,usuario_solicitante.ilike.%${filtroBusqueda}%`);
+    }
+    
+    if (filtroEstado) {
+        query = query.eq('estado', filtroEstado);
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
+    // Actualizar tabla...
+    */
+}
+
+// Funciones adicionales para editar/eliminar órdenes
+function editarOrden(id) {
+    alert('Función de editar orden: ' + id + ' (implementar según necesidades)');
+}
+
+function eliminarOrden(id) {
+    if (confirm('¿Está seguro de eliminar esta orden?')) {
+        // Aquí implementarías la eliminación con Supabase
+        console.log('Eliminando orden:', id);
+        
+        const { error } = await supabase
+            .from('ordenes_compra')
+            .delete()
+            .eq('id', id);
+            
+        if (!error) {
+            cargarOrdenesExistentes();
+        }
+        */
+    }
+}
+
+// ========================================
+// FIN DE FUNCIONES PARA OCI
+// ========================================
+
+// NOTA: Para activar la integración completa con Supabase, descomenta las líneas que tienen:
+// /*
+// y */
+// y asegúrate de que el cliente de Supabase esté configurado en tu archivo app.js
+
+
