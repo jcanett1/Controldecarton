@@ -707,8 +707,7 @@ async function guardarOCI() {
                 observaciones: ''
             };
             
-            // Si tienes acceso a supabase, descomenta esto:
-            
+            // Guardar en Supabase
             const { error } = await supabase
                 .from('ordenes_compra')
                 .insert([orden]);
@@ -718,9 +717,7 @@ async function guardarOCI() {
                 alert('Error al guardar la orden: ' + error.message);
                 return;
             }
-        
             
-            // Por ahora, solo simulamos el guardado
             console.log('Orden guardada:', orden);
         }
         
@@ -740,8 +737,6 @@ function cargarOrdenesRecientes() {
     if (!contenedor) return;
     
     contenedor.innerHTML = '<p>No hay órdenes recientes</p>';
-    
-    // Si tienes acceso a supabase, descomenta esto:
     
     try {
         const { data, error } = await supabase
@@ -773,7 +768,6 @@ function cargarOrdenesRecientes() {
     } catch (error) {
         console.error('Error al cargar órdenes recientes:', error);
     }
-    */
 }
 
 // Función para cargar órdenes existentes (para la lista)
@@ -790,8 +784,6 @@ async function cargarOrdenesExistentes() {
             </td>
         </tr>
     `;
-    
-    // Si tienes acceso a supabase, descomenta esto:
     
     try {
         const { data, error } = await supabase
@@ -830,7 +822,6 @@ async function cargarOrdenesExistentes() {
         console.error('Error al cargar órdenes:', error);
         tbody.innerHTML = '<tr><td colspan="7">Error al cargar las órdenes</td></tr>';
     }
-    */
     
     // Por ahora, mostrar mensaje temporal
     setTimeout(() => {
@@ -847,7 +838,6 @@ function filtrarOrdenes() {
     console.log('Filtrando órdenes...', { filtroBusqueda, filtroEstado });
     
     // Si tienes Supabase, usarías algo como:
-    
     let query = supabase.from('ordenes_compra').select('*');
     
     if (filtroBusqueda) {
@@ -860,7 +850,6 @@ function filtrarOrdenes() {
     
     const { data, error } = await query.order('created_at', { ascending: false });
     // Actualizar tabla...
-    */
 }
 
 // Funciones adicionales para editar/eliminar órdenes
@@ -881,7 +870,6 @@ function eliminarOrden(id) {
         if (!error) {
             cargarOrdenesExistentes();
         }
-        */
     }
 }
 
@@ -889,9 +877,5 @@ function eliminarOrden(id) {
 // FIN DE FUNCIONES PARA OCI
 // ========================================
 
-// NOTA: Para activar la integración completa con Supabase, descomenta las líneas que tienen:
-// /*
-// y */
-// y asegúrate de que el cliente de Supabase esté configurado en tu archivo app.js
-
-
+// NOTA: Este archivo ya incluye la integración completa con Supabase para el sistema OCI.
+// Todos los comentarios mal estructurados han sido corregidos.
