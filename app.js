@@ -1307,7 +1307,14 @@ async function initializeOCISection() {
         // Establecer fecha actual
         const now = new Date();
         const fechaISO = now.toISOString().slice(0, 16);
-        document.getElementById('oci-fecha').value = fechaISO;
+        
+        // CORRECCIÓN: Verificar que el elemento existe antes de usarlo
+        const fechaElement = document.getElementById('oci-fecha');
+        if (fechaElement) {
+            fechaElement.value = fechaISO;
+        } else {
+            console.warn('Elemento oci-fecha no encontrado en el DOM');
+        }
         
         // Limpiar detalles
         detallesOCI = [];
@@ -1318,7 +1325,6 @@ async function initializeOCISection() {
         await cargarOCIPendientesRecibir();
     }
 }
-
 // Función para agregar detalle OCI
 async function agregarDetalleOCI() {
     const container = document.getElementById('detalles-oci-container');
