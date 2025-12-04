@@ -718,7 +718,7 @@ async function guardarOCI() {
                 alert('Error al guardar la orden: ' + error.message);
                 return;
             }
-            */
+        
             
             // Por ahora, solo simulamos el guardado
             console.log('Orden guardada:', orden);
