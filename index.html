@@ -365,6 +365,328 @@
             font-style: italic;
         }
 
+        /* ========================================
+           ESTILOS ESPECÍFICOS PARA OCI
+        ======================================== */
+
+        .contenedor-oci {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .formulario-oci {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .fecha-numero-oci {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .campo-grupo {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .campo-grupo label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .campo-grupo input {
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .campo-grupo input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .campo-grupo input:read-only {
+            background-color: #f9fafb;
+            color: #6b7280;
+        }
+
+        .materiales-seleccion {
+            margin-top: 30px;
+        }
+
+        .materiales-seleccion h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1e293b;
+        }
+
+        .grid-materiales {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .material-card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .material-card:hover {
+            background: #e9ecef;
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .material-card.seleccionado {
+            background: #3b82f6;
+            color: white;
+            border-color: #1e40af;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .material-card h4 {
+            margin: 0 0 8px 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .material-card p {
+            margin: 0;
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        .material-card.seleccionado p {
+            opacity: 0.9;
+        }
+
+        .resumen-oci {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .resumen-oci h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1e293b;
+        }
+
+        .material-seleccionado {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .material-seleccionado span:first-child {
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .material-seleccionado span:last-child {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .material-seleccionado button {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+
+        .material-seleccionado button:hover {
+            background: #dc2626;
+        }
+
+        .total-oci {
+            text-align: right;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #d1d5db;
+            color: #1e293b;
+        }
+
+        .botones-oci {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 30px;
+        }
+
+        .btn-limpiar, .btn-guardar {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-limpiar {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-limpiar:hover {
+            background: #4b5563;
+            transform: translateY(-1px);
+        }
+
+        .btn-guardar {
+            background: #059669;
+            color: white;
+        }
+
+        .btn-guardar:hover {
+            background: #047857;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        }
+
+        .ordenes-recientes {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .ordenes-recientes h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1e293b;
+        }
+
+        .filtros-lista {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filtros-lista input, .filtros-lista select {
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .filtros-lista input:focus, .filtros-lista select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .tabla-oci {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .tabla-oci table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tabla-oci th, .tabla-oci td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .tabla-oci th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .tabla-oci tr:hover {
+            background: #f8fafc;
+        }
+
+        .info-usuario-oci {
+            float: right;
+            font-size: 14px;
+            color: #6b7280;
+            background: #f3f4f6;
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+
+        .contenedor-lista-oci {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .encabezado-lista-oci {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .cargando {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .spinner-oci {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
@@ -390,6 +712,28 @@
             .content-area {
                 padding: 1rem;
             }
+
+            .fecha-numero-oci {
+                grid-template-columns: 1fr;
+            }
+
+            .grid-materiales {
+                grid-template-columns: 1fr;
+            }
+
+            .filtros-lista {
+                flex-direction: column;
+            }
+
+            .botones-oci {
+                flex-direction: column;
+            }
+
+            .info-usuario-oci {
+                float: none;
+                display: inline-block;
+                margin-top: 10px;
+            }
         }
 
         /* Loading */
@@ -413,6 +757,28 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        .icono-estado {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .estado-pendiente {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .estado-aprobada {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .estado-rechazada {
+            background: #fef2f2;
+            color: #991b1b;
         }
     </style>
 </head>
@@ -444,11 +810,11 @@
                     <i class="fas fa-exchange-alt"></i>
                     <span>Movimientos</span>
                 </li>
-                <li class="menu-item" data-section="oci-crear">
+                <li class="menu-item" onclick="abrirOCI()">
                     <i class="fas fa-plus-circle"></i>
                     <span>Crear OCI</span>
                 </li>
-                <li class="menu-item" data-section="oci-revisar">
+                <li class="menu-item" onclick="abrirListaOCI()">
                     <i class="fas fa-check-circle"></i>
                     <span>Revisar OCI</span>
                 </li>
@@ -580,24 +946,108 @@
 
                 <!-- OCI Crear Section -->
                 <section id="oci-crear-section" class="content-section">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Crear Orden de Compra Interna</h3>
+                    <div class="contenedor-oci">
+                        <div class="encabezado-oci" style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                            <h2>Crear Orden de Compra Interna (OCI)</h2>
+                            <div class="info-usuario-oci">
+                                <span id="usuario-actual-oci">Usuario: Cargando...</span>
+                            </div>
                         </div>
-                        <div class="card-content">
-                            <p>Función en desarrollo. Próximamente disponible.</p>
+                        
+                        <div class="formulario-oci">
+                            <div class="fecha-numero-oci">
+                                <div class="campo-grupo">
+                                    <label>Fecha de Creación:</label>
+                                    <input type="date" id="fecha-oci" readonly>
+                                </div>
+                                <div class="campo-grupo">
+                                    <label>Número de OCI:</label>
+                                    <input type="text" id="numero-oci" readonly placeholder="Se asignará automáticamente">
+                                </div>
+                            </div>
+                            
+                            <div class="materiales-seleccion">
+                                <h3>Seleccionar Materiales:</h3>
+                                <div class="grid-materiales" id="grid-materiales">
+                                    <!-- Los materiales se cargarán dinámicamente -->
+                                </div>
+                            </div>
+                            
+                            <div class="resumen-oci" id="resumen-oci">
+                                <h3>Resumen de la OCI</h3>
+                                <div id="materiales-seleccionados"></div>
+                                <div class="total-oci">
+                                    <strong>Total de piezas: <span id="total-piezas">0</span></strong>
+                                </div>
+                            </div>
+                            
+                            <div class="botones-oci">
+                                <button type="button" onclick="limpiarFormularioOCI()" class="btn-limpiar">
+                                    <i class="fas fa-broom"></i>
+                                    Limpiar
+                                </button>
+                                <button type="button" onclick="guardarOCI()" class="btn-guardar">
+                                    <i class="fas fa-save"></i>
+                                    Guardar OCI
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="ordenes-recientes">
+                            <h3>Órdenes Recientes</h3>
+                            <div id="lista-ordenes-recientes">
+                                <div class="cargando">
+                                    <div class="spinner-oci"></div>
+                                    <p>Cargando órdenes recientes...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
 
                 <!-- OCI Revisar Section -->
                 <section id="oci-revisar-section" class="content-section">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Revisar Órdenes de Compra</h3>
+                    <div class="contenedor-lista-oci">
+                        <div class="encabezado-lista-oci">
+                            <h2>Lista de Órdenes de Compra Interna</h2>
                         </div>
-                        <div class="card-content">
-                            <p>Función en desarrollo. Próximamente disponible.</p>
+                        
+                        <div class="filtros-lista">
+                            <input type="text" id="filtro-busqueda" placeholder="Buscar por número OCI o usuario..." style="flex: 1;">
+                            <select id="filtro-estado">
+                                <option value="">Todos los estados</option>
+                                <option value="pendiente">Pendiente</option>
+                                <option value="aprobada">Aprobada</option>
+                                <option value="rechazada">Rechazada</option>
+                            </select>
+                            <button onclick="filtrarOrdenes()" class="btn btn-primary">
+                                <i class="fas fa-search"></i>
+                                Filtrar
+                            </button>
+                        </div>
+                        
+                        <div class="tabla-oci">
+                            <table id="tabla-ordenes">
+                                <thead>
+                                    <tr>
+                                        <th>Número OCI</th>
+                                        <th>Fecha</th>
+                                        <th>Usuario</th>
+                                        <th>Material</th>
+                                        <th>Cantidad</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpo-tabla-ordenes">
+                                    <tr>
+                                        <td colspan="7" class="cargando">
+                                            <div class="spinner-oci"></div>
+                                            <p>Cargando órdenes...</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </section>
