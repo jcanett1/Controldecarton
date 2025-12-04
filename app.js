@@ -1307,24 +1307,25 @@ async function initializeOCISection() {
         // Establecer fecha actual
         const now = new Date();
         const fechaISO = now.toISOString().slice(0, 16);
+        document.getElementById('fecha-oci').value = fechaISO;
         
-        // CORRECCIÓN: Verificar que el elemento existe antes de usarlo
-        const fechaElement = document.getElementById('oci-fecha');
-        if (fechaElement) {
-            fechaElement.value = fechaISO;
-        } else {
-            console.warn('Elemento oci-fecha no encontrado en el DOM');
-        }
+        // Cargar materiales de cartón
+        await cargarMaterialesOCICarton();
         
         // Limpiar detalles
         detallesOCI = [];
         actualizarListaDetallesOCI();
+        
+        // Cargar órdenes recientes
+        await cargarOrdenesRecientes();
+        
     } else if (currentSection === 'oci-revisar') {
         await cargarOCIPendientes();
     } else if (currentSection === 'oci-recibido') {
         await cargarOCIPendientesRecibir();
     }
 }
+
 // Función para agregar detalle OCI
 async function agregarDetalleOCI() {
     const container = document.getElementById('detalles-oci-container');
@@ -1473,77 +1474,65 @@ function removerFactura() {
 }
 
 // Función para crear OCI
-async function crearOCI() {
-    const usuario = document.getElementById('oci-usuario').value.trim();
-    const observaciones = document.getElementById('oci-observaciones').value.trim();
-    
-    if (!usuario) {
-        showToast('El usuario creador es requerido', 'error');
+// Función para guardar OCI usando Supabase
+async function guardarOCI() {
+    // Verificar que hay un usuario autenticado
+    if (!currentUser) {
+        showToast('Debe estar autenticado para crear una OCI', 'error');
         return;
     }
     
-    // Recopilar detalles
-    const detalles = [];
-    const detalleItems = document.querySelectorAll('.detalle-oci-item');
-    
-    if (detalleItems.length === 0) {
-        showToast('Debe agregar al menos un producto', 'error');
+    // Verificar que hay materiales seleccionados
+    if (detallesOCI.length === 0) {
+        showToast('Debe seleccionar al menos un material', 'error');
         return;
     }
-    
-    detalleItems.forEach(item => {
-        const id = item.id.replace('detalle-', '');
-        const productoId = document.getElementById(`producto-${id}`).value;
-        const cantidadTarimas = parseInt(document.getElementById(`tarimas-${id}`).value);
-        const unidadesPorTarima = parseInt(document.getElementById(`unidades-tarima-${id}`).value);
-        const observacionesDetalle = document.getElementById(`observaciones-${id}`).value.trim();
-        
-        if (!productoId || !cantidadTarimas || !unidadesPorTarima) {
-            showToast('Todos los campos de productos son requeridos', 'error');
-            return;
-        }
-        
-        detalles.push({
-            producto_id: parseInt(productoId),
-            cantidad_tarimas: cantidadTarimas,
-            cantidad_unidades_por_tarima: unidadesPorTarima,
-            observaciones: observacionesDetalle
-        });
-    });
     
     try {
-        const data = {
-            usuario_creador: usuario,
-            observaciones: observaciones,
-            detalles: detalles
-        };
+        // Generar número de OCI automático
+        const fecha = new Date();
+        const año = fecha.getFullYear().toString().slice(-2);
+        const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+        const dia = fecha.getDate().toString().padStart(2, '0');
+        const timestamp = Date.now().toString().slice(-6);
+        const numero_oci = `OCI-${año}${mes}${dia}-${timestamp}`;
         
-        const response = await fetch('/api/oci', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showToast('OCI creada exitosamente', 'success');
+        // Crear las OCI para cada material seleccionado
+        for (const detalle of detallesOCI) {
+            const { material_numero, material_descripcion, piezas_por_pallet, cantidad_pallets } = detalle;
             
-            // Si hay factura, subirla
-            if (facturaFile) {
-                await subirFacturaOCI(result.data.id);
+            const { data, error } = await supabase
+                .from('ordenes_compra')
+                .insert({
+                    numero_oci: numero_oci,
+                    usuario_solicitante_id: currentUser.id,
+                    material_numero: material_numero,
+                    piezas_por_pallet: piezas_por_pallet,
+                    cantidad_pallets: cantidad_pallets,
+                    estado: 'PENDIENTE',
+                    observaciones: ''
+                });
+            
+            if (error) {
+                console.error('Error insertando OCI:', error);
+                showToast(`Error al crear OCI: ${error.message}`, 'error');
+                return;
             }
-            
-            // Limpiar formulario
-            limpiarFormularioOCI();
-        } else {
-            showToast(`Error: ${result.error}`, 'error');
         }
+        
+        showToast('OCI(s) creada(s) exitosamente', 'success');
+        
+        // Limpiar formulario
+        limpiarFormularioOCI();
+        
+        // Actualizar la lista de órdenes recientes si estamos en esa sección
+        if (currentSection === 'oci-crear') {
+            await cargarOrdenesRecientes();
+        }
+        
     } catch (error) {
         console.error('Error creando OCI:', error);
-        showToast('Error de conexión al crear OCI', 'error');
+        showToast('Error al crear la OCI', 'error');
     }
 }
 
@@ -1588,119 +1577,114 @@ function limpiarFormularioOCI() {
 
 // Función para cargar OCI pendientes
 async function cargarOCIPendientes() {
-    const container = document.getElementById('oci-pendientes-container');
+    const container = document.getElementById('cuerpo-tabla-ordenes');
     
     try {
-        const response = await fetch('/api/oci/pendientes');
-        const result = await response.json();
+        // Consultar OCI pendientes de Supabase
+        const { data: ordenes, error } = await supabase
+            .from('ordenes_compra')
+            .select(`
+                *,
+                usuarios_carton!ordenes_compra_usuario_solicitante_id_fkey (
+                    username,
+                    nombre_completo
+                )
+            `)
+            .eq('estado', 'PENDIENTE')
+            .order('created_at', { ascending: false });
         
-        if (result.success) {
-            mostrarListaOCIPendientes(result.data);
-            actualizarEstadisticasOCI(result.data);
-        } else {
-            showToast(`Error cargando OCI: ${result.error}`, 'error');
+        if (error) {
+            console.error('Error cargando OCI pendientes:', error);
+            showToast(`Error cargando OCI: ${error.message}`, 'error');
+            return;
         }
+        
+        mostrarListaOCIPendientes(ordenes || []);
+        actualizarEstadisticasOCI(ordenes || []);
+        
     } catch (error) {
         console.error('Error cargando OCI pendientes:', error);
         showToast('Error de conexión', 'error');
     }
 }
 
-// Función para mostrar lista OCI pendientes
+// Función para mostrar lista OCI pendientes en tabla
 function mostrarListaOCIPendientes(ociList) {
-    const container = document.getElementById('oci-pendientes-container');
+    const container = document.getElementById('cuerpo-tabla-ordenes');
     
     if (ociList.length === 0) {
         container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-check-circle"></i>
-                <p>No hay OCI pendientes</p>
-                <small>Todas las órdenes han sido procesadas</small>
-            </div>
+            <tr>
+                <td colspan="7" class="cargando">
+                    <i class="fas fa-check-circle"></i>
+                    <p>No hay OCI pendientes</p>
+                    <small>Todas las órdenes han sido procesadas</small>
+                </td>
+            </tr>
         `;
         return;
     }
     
-    container.innerHTML = ociList.map(oci => `
-        <div class="oci-card">
-            <div class="oci-header">
-                <div class="oci-info">
-                    <div class="oci-numero">${oci.numero_oci}</div>
-                    <div class="oci-meta">
-                        Creado por: ${oci.usuario_creador} | 
-                        Fecha: ${new Date(oci.fecha_creacion).toLocaleString()} |
-                        Productos: ${oci.detalles.length}
-                    </div>
-                </div>
-                <div class="oci-actions">
-                    <button class="btn btn-sm btn-info" onclick="verDetalleOCI(${oci.id})">
-                        <i class="fas fa-eye"></i> Ver
+    container.innerHTML = ociList.map(oci => {
+        const usuario = oci.usuarios_carton;
+        const usuarioNombre = usuario ? usuario.nombre_completo || usuario.username : 'Desconocido';
+        const fechaCreacion = new Date(oci.fecha_creacion).toLocaleDateString();
+        
+        return `
+            <tr>
+                <td>${oci.numero_oci}</td>
+                <td>${fechaCreacion}</td>
+                <td>${usuarioNombre}</td>
+                <td>${oci.material_numero}</td>
+                <td>${oci.cantidad_pallets} pallets</td>
+                <td><span class="icono-estado estado-pendiente">${oci.estado}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-success" onclick="aceptarOCI(${oci.id})">
+                        <i class="fas fa-check"></i>
                     </button>
-                </div>
-            </div>
-            ${oci.observaciones ? `<div class="oci-observaciones"><strong>Observaciones:</strong> ${oci.observaciones}</div>` : ''}
-            <div class="oci-detalles">
-                <h4>Productos Solicitados:</h4>
-                ${oci.detalles.map(detalle => `
-                    <div class="detalle-item">
-                        <div><strong>${detalle.producto.numero_parte}</strong></div>
-                        <div>${detalle.producto.descripcion}</div>
-                        <div>${detalle.cantidad_tarimas} tarimas</div>
-                        <div>${detalle.total_unidades} unidades</div>
-                    </div>
-                `).join('')}
-            </div>
-            <div class="form-actions">
-                <button class="btn btn-danger" onclick="rechazarOCI(${oci.id})">
-                    <i class="fas fa-times"></i> Rechazar
-                </button>
-                <button class="btn btn-success" onclick="aceptarOCI(${oci.id})">
-                    <i class="fas fa-check"></i> Aceptar
-                </button>
-            </div>
-        </div>
-    `).join('');
+                    <button class="btn btn-sm btn-danger" onclick="rechazarOCI(${oci.id})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <button class="btn btn-sm btn-info" onclick="verDetalleOCI(${oci.id})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 // Función para aceptar OCI
 async function aceptarOCI(ociId) {
-    const usuario = prompt('Ingrese su nombre para firmar la aprobación:');
-    if (!usuario) return;
-    
-    const observaciones = prompt('Observaciones (opcional):') || '';
+    const observaciones = prompt('Observaciones para la aprobación (opcional):') || '';
     
     try {
-        const response = await fetch(`/api/oci/${ociId}/firmar`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                usuario_revisor: usuario,
-                accion: 'aceptar',
-                observaciones: observaciones
+        const { data, error } = await supabase
+            .from('ordenes_compra')
+            .update({
+                estado: 'APROBADA',
+                observaciones: observaciones,
+                updated_at: new Date().toISOString()
             })
-        });
+            .eq('id', ociId);
         
-        const result = await response.json();
-        
-        if (result.success) {
-            showToast('OCI aceptada exitosamente', 'success');
-            await cargarOCIPendientes();
-        } else {
-            showToast(`Error: ${result.error}`, 'error');
+        if (error) {
+            console.error('Error aceptando OCI:', error);
+            showToast(`Error al aceptar OCI: ${error.message}`, 'error');
+            return;
         }
+        
+        showToast('OCI aceptada exitosamente', 'success');
+        await cargarOCIPendientes();
+        
     } catch (error) {
         console.error('Error aceptando OCI:', error);
-        showToast('Error de conexión', 'error');
+        showToast('Error al aceptar la OCI', 'error');
     }
 }
 
 // Función para rechazar OCI
 async function rechazarOCI(ociId) {
-    const usuario = prompt('Ingrese su nombre para firmar el rechazo:');
-    if (!usuario) return;
-    
     const observaciones = prompt('Motivo del rechazo:');
     if (!observaciones) {
         showToast('El motivo del rechazo es requerido', 'error');
@@ -1708,29 +1692,27 @@ async function rechazarOCI(ociId) {
     }
     
     try {
-        const response = await fetch(`/api/oci/${ociId}/firmar`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                usuario_revisor: usuario,
-                accion: 'rechazar',
-                observaciones: observaciones
+        const { data, error } = await supabase
+            .from('ordenes_compra')
+            .update({
+                estado: 'RECHAZADA',
+                observaciones: observaciones,
+                updated_at: new Date().toISOString()
             })
-        });
+            .eq('id', ociId);
         
-        const result = await response.json();
-        
-        if (result.success) {
-            showToast('OCI rechazada', 'info');
-            await cargarOCIPendientes();
-        } else {
-            showToast(`Error: ${result.error}`, 'error');
+        if (error) {
+            console.error('Error rechazando OCI:', error);
+            showToast(`Error al rechazar OCI: ${error.message}`, 'error');
+            return;
         }
+        
+        showToast('OCI rechazada', 'info');
+        await cargarOCIPendientes();
+        
     } catch (error) {
         console.error('Error rechazando OCI:', error);
-        showToast('Error de conexión', 'error');
+        showToast('Error al rechazar la OCI', 'error');
     }
 }
 
@@ -1980,4 +1962,213 @@ async function refrescarListaOCI() {
 
 async function refrescarListaRecibidos() {
     await cargarOCIPendientesRecibir();
+}
+// Función para cargar órdenes recientes
+async function cargarOrdenesRecientes() {
+    const container = document.getElementById('lista-ordenes-recientes');
+    
+    try {
+        const { data: ordenes, error } = await supabase
+            .from('ordenes_compra')
+            .select(`
+                *,
+                usuarios_carton!ordenes_compra_usuario_solicitante_id_fkey (
+                    username,
+                    nombre_completo
+                )
+            `)
+            .order('created_at', { ascending: false })
+            .limit(5);
+        
+        if (error) {
+            console.error('Error cargando órdenes recientes:', error);
+            return;
+        }
+        
+        if (!ordenes || ordenes.length === 0) {
+            container.innerHTML = `
+                <div class="cargando">
+                    <p>No hay órdenes recientes</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = ordenes.map(oci => {
+            const usuario = oci.usuarios_carton;
+            const usuarioNombre = usuario ? usuario.nombre_completo || usuario.username : 'Desconocido';
+            const fechaCreacion = new Date(oci.created_at).toLocaleDateString();
+            
+            return `
+                <div class="orden-reciente">
+                    <div class="orden-info">
+                        <strong>${oci.numero_oci}</strong>
+                        <span>Material: ${oci.material_numero}</span>
+                        <span>Usuario: ${usuarioNombre}</span>
+                        <span>Fecha: ${fechaCreacion}</span>
+                    </div>
+                    <div class="orden-estado">
+                        <span class="icono-estado estado-${oci.estado.toLowerCase()}">${oci.estado}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error cargando órdenes recientes:', error);
+    }
+}
+
+// Función para cargar materiales de cartón
+async function cargarMaterialesOCICarton() {
+    const container = document.getElementById('grid-materiales');
+    
+    try {
+        // Materiales de cartón predefinidos
+        const materialesCarton = [
+            { numero: '1482388', descripcion: 'Material cartón 1482388', piezas_por_pallet: 760 },
+            { numero: '1482387', descripcion: 'Material cartón 1482387', piezas_por_pallet: 350 },
+            { numero: '632545', descripcion: 'Material cartón 632545 (10 x Caja)', piezas_por_pallet: 10 },
+            { numero: '1482386', descripcion: 'Material cartón 1482386', piezas_por_pallet: 500 },
+            { numero: '1482385', descripcion: 'Material cartón 1482385', piezas_por_pallet: 600 },
+            { numero: '1482384', descripcion: 'Material cartón 1482384', piezas_por_pallet: 800 },
+            { numero: '1482383', descripcion: 'Material cartón 1482383', piezas_por_pallet: 400 },
+            { numero: '1482382', descripcion: 'Material cartón 1482382', piezas_por_pallet: 550 },
+            { numero: '1482381', descripcion: 'Material cartón 1482381', piezas_por_pallet: 700 },
+            { numero: '1482380', descripcion: 'Material cartón 1482380', piezas_por_pallet: 450 },
+            { numero: '1482379', descripcion: 'Material cartón 1482379', piezas_por_pallet: 650 },
+            { numero: '1482378', descripcion: 'Material cartón 1472378', piezas_por_pallet: 750 },
+            { numero: '1482377', descripcion: 'Material cartón 1472377', piezas_por_pallet: 520 },
+            { numero: '1482376', descripcion: 'Material cartón 1472376', piezas_por_pallet: 680 },
+            { numero: '1482375', descripcion: 'Material cartón 1472375', piezas_por_pallet: 580 },
+            { numero: '1482374', descripcion: 'Material cartón 1472374', piezas_por_pallet: 720 },
+            { numero: '1482373', descripcion: 'Material cartón 1472373', piezas_por_pallet: 480 }
+        ];
+        
+        container.innerHTML = materialesCarton.map(material => `
+            <div class="material-card" onclick="toggleMaterialOCI('${material.numero}')">
+                <h4>${material.numero}</h4>
+                <p>${material.descripcion}</p>
+                <p><strong>${material.piezas_por_pallet} piezas por pallet</strong></p>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error cargando materiales:', error);
+        container.innerHTML = '<p>Error cargando materiales</p>';
+    }
+}
+
+// Función para toggle de selección de material
+function toggleMaterialOCI(materialNumero) {
+    // Buscar el material en el array de materiales predefinidos
+    const materialesCarton = [
+        { numero: '1482388', descripcion: 'Material cartón 1482388', piezas_por_pallet: 760 },
+        { numero: '1482387', descripcion: 'Material cartón 1482387', piezas_por_pallet: 350 },
+        { numero: '632545', descripcion: 'Material cartón 632545 (10 x Caja)', piezas_por_pallet: 10 },
+        { numero: '1482386', descripcion: 'Material cartón 1482386', piezas_por_pallet: 500 },
+        { numero: '1482385', descripcion: 'Material cartón 1482385', piezas_por_pallet: 600 },
+        { numero: '1482384', descripcion: 'Material cartón 1482384', piezas_por_pallet: 800 },
+        { numero: '1482383', descripcion: 'Material cartón 1482383', piezas_por_pallet: 400 },
+        { numero: '1482382', descripcion: 'Material cartón 1482382', piezas_por_pallet: 550 },
+        { numero: '1482381', descripcion: 'Material cartón 1482381', piezas_por_pallet: 700 },
+        { numero: '1482380', descripcion: 'Material cartón 1482380', piezas_por_pallet: 450 },
+        { numero: '1482379', descripcion: 'Material cartón 1482379', piezas_por_pallet: 650 },
+        { numero: '1482378', descripcion: 'Material cartón 1472378', piezas_por_pallet: 750 },
+        { numero: '1482377', descripcion: 'Material cartón 1472377', piezas_por_pallet: 520 },
+        { numero: '1482376', descripcion: 'Material cartón 1472376', piezas_por_pallet: 680 },
+        { numero: '1482375', descripcion: 'Material cartón 1472375', piezas_por_pallet: 580 },
+        { numero: '1482374', descripcion: 'Material cartón 1472374', piezas_por_pallet: 720 },
+        { numero: '1482373', descripcion: 'Material cartón 1472373', piezas_por_pallet: 480 }
+    ];
+    
+    const material = materialesCarton.find(m => m.numero === materialNumero);
+    if (!material) return;
+    
+    // Verificar si ya está seleccionado
+    const existente = detallesOCI.find(d => d.material_numero === materialNumero);
+    
+    if (existente) {
+        // Remover de la selección
+        detallesOCI = detallesOCI.filter(d => d.material_numero !== materialNumero);
+    } else {
+        // Agregar a la selección
+        const cantidad = prompt(`Cantidad de pallets para ${material.numero}:`, '1');
+        const cantidadPallets = parseInt(cantidad) || 1;
+        
+        detallesOCI.push({
+            material_numero: material.numero,
+            material_descripcion: material.descripcion,
+            piezas_por_pallet: material.piezas_por_pallet,
+            cantidad_pallets: cantidadPallets
+        });
+    }
+    
+    // Actualizar la interfaz
+    actualizarListaDetallesOCI();
+    actualizarGridMateriales();
+}
+
+// Función para actualizar el grid de materiales
+function actualizarGridMateriales() {
+    const materialCards = document.querySelectorAll('.material-card');
+    materialCards.forEach(card => {
+        const numeroMaterial = card.querySelector('h4').textContent;
+        const isSelected = detallesOCI.some(d => d.material_numero === numeroMaterial);
+        
+        if (isSelected) {
+            card.classList.add('seleccionado');
+        } else {
+            card.classList.remove('seleccionado');
+        }
+    });
+}
+
+// Función para actualizar la lista de detalles OCI
+function actualizarListaDetallesOCI() {
+    const container = document.getElementById('materiales-seleccionados');
+    const totalContainer = document.getElementById('total-piezas');
+    
+    if (detallesOCI.length === 0) {
+        container.innerHTML = '<p>No hay materiales seleccionados</p>';
+        totalContainer.textContent = '0';
+        return;
+    }
+    
+    container.innerHTML = detallesOCI.map((detalle, index) => `
+        <div class="material-seleccionado">
+            <span>${detalle.material_numero}</span>
+            <span>${detalle.cantidad_pallets} pallets</span>
+            <button onclick="removerMaterialOCI('${detalle.material_numero}')">×</button>
+        </div>
+    `).join('');
+    
+    // Calcular total
+    const totalPiezas = detallesOCI.reduce((sum, detalle) => {
+        return sum + (detalle.piezas_por_pallet * detalle.cantidad_pallets);
+    }, 0);
+    
+    totalContainer.textContent = totalPiezas;
+}
+
+// Función para remover material de la OCI
+function removerMaterialOCI(materialNumero) {
+    detallesOCI = detallesOCI.filter(d => d.material_numero !== materialNumero);
+    actualizarListaDetallesOCI();
+    actualizarGridMateriales();
+}
+
+// Función para limpiar formulario OCI
+function limpiarFormularioOCI() {
+    detallesOCI = [];
+    actualizarListaDetallesOCI();
+    actualizarGridMateriales();
+    
+    // Limpiar fecha y número
+    const now = new Date();
+    const fechaISO = now.toISOString().slice(0, 16);
+    document.getElementById('fecha-oci').value = fechaISO;
+    document.getElementById('numero-oci').value = '';
+    
+    showToast('Formulario limpiado', 'info');
 }
