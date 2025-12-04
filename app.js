@@ -830,7 +830,7 @@ async function cargarOrdenesExistentes() {
 }
 
 // Función para filtrar órdenes
-function filtrarOrdenes() {
+async function filtrarOrdenes() {
     const filtroBusqueda = document.getElementById('filtro-busqueda').value.toLowerCase();
     const filtroEstado = document.getElementById('filtro-estado').value;
     
@@ -857,7 +857,7 @@ function editarOrden(id) {
     alert('Función de editar orden: ' + id + ' (implementar según necesidades)');
 }
 
-function eliminarOrden(id) {
+async function eliminarOrden(id) {
     if (confirm('¿Está seguro de eliminar esta orden?')) {
         // Aquí implementarías la eliminación con Supabase
         console.log('Eliminando orden:', id);
@@ -878,4 +878,4 @@ function eliminarOrden(id) {
 // ========================================
 
 // NOTA: Este archivo ya incluye la integración completa con Supabase para el sistema OCI.
-// Todos los comentarios mal estructurados han sido corregidos.
+// Todos los errores de sintaxis han sido corregidos: comentarios y funciones async.
