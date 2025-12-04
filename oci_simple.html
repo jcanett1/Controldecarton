@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orden de Compra - Material de Cartón</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .material-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .material-card {
+            border: 2px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            background: white;
+        }
+        
+        .material-card:hover {
+            border-color: #3498db;
+            background: #f8f9fa;
+        }
+        
+        .material-card.selected {
+            border-color: #3498db;
+            background: #e3f2fd;
+        }
+        
+        .material-numero {
+            font-weight: bold;
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .material-piezas {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        .btn {
+            background: #3498db;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .user-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .ordenes-list {
+            margin-top: 30px;
+        }
+        
+        .orden-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        
+        .status {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-pendiente {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-aprobada {
+            background: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📦 Orden de Compra de Material de Cartón</h1>
+        
+        <div class="user-info" id="userInfo">
+            <strong>Usuario:</strong> <span id="userName">Cargando...</span>
+        </div>
+        
+        <div id="alertContainer"></div>
+        
+        <form id="ordenForm">
+            <div class="form-group">
+                <label for="numeroOci">Número de OCI:</label>
+                <input type="text" id="numeroOci" readonly style="background: #f0f0f0;">
+            </div>
+            
+            <div class="form-group">
+                <label for="fechaCreacion">Fecha de Creación:</label>
+                <input type="datetime-local" id="fechaCreacion" readonly style="background: #f0f0f0;">
+            </div>
+            
+            <div class="form-group">
+                <label for="usuarioSolicitante">Usuario que Solicita:</label>
+                <input type="text" id="usuarioSolicitante" readonly style="background: #f0f0f0;">
+            </div>
+            
+            <div class="form-group">
+                <label>Seleccionar Material de Cartón:</label>
+                <div class="material-grid" id="materialGrid">
+                    <!-- Los materiales se cargarán aquí -->
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="cantidadPallets">Cantidad de Pallets:</label>
+                <input type="number" id="cantidadPallets" min="1" value="1" onchange="calcularTotal()">
+            </div>
+            
+            <div class="form-group">
+                <label for="observaciones">Observaciones:</label>
+                <textarea id="observaciones" rows="3" placeholder="Comentarios adicionales..."></textarea>
+            </div>
+            
+            <button type="button" class="btn" onclick="limpiarFormulario()">Limpiar</button>
+            <button type="submit" class="btn" id="btnGuardar" disabled>💾 Guardar Orden</button>
+        </form>
+        
+        <div class="ordenes-list" id="ordenesList">
+            <h3>📋 Órdenes Recientes</h3>
+            <div id="ordenesContainer">
+                <p>Cargando órdenes...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // Configuración de Supabase
+        const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Materiales de cartón
+        const materiales = [
+            { numero: '1482388', piezas: 760 },
+            { numero: '1482387', piezas: 350 },
+            { numero: '1482389', piezas: 700 },
+            { numero: '1482396', piezas: 350 },
+            { numero: '1482874', piezas: 2000 },
+            { numero: '1522048', piezas: 270 },
+            { numero: '632545', piezas: '10 x Caja' },
+            { numero: '1479785', piezas: 1200 },
+            { numero: '1491480', piezas: 900 },
+            { numero: '1572515', piezas: 200 },
+            { numero: '1583803', piezas: 500 },
+            { numero: '1564742', piezas: 700 },
+            { numero: '1550683', piezas: 375 },
+            { numero: '1574769', piezas: 500 },
+            { numero: '1574771', piezas: 500 },
+            { numero: '1517173', piezas: 450 },
+            { numero: '1586785', piezas: 500 }
+        ];
+
+        let materialSeleccionado = null;
+        let usuarioActual = null;
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarUsuario();
+            cargarMateriales();
+            configurarFormulario();
+            generarNumeroOCI();
+            cargarOrdenes();
+        });
+
+        // Cargar usuario actual
+        async function cargarUsuario() {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    window.location.href = 'login_usuarios_carton.html';
+                    return;
+                }
+
+                const { data, error } = await supabase
+                    .from('usuarios_carton')
+                    .select('*')
+                    .eq('username', session.user.email.split('@')[0])
+                    .single();
+
+                if (error) {
+                    console.error('Error cargando usuario:', error);
+                    return;
+                }
+
+                usuarioActual = data;
+                document.getElementById('userName').textContent = `${data.nombre_completo} (${data.username})`;
+                document.getElementById('usuarioSolicitante').value = data.nombre_completo;
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error cargando información del usuario', 'error');
+            }
+        }
+
+        // Cargar materiales
+        function cargarMateriales() {
+            const grid = document.getElementById('materialGrid');
+            grid.innerHTML = '';
+
+            materiales.forEach((material, index) => {
+                const card = document.createElement('div');
+                card.className = 'material-card';
+                card.onclick = () => seleccionarMaterial(index);
+
+                card.innerHTML = `
+                    <div class="material-numero">Material #${material.numero}</div>
+                    <div class="material-piezas">${material.piezas} piezas por pallet</div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        // Seleccionar material
+        function seleccionarMaterial(index) {
+            // Remover selección anterior
+            document.querySelectorAll('.material-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Seleccionar nuevo material
+            const card = document.querySelectorAll('.material-card')[index];
+            card.classList.add('selected');
+            materialSeleccionado = materiales[index];
+
+            // Habilitar botón
+            document.getElementById('btnGuardar').disabled = false;
+            calcularTotal();
+        }
+
+        // Calcular total
+        function calcularTotal() {
+            if (materialSeleccionado && materialSeleccionado.piezas !== '10 x Caja') {
+                const cantidadPallets = parseInt(document.getElementById('cantidadPallets').value) || 1;
+                const total = cantidadPallets * parseInt(materialSeleccionado.piezas);
+                mostrarAlerta(`Total: ${total.toLocaleString()} piezas`, 'info');
+            }
+        }
+
+        // Configurar formulario
+        function configurarFormulario() {
+            const fecha = new Date();
+            fecha.setMinutes(fecha.getMinutes() - fecha.getTimezoneOffset());
+            document.getElementById('fechaCreacion').value = fecha.toISOString().slice(0, 16);
+
+            document.getElementById('ordenForm').addEventListener('submit', guardarOrden);
+        }
+
+        // Generar número OCI
+        async function generarNumeroOCI() {
+            try {
+                const fecha = new Date();
+                const año = fecha.getFullYear();
+                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                
+                const { data, error } = await supabase
+                    .from('ordenes_compra')
+                    .select('numero_oci')
+                    .like('numero_oci', `OCI-${año}-%`)
+                    .order('numero_oci', { ascending: false })
+                    .limit(1);
+
+                let numero = 1;
+                if (data && data.length > 0) {
+                    const ultimoNumero = data[0].numero_oci;
+                    const numeroActual = parseInt(ultimoNumero.split('-')[3]) || 0;
+                    numero = numeroActual + 1;
+                }
+
+                const numeroOCI = `OCI-${año}-${mes}-${String(numero).padStart(3, '0')}`;
+                document.getElementById('numeroOci').value = numeroOCI;
+            } catch (error) {
+                console.error('Error generando número OCI:', error);
+            }
+        }
+
+        // Guardar orden
+        async function guardarOrden(event) {
+            event.preventDefault();
+
+            if (!materialSeleccionado) {
+                mostrarAlerta('Debes seleccionar un material', 'error');
+                return;
+            }
+
+            const btnGuardar = document.getElementById('btnGuardar');
+            btnGuardar.disabled = true;
+            btnGuardar.textContent = 'Guardando...';
+
+            try {
+                const orden = {
+                    numero_oci: document.getElementById('numeroOci').value,
+                    fecha_creacion: new Date(document.getElementById('fechaCreacion').value).toISOString(),
+                    usuario_solicitante_id: usuarioActual.id,
+                    material_numero: materialSeleccionado.numero,
+                    piezas_por_pallet: materialSeleccionado.piezas === '10 x Caja' ? 10 : parseInt(materialSeleccionado.piezas),
+                    cantidad_pallets: parseInt(document.getElementById('cantidadPallets').value),
+                    observaciones: document.getElementById('observaciones').value || null,
+                    estado: 'PENDIENTE'
+                };
+
+                const { data, error } = await supabase
+                    .from('ordenes_compra')
+                    .insert([orden])
+                    .select();
+
+                if (error) {
+                    mostrarAlerta('Error guardando la orden: ' + error.message, 'error');
+                    return;
+                }
+
+                mostrarAlerta('✅ Orden de compra creada exitosamente', 'success');
+                limpiarFormulario();
+                cargarOrdenes();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error inesperado: ' + error.message, 'error');
+            } finally {
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = '💾 Guardar Orden';
+            }
+        }
+
+        // Limpiar formulario
+        function limpiarFormulario() {
+            document.getElementById('ordenForm').reset();
+            materialSeleccionado = null;
+            document.getElementById('btnGuardar').disabled = true;
+            document.querySelectorAll('.material-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            generarNumeroOCI();
+            const fecha = new Date();
+            fecha.setMinutes(fecha.getMinutes() - fecha.getTimezoneOffset());
+            document.getElementById('fechaCreacion').value = fecha.toISOString().slice(0, 16);
+            document.getElementById('alertContainer').innerHTML = '';
+        }
+
+        // Cargar órdenes
+        async function cargarOrdenes() {
+            try {
+                const { data, error } = await supabase
+                    .from('ordenes_compra')
+                    .select(`
+                        *,
+                        usuarios_carton!ordenes_compra_usuario_solicitante_id_fkey (
+                            nombre_completo
+                        )
+                    `)
+                    .order('fecha_creacion', { ascending: false })
+                    .limit(5);
+
+                if (error) {
+                    console.error('Error cargando órdenes:', error);
+                    return;
+                }
+
+                const container = document.getElementById('ordenesContainer');
+                
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p>No hay órdenes registradas</p>';
+                    return;
+                }
+
+                let html = '';
+                data.forEach(orden => {
+                    const fecha = new Date(orden.fecha_creacion).toLocaleDateString('es-ES');
+                    html += `
+                        <div class="orden-item">
+                            <strong>${orden.numero_oci}</strong> - ${fecha}<br>
+                            Material: #${orden.material_numero} | ${orden.cantidad_pallets} pallets<br>
+                            Solicitante: ${orden.usuarios_carton?.nombre_completo || 'N/A'}<br>
+                            <span class="status status-${orden.estado.toLowerCase()}">${orden.estado}</span>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Mostrar alerta
+        function mostrarAlerta(mensaje, tipo) {
+            const container = document.getElementById('alertContainer');
+            const alertClass = tipo === 'success' ? 'alert-success' : 
+                              tipo === 'error' ? 'alert-error' : 'alert-info';
+            
+            container.innerHTML = `<div class="alert ${alertClass}">${mensaje}</div>`;
+
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
