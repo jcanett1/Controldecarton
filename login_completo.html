@@ -394,9 +394,14 @@
         const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
 
-        // Inicializar Supabase
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+       if (!window.supabaseClient) {
+  window.supabaseClient = window.supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+  );
+}
 
+const supabase = window.supabaseClient;
         // Variables globales
         let currentUser = null;
 
