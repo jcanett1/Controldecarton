@@ -9,7 +9,7 @@ if (!window.supabaseClient) {
   );
 }
 
-const supabase = window.supabaseClient;
+var supabase = window.supabaseClient;
 
 // Variables globales
 let currentSection = 'dashboard';
