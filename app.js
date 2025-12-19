@@ -374,7 +374,7 @@ async function loadInventario(filter = 'all') {
     try {
         console.log('🔄 Cargando inventario con filtro:', filter);
         
-        // VALIDACIÓN: Verificar que tu elemento inventario-list existe
+        // Validación: Verificar que tu elemento inventario-list existe
         const inventarioList = document.getElementById('inventario-list');
         
         if (!inventarioList) {
@@ -391,7 +391,7 @@ async function loadInventario(filter = 'all') {
             </div>
         `;
         
-        // Preparar consulta
+        // Preparar consulta (mantén tu código actual de Supabase)
         let query = supabase
             .from('inventario')
             .select(`
@@ -405,9 +405,8 @@ async function loadInventario(filter = 'all') {
             `)
             .order('ultima_actualizacion', { ascending: false });
         
-        // CORRECCIÓN: Manejo correcto de filtros
+        // Filtros
         if (filter === 'stock-bajo') {
-            console.log('📊 Aplicando filtro de stock bajo...');
             const { data: allData, error } = await query;
             if (error) throw error;
             
@@ -417,35 +416,16 @@ async function loadInventario(filter = 'all') {
             inventario = filteredData;
             updateInventarioTable();
             console.log('✅ Inventario de stock bajo cargado:', filteredData.length, 'items');
-            showToast(`${filteredData.length} productos con stock bajo`, 'info');
             return;
-            
         } else if (filter === 'sin-stock') {
-            console.log('📊 Aplicando filtro sin stock...');
             query = query.eq('cantidad_actual', 0);
         }
         
-        // Ejecutar consulta principal
-        console.log('📊 Ejecutando consulta de inventario...');
         const { data, error } = await query;
+        if (error) throw error;
         
-        if (error) {
-            console.error('❌ Error en consulta de inventario:', error);
-            throw error;
-        }
-        
-        // Procesar datos
         inventario = data || [];
-        console.log('📊 Datos recibidos:', inventario.length, 'elementos');
-        
-        // Actualizar tabla en tu estructura
         updateInventarioTable();
-        
-        // Mostrar mensaje de éxito
-        const mensaje = filter === 'all' ? 
-            `Inventario cargado: ${inventario.length} productos` :
-            `${inventario.length} productos con filtro "${filter}"`;
-        console.log('✅ ' + mensaje);
         
     } catch (error) {
         console.error('❌ Error cargando inventario:', error);
@@ -458,16 +438,16 @@ async function loadInventario(filter = 'all') {
                     <i class="fas fa-exclamation-triangle"></i>
                     <h4>Error cargando inventario</h4>
                     <p>${error.message}</p>
-                    <button class="btn-retry" onclick="loadInventario()">Reintentar</button>
+                    <button class="btn-retry" onclick="loadInventario()">
+                        <i class="fas fa-redo"></i> Reintentar
+                    </button>
                 </div>
             `;
         }
         
-        // Mostrar toast con error
         showToast('Error cargando inventario: ' + error.message, 'error');
     }
 }
-
 // ===== FUNCIÓN MEJORADA DE DIAGNÓSTICO COMPLETO =====
 
 async function diagnosticoCompletoInventario() {
@@ -948,25 +928,30 @@ function updateProductosTable() {
 // ===== FUNCIÓN updateInventarioTable CORREGIDA =====
 
 function updateInventarioTable() {
-    // CORRECCIÓN: Buscar tu elemento específico
+    console.log('🔄 Actualizando tabla de inventario...');
+    
+    // Usar tu elemento específico inventario-list
     const inventarioList = document.getElementById('inventario-list');
     
     if (!inventarioList) {
-        console.error('❌ Elemento inventario-list no encontrado');
+        console.error('❌ Elemento inventario-list no encontrado en el DOM');
         return;
     }
     
+    console.log('✅ Elemento inventario-list encontrado');
+    
     if (inventario.length === 0) {
         inventarioList.innerHTML = `
-            <div class="no-data">
+            <div class="empty-state">
                 <i class="fas fa-boxes"></i>
-                <h4>No hay datos de inventario</h4>
+                <p>No hay productos en el inventario</p>
+                <small>Agrega productos para comenzar a gestionar tu inventario</small>
             </div>
         `;
         return;
     }
 
-    // Generar tabla compatible con tu card
+    // Generar HTML compatible con tu estructura
     const htmlContent = `
         <div class="inventory-table">
             <table class="data-table">
@@ -985,8 +970,10 @@ function updateInventarioTable() {
                     ${inventario.map(item => `
                         <tr>
                             <td>
-                                <strong>${item.producto?.numero_parte || 'N/A'}</strong><br>
-                                <small>${item.producto?.descripcion || 'Sin descripción'}</small>
+                                <div class="product-info">
+                                    <strong>${item.producto?.numero_parte || 'N/A'}</strong><br>
+                                    <small>${item.producto?.descripcion || 'Sin descripción'}</small>
+                                </div>
                             </td>
                             <td>
                                 <span class="quantity-badge ${getStockStatus(item)}">
@@ -1004,11 +991,13 @@ function updateInventarioTable() {
                                 <small>${formatDate(item.ultima_actualizacion)}</small>
                             </td>
                             <td>
-                                ${currentUser && currentUser.rol === 'ADMIN' ? `
-                                    <button class="btn-action adjust" onclick="showAdjustModal(${item.producto_id})">
-                                        <i class="fas fa-cog"></i>
-                                    </button>
-                                ` : '<span class="text-muted">Solo lectura</span>'}
+                                <div class="inventory-actions">
+                                    ${currentUser && currentUser.rol === 'ADMIN' ? `
+                                        <button class="btn-action adjust" onclick="showAdjustModal(${item.producto_id})" title="Ajustar inventario">
+                                            <i class="fas fa-cog"></i>
+                                        </button>
+                                    ` : '<span class="text-muted">Solo lectura</span>'}
+                                </div>
                             </td>
                         </tr>
                     `).join('')}
@@ -1018,6 +1007,7 @@ function updateInventarioTable() {
     `;
     
     inventarioList.innerHTML = htmlContent;
+    console.log('✅ Tabla de inventario actualizada con', inventario.length, 'items');
 }
 
 // ===== FUNCIÓN AUXILIAR: Crear tabla si no existe =====
