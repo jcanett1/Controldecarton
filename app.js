@@ -368,10 +368,41 @@ async function loadProductos() {
     }
 }
 
+// ===== FUNCIÓN loadInventario CON VALIDACIÓN DE DOM =====
+
 async function loadInventario(filter = 'all') {
     try {
         console.log('🔄 Cargando inventario con filtro:', filter);
         
+        // VALIDACIÓN: Verificar que los elementos necesarios existen
+        const inventarioSection = document.getElementById('inventario-section');
+        const inventarioTableBody = document.getElementById('inventario-table-body');
+        
+        if (!inventarioSection) {
+            console.error('❌ Sección inventario-section no encontrada');
+            showToast('Error: Sección de inventario no encontrada', 'error');
+            return;
+        }
+        
+        if (!inventarioTableBody) {
+            console.warn('⚠️ Tabla inventario-table-body no encontrada, creando...');
+            crearTablaInventarioSiNoExiste();
+            
+            // Esperar a que se cree la tabla
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Verificar nuevamente
+            const newTableBody = document.getElementById('inventario-table-body');
+            if (!newTableBody) {
+                throw new Error('No se pudo crear la tabla de inventario');
+            }
+        }
+        
+        // Mostrar estado de carga
+        const tbody = document.getElementById('inventario-table-body');
+        tbody.innerHTML = '<tr><td colspan="7" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando inventario...</td></tr>';
+        
+        // Preparar consulta
         let query = supabase
             .from('inventario')
             .select(`
@@ -387,6 +418,7 @@ async function loadInventario(filter = 'all') {
         
         // CORRECCIÓN: Manejo correcto de filtros
         if (filter === 'stock-bajo') {
+            console.log('📊 Aplicando filtro de stock bajo...');
             const { data: allData, error } = await query;
             if (error) throw error;
             
@@ -395,24 +427,245 @@ async function loadInventario(filter = 'all') {
             );
             inventario = filteredData;
             updateInventarioTable();
-            console.log('Inventario de stock bajo cargado:', filteredData.length, 'items');
+            console.log('✅ Inventario de stock bajo cargado:', filteredData.length, 'items');
+            showToast(`${filteredData.length} productos con stock bajo`, 'info');
             return;
+            
         } else if (filter === 'sin-stock') {
+            console.log('📊 Aplicando filtro sin stock...');
             query = query.eq('cantidad_actual', 0);
         }
         
+        // Ejecutar consulta principal
+        console.log('📊 Ejecutando consulta de inventario...');
         const { data, error } = await query;
-        if (error) throw error;
         
+        if (error) {
+            console.error('❌ Error en consulta de inventario:', error);
+            throw error;
+        }
+        
+        // Procesar datos
         inventario = data || [];
+        console.log('📊 Datos recibidos:', inventario.length, 'elementos');
+        
+        // Validar estructura de datos
+        if (inventario.length > 0) {
+            const primerElemento = inventario[0];
+            const tieneProducto = primerElemento.producto && 
+                                 primerElemento.producto.numero_parte && 
+                                 primerElemento.producto.descripcion;
+            
+            if (!tieneProducto) {
+                console.warn('⚠️ Los datos no incluyen información completa del producto');
+                showToast('Advertencia: Datos de producto incompletos', 'warning');
+            }
+        }
+        
+        // Actualizar tabla
         updateInventarioTable();
-        console.log('✅ Inventario cargado:', inventario.length, 'items');
+        
+        // Mostrar mensaje de éxito
+        const mensaje = filter === 'all' ? 
+            `Inventario cargado: ${inventario.length} productos` :
+            `${inventario.length} productos con filtro "${filter}"`;
+        console.log('✅ ' + mensaje);
         
     } catch (error) {
         console.error('❌ Error cargando inventario:', error);
+        
+        // Mostrar error en la tabla
+        const tbody = document.getElementById('inventario-table-body');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="loading" style="color: #dc3545;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Error cargando inventario: ${error.message}
+                    </td>
+                </tr>
+            `;
+        }
+        
+        // Mostrar toast con error
         showToast('Error cargando inventario: ' + error.message, 'error');
+        
+        // Sugerencias de solución
+        if (error.message.includes('connection') || error.message.includes('network')) {
+            showToast('Verifica tu conexión a internet', 'warning');
+        } else if (error.message.includes('permission') || error.message.includes('auth')) {
+            showToast('Problema de autenticación - Intenta recargar la página', 'warning');
+        }
     }
 }
+
+// ===== FUNCIÓN MEJORADA DE DIAGNÓSTICO COMPLETO =====
+
+async function diagnosticoCompletoInventario() {
+    console.clear();
+    console.log('🚀 === DIAGNÓSTICO COMPLETO DE INVENTARIO ===');
+    console.log('Fecha:', new Date().toLocaleString());
+    console.log('URL:', window.location.href);
+    console.log('');
+    
+    const resultados = {
+        fecha: new Date().toISOString(),
+        problemas: [],
+        advertencias: [],
+        exitosos: [],
+        estado: 'OK'
+    };
+    
+    try {
+        // 1. Diagnóstico de DOM
+        console.log('🔍 1. DIAGNÓSTICO DE DOM');
+        const elementos = [
+            'inventario-section',
+            'inventario-table-body', 
+            'inventario-filter',
+            'page-title',
+            'page-subtitle'
+        ];
+        
+        elementos.forEach(id => {
+            const elemento = document.getElementById(id);
+            if (elemento) {
+                console.log(`  ✅ ${id}: Encontrado (${elemento.tagName})`);
+                resultados.exitosos.push(`Elemento ${id} disponible`);
+            } else {
+                console.log(`  ❌ ${id}: NO ENCONTRADO`);
+                resultados.problemas.push(`Elemento DOM ${id} no existe`);
+            }
+        });
+        
+        // 2. Diagnóstico de JavaScript
+        console.log('\n🔍 2. DIAGNÓSTICO DE JAVASCRIPT');
+        const variables = ['inventario', 'currentUser', 'supabase'];
+        const funciones = ['loadInventario', 'updateInventarioTable', 'showToast', 'formatDate'];
+        
+        variables.forEach(variable => {
+            if (typeof window[variable] !== 'undefined') {
+                console.log(`  ✅ Variable ${variable}: ${typeof window[variable]}`);
+                if (variable === 'inventario' && Array.isArray(window[variable])) {
+                    console.log(`     Elementos: ${window[variable].length}`);
+                }
+                resultados.exitosos.push(`Variable ${variable} disponible`);
+            } else {
+                console.log(`  ❌ Variable ${variable}: NO DEFINIDA`);
+                resultados.problemas.push(`Variable ${variable} no definida`);
+            }
+        });
+        
+        funciones.forEach(funcion => {
+            if (typeof window[funcion] === 'function') {
+                console.log(`  ✅ Función ${funcion}: Disponible`);
+                resultados.exitosos.push(`Función ${funcion} disponible`);
+            } else {
+                console.log(`  ❌ Función ${funcion}: NO ENCONTRADA`);
+                resultados.problemas.push(`Función ${funcion} no disponible`);
+            }
+        });
+        
+        // 3. Diagnóstico de Supabase
+        console.log('\n🔍 3. DIAGNÓSTICO DE SUPABASE');
+        try {
+            const { data, error } = await supabase
+                .from('inventario')
+                .select('count', { count: 'exact', head: true });
+                
+            if (error) {
+                console.log(`  ❌ Error de conexión: ${error.message}`);
+                resultados.problemas.push(`Error de Supabase: ${error.message}`);
+            } else {
+                console.log(`  ✅ Conexión OK - Registros: ${data}`);
+                resultados.exitosos.push(`Conexión Supabase OK (${data} registros)`);
+            }
+        } catch (error) {
+            console.log(`  ❌ Error de red: ${error.message}`);
+            resultados.problemas.push(`Error de red: ${error.message}`);
+        }
+        
+        // 4. Diagnóstico de estructura HTML
+        console.log('\n🔍 4. DIAGNÓSTICO DE ESTRUCTURA HTML');
+        const inventarioSection = document.getElementById('inventario-section');
+        if (inventarioSection) {
+            const tablas = inventarioSection.querySelectorAll('table');
+            console.log(`  ✅ Tablas en inventario-section: ${tablas.length}`);
+            
+            tablas.forEach((tabla, i) => {
+                const thead = tabla.querySelector('thead');
+                const tbody = tabla.querySelector('tbody');
+                const tbodyId = tbody?.id;
+                
+                console.log(`  Tabla ${i + 1}:`);
+                console.log(`    - thead: ${thead ? '✅' : '❌'}`);
+                console.log(`    - tbody: ${tbody ? '✅' : '❌'}`);
+                console.log(`    - tbody.id: ${tbodyId || 'NINGUNO'}`);
+                
+                if (!thead || !tbody) {
+                    resultados.problemas.push(`Tabla ${i + 1} incompleta`);
+                }
+                
+                if (tbodyId !== 'inventario-table-body') {
+                    resultados.advertencias.push(`ID de tbody incorrecto: "${tbodyId}"`);
+                }
+            });
+        }
+        
+        // 5. Probar función loadInventario
+        console.log('\n🔍 5. PROBANDO FUNCIÓN LOADINVENTARIO');
+        try {
+            await loadInventario();
+            console.log('  ✅ loadInventario() ejecutada exitosamente');
+            resultados.exitosos.push('Función loadInventario ejecutada');
+        } catch (error) {
+            console.log(`  ❌ Error en loadInventario(): ${error.message}`);
+            resultados.problemas.push(`Error en loadInventario: ${error.message}`);
+        }
+        
+        // 6. Resumen final
+        console.log('\n📊 === RESUMEN FINAL ===');
+        console.log(`Estado general: ${resultados.estado}`);
+        console.log(`Problemas: ${resultados.problemas.length}`);
+        console.log(`Advertencias: ${resultados.advertencias.length}`);
+        console.log(`Exitosos: ${resultados.exitosos.length}`);
+        
+        if (resultados.problemas.length > 0) {
+            console.log('\n❌ PROBLEMAS ENCONTRADOS:');
+            resultados.problemas.forEach((problema, i) => {
+                console.log(`  ${i + 1}. ${problema}`);
+            });
+        }
+        
+        if (resultados.advertencias.length > 0) {
+            console.log('\n⚠️ ADVERTENCIAS:');
+            resultados.advertencias.forEach((advertencia, i) => {
+                console.log(`  ${i + 1}. ${advertencia}`);
+            });
+        }
+        
+        // Mostrar resultado final
+        if (resultados.problemas.length === 0) {
+            console.log('\n🎉 ¡DIAGNÓSTICO COMPLETADO - TODO OK!');
+            showToast('Diagnóstico completado - Sistema funcionando correctamente', 'success');
+        } else {
+            console.log('\n🚨 DIAGNÓSTICO COMPLETADO - SE ENCONTRARON PROBLEMAS');
+            showToast(`Diagnóstico: ${resultados.problemas.length} problemas encontrados`, 'error');
+        }
+        
+        return resultados;
+        
+    } catch (error) {
+        console.error('💥 ERROR DURANTE EL DIAGNÓSTICO:', error);
+        resultados.problemas.push('Error durante diagnóstico: ' + error.message);
+        resultados.estado = 'ERROR';
+        return resultados;
+    }
+}
+
+// ===== EXPORTAR FUNCIONES =====
+window.loadInventario = loadInventario;
+window.diagnosticoCompletoInventario = diagnosticoCompletoInventario;
 
 async function loadProductosForMovement() {
     try {
