@@ -370,7 +370,7 @@ async function loadProductos() {
 
 async function loadInventario(filter = 'all') {
     try {
-        console.log('Cargando inventario con filtro:', filter);
+        console.log('🔄 Cargando inventario con filtro:', filter);
         
         let query = supabase
             .from('inventario')
@@ -385,42 +385,31 @@ async function loadInventario(filter = 'all') {
             `)
             .order('ultima_actualizacion', { ascending: false });
         
-        // Manejar filtros de stock
+        // CORRECCIÓN: Manejo correcto de filtros
         if (filter === 'stock-bajo') {
-            try {
-                const { data: minData, error: rpcError } = await supabase
-                    .rpc('get_cantidad_minima');
-                
-                if (!rpcError && minData !== null) {
-                    query = query.lte('cantidad_actual', minData);
-                } else {
-                    // Fallback: filtrar donde cantidad_actual es menor que cantidad_minima
-                    query = query.lt('cantidad_actual', supabase.ref('cantidad_minima'));
-                }
-            } catch (rpcError) {
-                console.warn('Función RPC no disponible, usando filtro alternativo');
-                query = query.lt('cantidad_actual', supabase.ref('cantidad_minima'));
-            }
+            const { data: allData, error } = await query;
+            if (error) throw error;
+            
+            const filteredData = allData.filter(item => 
+                item.cantidad_actual <= item.cantidad_minima
+            );
+            inventario = filteredData;
+            updateInventarioTable();
+            console.log('Inventario de stock bajo cargado:', filteredData.length, 'items');
+            return;
         } else if (filter === 'sin-stock') {
             query = query.eq('cantidad_actual', 0);
         }
         
-        const { data, error, status } = await query;
+        const { data, error } = await query;
+        if (error) throw error;
         
-        console.log('Estado de la consulta:', status);
-        
-        if (error) {
-            console.error('Detalles del error de Supabase:', error);
-            throw error;
-        }
-        
-        inventario = data;
+        inventario = data || [];
         updateInventarioTable();
-        console.log('Inventario cargado exitosamente:', data?.length || 0, 'items');
+        console.log('✅ Inventario cargado:', inventario.length, 'items');
         
     } catch (error) {
-        console.error('Error cargando inventario:', error);
-        console.error('Detalles del error:', error.message, error.details);
+        console.error('❌ Error cargando inventario:', error);
         showToast('Error cargando inventario: ' + error.message, 'error');
     }
 }
