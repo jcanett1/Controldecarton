@@ -723,16 +723,37 @@ function updateProductosTable() {
     `).join('');
 }
 
-// ===== FUNCIÓN CORREGIDA: updateInventarioTable con fecha =====
+// ===== FUNCIÓN updateInventarioTable CORREGIDA =====
+
 function updateInventarioTable() {
+    console.log('🔄 Actualizando tabla de inventario...');
+    
+    // CORRECCIÓN: Validar que el elemento existe antes de usarlo
     const tbody = document.getElementById('inventario-table-body');
+    
+    if (!tbody) {
+        console.error('❌ Elemento inventario-table-body no encontrado en el DOM');
+        console.log('Elementos disponibles con "inventario" en el ID:');
+        const elementos = document.querySelectorAll('[id*="inventario"]');
+        elementos.forEach((el, i) => {
+            console.log(`  ${i + 1}. ID: "${el.id}" - Elemento: ${el.tagName}`);
+        });
+        
+        // Intentar crear el elemento si no existe
+        console.log('🔧 Intentando crear el elemento inventario-table-body...');
+        crearTablaInventarioSiNoExiste();
+        return;
+    }
+    
+    console.log('✅ Elemento inventario-table-body encontrado');
     
     if (inventario.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="loading">No hay datos de inventario</td></tr>';
         return;
     }
 
-    tbody.innerHTML = inventario.map(item => `
+    // Generar HTML de la tabla
+    const htmlContent = inventario.map(item => `
         <tr>
             <td>
                 <strong>${item.producto?.numero_parte || 'N/A'}</strong><br>
@@ -746,7 +767,7 @@ function updateInventarioTable() {
                     ${getStockStatusText(item)}
                 </span>
             </td>
-            <td>${formatDate(item.ultima_actualizacion)}</td> <!-- Usar ultima_actualizacion en lugar de created_at -->
+            <td>${formatDate(item.ultima_actualizacion)}</td>
             <td>
                 ${currentUser && currentUser.rol === 'ADMIN' ? `
                     <button class="action-btn adjust" onclick="showAdjustModal(${item.producto_id})">
@@ -756,8 +777,176 @@ function updateInventarioTable() {
             </td>
         </tr>
     `).join('');
+    
+    tbody.innerHTML = htmlContent;
+    console.log('✅ Tabla de inventario actualizada con', inventario.length, 'items');
 }
 
+// ===== FUNCIÓN AUXILIAR: Crear tabla si no existe =====
+function crearTablaInventarioSiNoExiste() {
+    console.log('🔧 Creando estructura de tabla de inventario...');
+    
+    // Buscar el contenedor de la sección inventario
+    const inventarioSection = document.getElementById('inventario-section');
+    
+    if (!inventarioSection) {
+        console.error('❌ No se encontró la sección inventario-section');
+        showToast('Error: Sección de inventario no encontrada en el DOM', 'error');
+        return;
+    }
+    
+    // Crear la tabla completa
+    const tablaHTML = `
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad Actual</th>
+                        <th>Stock Mínimo</th>
+                        <th>Stock Máximo</th>
+                        <th>Estado</th>
+                        <th>Última Actualización</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inventario-table-body">
+                    <tr><td colspan="7" class="loading">Cargando inventario...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    // Insertar la tabla en la sección
+    inventarioSection.insertAdjacentHTML('beforeend', tablaHTML);
+    console.log('✅ Tabla de inventario creada automáticamente');
+    
+    // Intentar actualizar la tabla nuevamente
+    setTimeout(() => {
+        updateInventarioTable();
+    }, 100);
+}
+
+// ===== FUNCIÓN DE DIAGNÓSTICO MEJORADA =====
+async function diagnosticarTablaInventario() {
+    console.log('🔍 === DIAGNÓSTICO DE TABLA DE INVENTARIO ===');
+    
+    const problemas = [];
+    
+    // 1. Verificar elementos del DOM
+    console.log('1️⃣ Verificando elementos del DOM...');
+    const elementosRequeridos = [
+        'inventario-section',
+        'inventario-table-body',
+        'inventario-filter'
+    ];
+    
+    elementosRequeridos.forEach(elementoId => {
+        const elemento = document.getElementById(elementoId);
+        if (elemento) {
+            console.log(`✅ ${elementoId}: Encontrado (${elemento.tagName})`);
+        } else {
+            console.warn(`⚠️ ${elementoId}: NO ENCONTRADO`);
+            problemas.push(`Elemento ${elementoId} no existe en el DOM`);
+        }
+    });
+    
+    // 2. Verificar estructura HTML
+    console.log('2️⃣ Verificando estructura HTML...');
+    const inventarioSection = document.getElementById('inventario-section');
+    if (inventarioSection) {
+        const tablas = inventarioSection.querySelectorAll('table');
+        console.log(`✅ Tablas encontradas en inventario-section: ${tablas.length}`);
+        
+        tablas.forEach((tabla, i) => {
+            const tbody = tabla.querySelector('tbody');
+            const thead = tabla.querySelector('thead');
+            console.log(`  Tabla ${i + 1}: thead=${!!thead}, tbody=${!!tbody}`);
+            
+            if (!thead) {
+                console.warn(`⚠️ Tabla ${i + 1}: Sin thead`);
+                problemas.push(`Tabla ${i + 1} sin thead`);
+            }
+            
+            if (!tbody) {
+                console.warn(`⚠️ Tabla ${i + 1}: Sin tbody`);
+                problemas.push(`Tabla ${i + 1} sin tbody`);
+            }
+        });
+    }
+    
+    // 3. Verificar variables JavaScript
+    console.log('3️⃣ Verificando variables JavaScript...');
+    console.log(`✅ Variable inventario: ${typeof inventario} con ${inventario?.length || 0} elementos`);
+    console.log(`✅ Variable currentUser: ${typeof currentUser} (${currentUser?.rol || 'sin rol'})`);
+    
+    // 4. Verificar funciones
+    console.log('4️⃣ Verificando funciones...');
+    const funciones = ['updateInventarioTable', 'loadInventario', 'formatDate', 'getStockStatus'];
+    funciones.forEach(funcion => {
+        if (typeof window[funcion] === 'function' || typeof eval(funcion) === 'function') {
+            console.log(`✅ ${funcion}: Disponible`);
+        } else {
+            console.warn(`⚠️ ${funcion}: NO ENCONTRADA`);
+            problemas.push(`Función ${funcion} no disponible`);
+        }
+    });
+    
+    // 5. Verificar datos en Supabase
+    console.log('5️⃣ Verificando datos en Supabase...');
+    try {
+        const { data, error } = await supabase
+            .from('inventario')
+            .select('count', { count: 'exact', head: true });
+            
+        if (error) {
+            console.error('❌ Error consultando inventario:', error);
+            problemas.push('Error consultando inventario en Supabase: ' + error.message);
+        } else {
+            console.log(`✅ Datos en inventario: ${data} registros`);
+        }
+    } catch (error) {
+        console.error('❌ Error de conexión:', error);
+        problemas.push('Error de conexión con Supabase');
+    }
+    
+    // 6. Resumen final
+    console.log('📊 === RESUMEN ===');
+    if (problemas.length === 0) {
+        console.log('✅ No se encontraron problemas');
+        showToast('Diagnóstico completado - Todo OK', 'success');
+    } else {
+        console.log(`❌ ${problemas.length} problemas encontrados:`);
+        problemas.forEach((problema, i) => {
+            console.log(`  ${i + 1}. ${problema}`);
+        });
+        showToast(`Diagnóstico completado - ${problemas.length} problemas encontrados`, 'error');
+    }
+    
+    return problemas;
+}
+
+// ===== FUNCIÓN PARA FORZAR CREACIÓN DE TABLA =====
+function forzarCreacionTabla() {
+    console.log('🔧 Forzando creación de tabla de inventario...');
+    
+    // Eliminar tabla existente si hay problemas
+    const tablaExistente = document.querySelector('#inventario-section table');
+    if (tablaExistente) {
+        console.log('🗑️ Eliminando tabla existente con problemas...');
+        tablaExistente.remove();
+    }
+    
+    // Crear nueva tabla
+    crearTablaInventarioSiNoExiste();
+    
+    showToast('Tabla de inventario recreada', 'success');
+}
+
+// ===== FUNCIONES DE DIAGNÓSTICO PARA LA CONSOLA =====
+window.diagnosticoTablaInventario = diagnosticarTablaInventario;
+window.forzarCreacionTabla = forzarCreacionTabla;
+window.crearTablaInventarioSiNoExiste = crearTablaInventarioSiNoExiste;
 function updateMovimientosTable() {
     const tbody = document.getElementById('movimientos-table-body');
     if (!tbody) return;
