@@ -374,33 +374,22 @@ async function loadInventario(filter = 'all') {
     try {
         console.log('🔄 Cargando inventario con filtro:', filter);
         
-        // VALIDACIÓN: Verificar que los elementos necesarios existen
-        const inventarioSection = document.getElementById('inventario-section');
-        const inventarioTableBody = document.getElementById('inventario-table-body');
+        // VALIDACIÓN: Verificar que tu elemento inventario-list existe
+        const inventarioList = document.getElementById('inventario-list');
         
-        if (!inventarioSection) {
-            console.error('❌ Sección inventario-section no encontrada');
-            showToast('Error: Sección de inventario no encontrada', 'error');
+        if (!inventarioList) {
+            console.error('❌ Elemento inventario-list no encontrado');
+            showToast('Error: Elemento de inventario no encontrado', 'error');
             return;
         }
         
-        if (!inventarioTableBody) {
-            console.warn('⚠️ Tabla inventario-table-body no encontrada, creando...');
-            crearTablaInventarioSiNoExiste();
-            
-            // Esperar a que se cree la tabla
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
-            // Verificar nuevamente
-            const newTableBody = document.getElementById('inventario-table-body');
-            if (!newTableBody) {
-                throw new Error('No se pudo crear la tabla de inventario');
-            }
-        }
-        
-        // Mostrar estado de carga
-        const tbody = document.getElementById('inventario-table-body');
-        tbody.innerHTML = '<tr><td colspan="7" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando inventario...</td></tr>';
+        // Mostrar estado de carga en tu estructura
+        inventarioList.innerHTML = `
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Cargando inventario...</p>
+            </div>
+        `;
         
         // Preparar consulta
         let query = supabase
@@ -449,20 +438,7 @@ async function loadInventario(filter = 'all') {
         inventario = data || [];
         console.log('📊 Datos recibidos:', inventario.length, 'elementos');
         
-        // Validar estructura de datos
-        if (inventario.length > 0) {
-            const primerElemento = inventario[0];
-            const tieneProducto = primerElemento.producto && 
-                                 primerElemento.producto.numero_parte && 
-                                 primerElemento.producto.descripcion;
-            
-            if (!tieneProducto) {
-                console.warn('⚠️ Los datos no incluyen información completa del producto');
-                showToast('Advertencia: Datos de producto incompletos', 'warning');
-            }
-        }
-        
-        // Actualizar tabla
+        // Actualizar tabla en tu estructura
         updateInventarioTable();
         
         // Mostrar mensaje de éxito
@@ -474,28 +450,21 @@ async function loadInventario(filter = 'all') {
     } catch (error) {
         console.error('❌ Error cargando inventario:', error);
         
-        // Mostrar error en la tabla
-        const tbody = document.getElementById('inventario-table-body');
-        if (tbody) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="loading" style="color: #dc3545;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Error cargando inventario: ${error.message}
-                    </td>
-                </tr>
+        // Mostrar error en tu estructura
+        const inventarioList = document.getElementById('inventario-list');
+        if (inventarioList) {
+            inventarioList.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h4>Error cargando inventario</h4>
+                    <p>${error.message}</p>
+                    <button class="btn-retry" onclick="loadInventario()">Reintentar</button>
+                </div>
             `;
         }
         
         // Mostrar toast con error
         showToast('Error cargando inventario: ' + error.message, 'error');
-        
-        // Sugerencias de solución
-        if (error.message.includes('connection') || error.message.includes('network')) {
-            showToast('Verifica tu conexión a internet', 'warning');
-        } else if (error.message.includes('permission') || error.message.includes('auth')) {
-            showToast('Problema de autenticación - Intenta recargar la página', 'warning');
-        }
     }
 }
 
@@ -979,60 +948,76 @@ function updateProductosTable() {
 // ===== FUNCIÓN updateInventarioTable CORREGIDA =====
 
 function updateInventarioTable() {
-    console.log('🔄 Actualizando tabla de inventario...');
+    // CORRECCIÓN: Buscar tu elemento específico
+    const inventarioList = document.getElementById('inventario-list');
     
-    // CORRECCIÓN: Validar que el elemento existe antes de usarlo
-    const tbody = document.getElementById('inventario-table-body');
-    
-    if (!tbody) {
-        console.error('❌ Elemento inventario-table-body no encontrado en el DOM');
-        console.log('Elementos disponibles con "inventario" en el ID:');
-        const elementos = document.querySelectorAll('[id*="inventario"]');
-        elementos.forEach((el, i) => {
-            console.log(`  ${i + 1}. ID: "${el.id}" - Elemento: ${el.tagName}`);
-        });
-        
-        // Intentar crear el elemento si no existe
-        console.log('🔧 Intentando crear el elemento inventario-table-body...');
-        crearTablaInventarioSiNoExiste();
+    if (!inventarioList) {
+        console.error('❌ Elemento inventario-list no encontrado');
         return;
     }
     
-    console.log('✅ Elemento inventario-table-body encontrado');
-    
     if (inventario.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading">No hay datos de inventario</td></tr>';
+        inventarioList.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-boxes"></i>
+                <h4>No hay datos de inventario</h4>
+            </div>
+        `;
         return;
     }
 
-    // Generar HTML de la tabla
-    const htmlContent = inventario.map(item => `
-        <tr>
-            <td>
-                <strong>${item.producto?.numero_parte || 'N/A'}</strong><br>
-                <small>${item.producto?.descripcion || 'Sin descripción'}</small>
-            </td>
-            <td><strong>${item.cantidad_actual}</strong></td>
-            <td>${item.cantidad_minima}</td>
-            <td>${item.cantidad_maxima}</td>
-            <td>
-                <span class="status-badge ${getStockStatus(item)}">
-                    ${getStockStatusText(item)}
-                </span>
-            </td>
-            <td>${formatDate(item.ultima_actualizacion)}</td>
-            <td>
-                ${currentUser && currentUser.rol === 'ADMIN' ? `
-                    <button class="action-btn adjust" onclick="showAdjustModal(${item.producto_id})">
-                        <i class="fas fa-cog"></i> Ajustar
-                    </button>
-                ` : '<span class="text-muted">Solo lectura</span>'}
-            </td>
-        </tr>
-    `).join('');
+    // Generar tabla compatible con tu card
+    const htmlContent = `
+        <div class="inventory-table">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad Actual</th>
+                        <th>Stock Mínimo</th>
+                        <th>Stock Máximo</th>
+                        <th>Estado</th>
+                        <th>Última Actualización</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${inventario.map(item => `
+                        <tr>
+                            <td>
+                                <strong>${item.producto?.numero_parte || 'N/A'}</strong><br>
+                                <small>${item.producto?.descripcion || 'Sin descripción'}</small>
+                            </td>
+                            <td>
+                                <span class="quantity-badge ${getStockStatus(item)}">
+                                    ${item.cantidad_actual}
+                                </span>
+                            </td>
+                            <td>${item.cantidad_minima}</td>
+                            <td>${item.cantidad_maxima}</td>
+                            <td>
+                                <span class="status-badge ${getStockStatus(item)}">
+                                    ${getStockStatusText(item)}
+                                </span>
+                            </td>
+                            <td>
+                                <small>${formatDate(item.ultima_actualizacion)}</small>
+                            </td>
+                            <td>
+                                ${currentUser && currentUser.rol === 'ADMIN' ? `
+                                    <button class="btn-action adjust" onclick="showAdjustModal(${item.producto_id})">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                ` : '<span class="text-muted">Solo lectura</span>'}
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
     
-    tbody.innerHTML = htmlContent;
-    console.log('✅ Tabla de inventario actualizada con', inventario.length, 'items');
+    inventarioList.innerHTML = htmlContent;
 }
 
 // ===== FUNCIÓN AUXILIAR: Crear tabla si no existe =====
