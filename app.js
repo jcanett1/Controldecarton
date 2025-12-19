@@ -2277,71 +2277,43 @@ async function confirmarRecepcionOCI(ociId) {
 // Función para ver detalle OCI
 async function verDetalleOCI(ociId) {
     try {
-        const response = await fetch(`/api/oci/${ociId}`);
-        const result = await response.json();
-        
-        if (result.success) {
-            const oci = result.data;
-            let detalleHTML = `
-                <div class="modal" style="display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-                    <div style="background: white; margin: 50px auto; padding: 20px; max-width: 800px; max-height: 80vh; overflow-y: auto; border-radius: 8px;">
-                        <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 20px;">
-                            <h3>OCI ${oci.numero_oci}</h3>
-                            <button onclick="cerrarModalDetalle()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
-                        </div>
-                        <div><strong>Estado:</strong> <span class="estado-badge estado-${oci.estado.toLowerCase()}">${oci.estado}</span></div>
-                        <div><strong>Creado por:</strong> ${oci.usuario_creador}</div>
-                        <div><strong>Fecha creación:</strong> ${new Date(oci.fecha_creacion).toLocaleString()}</div>
-                        ${oci.usuario_revisor ? `<div><strong>Revisado por:</strong> ${oci.usuario_revisor}</div>` : ''}
-                        ${oci.usuario_receptor ? `<div><strong>Recibido por:</strong> ${oci.usuario_receptor}</div>` : ''}
-                        ${oci.observaciones ? `<div><strong>Observaciones:</strong> ${oci.observaciones}</div>` : ''}
-                        
-                        <h4 style="margin-top: 20px;">Detalles:</h4>
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="background: #f1f5f9;">
-                                    <th style="padding: 8px; border: 1px solid #e2e8f0;">Producto</th>
-                                    <th style="padding: 8px; border: 1px solid #e2e8f0;">Tarimas</th>
-                                    <th style="padding: 8px; border: 1px solid #e2e8f0;">Unidades/Tarima</th>
-                                    <th style="padding: 8px; border: 1px solid #e2e8f0;">Total Unidades</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${oci.detalles.map(detalle => `
-                                    <tr>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0;">
-                                            <strong>${detalle.producto.numero_parte}</strong><br>
-                                            <small>${detalle.producto.descripcion}</small>
-                                        </td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0;">${detalle.cantidad_tarimas}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0;">${detalle.cantidad_unidades_por_tarima}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0;">${detalle.total_unidades}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                        
-                        ${oci.facturas && oci.facturas.length > 0 ? `
-                            <h4 style="margin-top: 20px;">Facturas:</h4>
-                            ${oci.facturas.map(factura => `
-                                <div style="background: #f1f5f9; padding: 10px; margin: 5px 0; border-radius: 4px;">
-                                    <i class="fas fa-file-pdf" style="color: #dc2626;"></i>
-                                    <a href="/uploads/${factura.nombre_archivo}" target="_blank">${factura.nombre_original}</a>
-                                    <small>Subida por: ${factura.usuario_subida}</small>
-                                </div>
-                            `).join('')}
-                        ` : ''}
-                    </div>
-                </div>
-            `;
-            
-            document.body.insertAdjacentHTML('beforeend', detalleHTML);
-        } else {
-            showToast(`Error cargando detalle: ${result.error}`, 'error');
-        }
+        const { data: oci, error } = await supabase
+            .from('ordenes_compra')
+            .select(`
+                id,
+                numero_oci,
+                estado,
+                fecha_creacion,
+                observaciones,
+                usuario_creador,
+                usuario_revisor,
+                usuario_receptor,
+                detalles:ordenes_compra_detalles (
+                    cantidad_tarimas,
+                    cantidad_unidades_por_tarima,
+                    total_unidades,
+                    producto:productos_carton (
+                        numero_parte,
+                        descripcion
+                    )
+                ),
+                facturas:oci_facturas (
+                    nombre_archivo,
+                    nombre_original,
+                    usuario_subida
+                )
+            `)
+            .eq('id', ociId)
+            .single();
+
+        if (error) throw error;
+
+        // 👉 reutilizamos TU HTML (no lo rompemos)
+        renderDetalleOCIModal(oci);
+
     } catch (error) {
         console.error('Error cargando detalle OCI:', error);
-        showToast('Error de conexión', 'error');
+        showToast('Error cargando detalle OCI', 'error');
     }
 }
 
@@ -2354,10 +2326,20 @@ function cerrarModalDetalle() {
 }
 
 // Función para actualizar estadísticas OCI
-function actualizarEstadisticasOCI(ociList) {
-    // Implementar lógica para actualizar contadores
-    const pendientes = ociList.filter(oci => oci.estado === 'PENDIENTE').length;
-    document.getElementById('oci-pendientes-count').textContent = pendientes;
+function actualizarEstadisticasOCI(ordenes) {
+    const total = document.getElementById('oci-total');
+    const pendientes = document.getElementById('oci-pendientes');
+    const aprobadas = document.getElementById('oci-aprobadas');
+
+    // ⛔ SI NO EXISTE LA UI, NO EXPLOTES
+    if (!total || !pendientes || !aprobadas) {
+        console.warn('⚠️ Estadísticas OCI no existen en esta vista');
+        return;
+    }
+
+    total.textContent = ordenes.length;
+    pendientes.textContent = ordenes.filter(o => o.estado === 'PENDIENTE').length;
+    aprobadas.textContent = ordenes.filter(o => o.estado === 'APROBADA').length;
 }
 
 // Función para actualizar estadísticas recibido
