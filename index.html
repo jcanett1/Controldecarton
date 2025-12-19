@@ -780,6 +780,253 @@
             background: #fef2f2;
             color: #991b1b;
         }
+        /* Container principal para la tabla de inventario */
+.inventory-table {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+/* Tabla de inventario */
+.inventory-table .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.inventory-table .data-table th,
+.inventory-table .data-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.inventory-table .data-table th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.inventory-table .data-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.inventory-table .data-table tbody tr:nth-child(even) {
+    background: #fcfcfd;
+}
+
+/* Badges para cantidades */
+.quantity-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-align: center;
+    min-width: 2.5rem;
+    display: inline-block;
+    line-height: 1.2;
+}
+
+.quantity-badge.status-normal {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.quantity-badge.status-low {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.quantity-badge.status-out {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* Status badges */
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-badge.status-normal {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.status-badge.status-low {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge.status-out {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* Botones de acción */
+.btn-action {
+    background: none;
+    border: none;
+    padding: 0.375rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    color: #6b7280;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.btn-action:hover {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.btn-action.adjust:hover {
+    background-color: #0ea5e9;
+    color: white;
+}
+
+/* Información del producto */
+.product-info {
+    line-height: 1.4;
+}
+
+.product-info strong {
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.product-info small {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+/* Acciones de inventario */
+.inventory-actions {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+/* Loading spinner */
+.spinner {
+    border: 3px solid #f1f5f9;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    width: 2.5rem;
+    height: 2.5rem;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Estados */
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #64748b;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+    color: #cbd5e1;
+}
+
+.empty-state p {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #475569;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state small {
+    font-size: 0.875rem;
+    color: #94a3b8;
+}
+
+.error-message {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: #64748b;
+}
+
+.error-message i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+    color: #ef4444;
+}
+
+.error-message h4 {
+    margin: 0.5rem 0;
+    color: #374151;
+    font-weight: 600;
+}
+
+/* Botón de reintento */
+.btn-retry {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-retry:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Utilidades */
+.text-muted {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Responsive específico para inventario */
+@media (max-width: 768px) {
+    .inventory-table .data-table {
+        font-size: 0.75rem;
+    }
+    
+    .inventory-table .data-table th,
+    .inventory-table .data-table td {
+        padding: 0.5rem 0.375rem;
+    }
+    
+    .quantity-badge {
+        font-size: 0.75rem;
+        min-width: 2rem;
+        padding: 0.125rem 0.375rem;
+    }
+}
+
+/* ===== FIN DE ESTILOS CRÍTICOS ===== */
     </style>
 </head>
 
