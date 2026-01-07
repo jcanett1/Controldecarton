@@ -1,3 +1,4 @@
+
 // Configuración del sistema de cartón con Supabase
 const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
@@ -2317,9 +2318,196 @@ async function verDetalleOCI(ociId) {
     }
 }
 
+// Función para renderizar modal con detalles OCI
+function renderDetalleOCIModal(oci) {
+    // Crear el HTML del modal
+    const detallesHTML = oci.detalles && oci.detalles.length > 0 ? oci.detalles.map(detalle => `
+        <div class="detalle-item" style="border-bottom: 1px solid #eee; padding: 12px 0;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <strong style="color: #333;">Número de Parte:</strong>
+                    <p style="margin: 5px 0; color: #666;">${detalle.producto?.numero_parte || 'N/A'}</p>
+                </div>
+                <div>
+                    <strong style="color: #333;">Descripción:</strong>
+                    <p style="margin: 5px 0; color: #666;">${detalle.producto?.descripcion || 'N/A'}</p>
+                </div>
+                <div>
+                    <strong style="color: #333;">Cantidad de Tarimas:</strong>
+                    <p style="margin: 5px 0; color: #666;">${detalle.cantidad_tarimas || 0}</p>
+                </div>
+                <div>
+                    <strong style="color: #333;">Unidades por Tarima:</strong>
+                    <p style="margin: 5px 0; color: #666;">${detalle.cantidad_unidades_por_tarima || 0}</p>
+                </div>
+                <div>
+                    <strong style="color: #333;">Total de Unidades:</strong>
+                    <p style="margin: 5px 0; color: #28a745; font-weight: bold;">${detalle.total_unidades || 0}</p>
+                </div>
+            </div>
+        </div>
+    `).join('') : '<p style="color: #999; text-align: center; padding: 20px;">No hay detalles de productos</p>';
+
+    const facturasHTML = oci.facturas && oci.facturas.length > 0 ? oci.facturas.map(factura => `
+        <div style="padding: 10px; background: #f8f9fa; border-radius: 4px; margin-bottom: 8px;">
+            <i class="fas fa-file-pdf" style="color: #dc3545; margin-right: 8px;"></i>
+            <strong>${factura.nombre_original || factura.nombre_archivo}</strong>
+            <small style="color: #999; display: block; margin-top: 4px;">Subido por: ${factura.usuario_subida || 'Desconocido'}</small>
+        </div>
+    `).join('') : '<p style="color: #999; text-align: center; padding: 20px;">No hay facturas adjuntas</p>';
+
+    const estadoClase = oci.estado === 'PENDIENTE' ? 'estado-pendiente' : 
+                       oci.estado === 'APROBADA' ? 'estado-aprobada' : 
+                       oci.estado === 'RECHAZADA' ? 'estado-rechazada' : 'estado-recibida';
+
+    const modalHTML = `
+        <div class="modal-detalle-oci" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        ">
+            <div style="
+                background: white;
+                border-radius: 8px;
+                max-width: 900px;
+                width: 100%;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            ">
+                <!-- Header del Modal -->
+                <div style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 20px;
+                    border-radius: 8px 8px 0 0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                ">
+                    <div>
+                        <h2 style="margin: 0; font-size: 24px; font-weight: bold;">OCI #${oci.numero_oci}</h2>
+                        <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">Detalles de la Orden de Compra Interna</p>
+                    </div>
+                    <button onclick="cerrarModalDetalle()" style="
+                        background: rgba(255, 255, 255, 0.2);
+                        border: none;
+                        color: white;
+                        font-size: 24px;
+                        cursor: pointer;
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: background 0.3s;
+                    " onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Contenido del Modal -->
+                <div style="padding: 30px;">
+                    <!-- Información General -->
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">
+                            <i class="fas fa-info-circle" style="margin-right: 8px;"></i>Información General
+                        </h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Estado</strong>
+                                <p style="margin: 8px 0; font-size: 16px;">
+                                    <span class="icono-estado ${estadoClase}" style="padding: 6px 12px; border-radius: 4px; display: inline-block;">${oci.estado}</span>
+                                </p>
+                            </div>
+                            <div>
+                                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Fecha de Creación</strong>
+                                <p style="margin: 8px 0; font-size: 16px; color: #333;">${new Date(oci.fecha_creacion).toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Usuario Creador</strong>
+                                <p style="margin: 8px 0; font-size: 16px; color: #333;">${oci.usuario_creador || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Usuario Revisor</strong>
+                                <p style="margin: 8px 0; font-size: 16px; color: #333;">${oci.usuario_revisor || 'Pendiente'}</p>
+                            </div>
+                            <div>
+                                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Usuario Receptor</strong>
+                                <p style="margin: 8px 0; font-size: 16px; color: #333;">${oci.usuario_receptor || 'Pendiente'}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detalles de Productos -->
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">
+                            <i class="fas fa-box" style="margin-right: 8px;"></i>Detalles de Productos
+                        </h3>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px;">
+                            ${detallesHTML}
+                        </div>
+                    </div>
+
+                    <!-- Facturas -->
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">
+                            <i class="fas fa-file-invoice" style="margin-right: 8px;"></i>Facturas Adjuntas
+                        </h3>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px;">
+                            ${facturasHTML}
+                        </div>
+                    </div>
+
+                    <!-- Observaciones -->
+                    ${oci.observaciones ? `
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">
+                            <i class="fas fa-sticky-note" style="margin-right: 8px;"></i>Observaciones
+                        </h3>
+                        <div style="background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; border-radius: 4px; color: #333;">
+                            ${oci.observaciones}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Botones de Acción -->
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                        <button onclick="cerrarModalDetalle()" style="
+                            background: #6c757d;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            font-weight: 500;
+                            transition: background 0.3s;
+                        " onmouseover="this.style.background='#5a6268'" onmouseout="this.style.background='#6c757d'">
+                            <i class="fas fa-times" style="margin-right: 8px;"></i>Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Insertar modal en el DOM
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
 // Función para cerrar modal detalle
 function cerrarModalDetalle() {
-    const modal = document.querySelector('.modal[style*="display: block"]');
+    const modal = document.querySelector('.modal-detalle-oci');
     if (modal) {
         modal.remove();
     }
