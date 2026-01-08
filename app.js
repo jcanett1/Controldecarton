@@ -62,6 +62,7 @@ async function checkAuthentication() {
         // Inicializar la aplicación
         await initializeApp();
         setupUserInterface();
+      verificarRetornoOCI();
         
     } catch (error) {
         console.error('Error en verificación de autenticación:', error);
@@ -169,15 +170,19 @@ async function initializeApp() {
 
 function setupEventListeners() {
     // Sidebar navigation - CORREGIDO
-    document.querySelectorAll('.menu-item').forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
-            const section = this.dataset.section;
-            if (section) {
-                showSection(section);
-            }
-        });
+  document.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        const section = this.dataset.section;
+        
+        // ✨ NUEVO: Verificar si es OCI - abrir como archivo standalone
+        if (section === 'oci-crear' || section === 'oci-revisar' || section === 'oci-recibido') {
+            abrirOCIStandalone(section);
+        } else if (section) {
+            showSection(section);
+        }
     });
+});
 
     // Refresh button
     const refreshBtn = document.getElementById('refresh-btn');
@@ -273,15 +278,18 @@ async function loadSectionData(sectionName) {
         case 'movimientos':
             await loadMovimientos();
             break;
-        case 'oci-crear':
-            await initializeOCISection();
-            break;
+       case 'oci-crear':
+    // Ya no se carga aquí - se abre en archivo standalone
+    console.log('ℹ️ OCI se abre en archivo standalone (oci_simple.html)');
+    break;
         case 'oci-revisar':
-            await initializeOCISection();
-            break;
+    // Ya no se carga aquí - se abre en archivo standalone
+    console.log('ℹ️ OCI se abre en archivo standalone (oci_simple.html)');
+    break;
         case 'oci-recibido':
-            await initializeOCISection();
-            break;
+    // Ya no se carga aquí - se abre en archivo standalone
+    console.log('ℹ️ OCI se abre en archivo standalone (oci_simple.html)');
+    break;
         case 'produccion':
             await loadProduccion();
             break;
@@ -304,6 +312,105 @@ function refreshCurrentSection() {
         showToast('Datos actualizados correctamente', 'success');
     }, 1000);
 }
+
+
+// ===== FUNCIONES PARA ABRIR OCI COMO ARCHIVO STANDALONE =====
+
+/**
+ * Abre oci_simple.html como archivo independiente
+ * @param {string} tipo - Tipo de OCI: 'oci-crear', 'oci-revisar', 'oci-recibido'
+ */
+function abrirOCIStandalone(tipo) {
+    console.log('🔗 Abriendo OCI standalone:', tipo);
+    
+    try {
+        // Guardar datos en localStorage
+        localStorage.setItem('oci_tipo', tipo);
+        localStorage.setItem('usuario_actual', JSON.stringify(currentUser));
+        
+        console.log('✅ Datos guardados en localStorage');
+        console.log('📁 Abriendo oci_simple.html...');
+        
+        // Abrir el archivo
+        window.location.href = 'oci_simple.html';
+        
+    } catch (error) {
+        console.error('❌ Error abriendo OCI:', error);
+        showToast('Error abriendo OCI. Intenta de nuevo.', 'error');
+    }
+}
+
+/**
+ * Abre OCI en nueva pestaña (alternativa)
+ */
+function abrirOCIEnNuevaPestaña(tipo) {
+    console.log('🔗 Abriendo OCI en nueva pestaña:', tipo);
+    
+    try {
+        localStorage.setItem('oci_tipo', tipo);
+        localStorage.setItem('usuario_actual', JSON.stringify(currentUser));
+        
+        window.open('oci_simple.html', '_blank');
+        
+    } catch (error) {
+        console.error('❌ Error abriendo OCI:', error);
+        showToast('Error abriendo OCI. Intenta de nuevo.', 'error');
+    }
+}
+
+/**
+ * Volver desde oci_simple.html al index
+ */
+function volverDesdeOCI() {
+    console.log('🔙 Volviendo al index desde OCI');
+    
+    try {
+        localStorage.removeItem('oci_tipo');
+        sincronizarDatosOCI();
+        window.location.href = 'index.html';
+        
+    } catch (error) {
+        console.error('❌ Error volviendo:', error);
+        window.location.href = 'index.html';
+    }
+}
+
+/**
+ * Sincronizar datos de OCI
+ */
+function sincronizarDatosOCI() {
+    console.log('🔄 Sincronizando datos de OCI');
+    
+    try {
+        if (currentSection && currentSection.startsWith('oci-')) {
+            loadSectionData(currentSection);
+            showToast('Datos sincronizados correctamente', 'success');
+        }
+    } catch (error) {
+        console.error('⚠️ Error sincronizando:', error);
+    }
+}
+
+/**
+ * Verificar si venimos de oci_simple.html
+ */
+function verificarRetornoOCI() {
+    console.log('🔍 Verificando retorno de OCI...');
+    
+    const ociTipo = localStorage.getItem('oci_tipo');
+    
+    if (ociTipo) {
+        console.log('✅ Retorno detectado de OCI tipo:', ociTipo);
+        showToast('Retorno desde OCI', 'info');
+        sincronizarDatosOCI();
+        localStorage.removeItem('oci_tipo');
+    }
+}
+
+
+
+
+
 
 // ===== FUNCIONES DE CARGA DE DATOS =====
 
