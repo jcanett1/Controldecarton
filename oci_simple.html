@@ -484,12 +484,12 @@
         <!-- PESTAÑAS -->
         <div class="tabs-container">
             <div class="tabs-header">
-                <button class="tab-button active" onclick="cambiarPestaña('crear', this)">
-                    <i class="fas fa-plus-circle"></i> Crear OCI
-                </button>
-                <button class="tab-button" onclick="cambiarPestaña('historico', this)">
-                    <i class="fas fa-history"></i> Consulta Histórico de OCI
-                </button>
+               <button class="tab-button active" onclick="cambiarPestana('crear', this)">
+    <i class="fas fa-plus-circle"></i> Crear OCI
+</button>
+<button class="tab-button" onclick="cambiarPestana('historico', this)">
+    <i class="fas fa-history"></i> Consulta Histórico de OCI
+</button>
             </div>
 
             <div class="tabs-content">
@@ -626,7 +626,7 @@
         // Configuración de Supabase
         const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+       let supabase = window.supabaseClient || window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // Materiales de cartón - LISTA COMPLETA ACTUALIZADA
         const materiales = [
@@ -663,7 +663,7 @@
         });
 
         // FUNCIONES DE PESTAÑAS
-        function cambiarPestaña(nombrePestaña, elemento) {
+        function cambiarPestana(nombrePestana, elemento)  {
             document.querySelectorAll('.tab-pane').forEach(pane => {
                 pane.classList.remove('active');
             });
@@ -672,7 +672,7 @@
                 btn.classList.remove('active');
             });
 
-            document.getElementById(nombrePestaña).classList.add('active');
+            document.getElementById(nombrePestana).classList.add('active');
             elemento.classList.add('active');
 
             if (nombrePestaña === 'historico') {
