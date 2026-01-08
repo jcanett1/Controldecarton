@@ -408,7 +408,11 @@ function verificarRetornoOCI() {
 }
 
 
-
+function abrirRevisarOCI() {
+    console.log('🔗 Abriendo revisor de OCI');
+    localStorage.setItem('usuario_actual', JSON.stringify(currentUser));
+    window.location.href = 'oci_revisar.html';
+}
 
 
 
