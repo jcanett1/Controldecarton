@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisar OCI - Sistema de Cartón</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .header-left p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .btn-volver {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-volver:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .user-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .contenedor-lista-oci {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .encabezado-lista-oci {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .encabezado-lista-oci h2 {
+            font-size: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filtros-lista {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filtros-lista input,
+        .filtros-lista select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .filtros-lista input:focus,
+        .filtros-lista select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .filtros-lista input {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-info {
+            background: #0066cc;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #0052a3;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .tabla-oci {
+            overflow-x: auto;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .estado {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .estado-pendiente {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .estado-aprobada {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .estado-rechazada {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .cargando {
+            text-align: center;
+            padding: 40px !important;
+            color: #999;
+        }
+
+        .spinner-oci {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .acciones {
+            display: flex;
+            gap: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .filtros-lista {
+                flex-direction: column;
+            }
+
+            .filtros-lista input {
+                min-width: 100%;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+
+            .acciones {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-list-check"></i> Revisar Órdenes de Compra Interna</h1>
+                <p>Sistema de Control de Cartón - OCI</p>
+            </div>
+            <button onclick="volverAlIndex()" class="btn-volver">
+                <i class="fas fa-arrow-left"></i> Volver
+            </button>
+        </div>
+
+        <!-- User Info -->
+        <div class="user-info">
+            <strong>Usuario:</strong> <span id="usuario-actual">Cargando...</span>
+        </div>
+
+        <!-- Contenedor Lista OCI -->
+        <div class="contenedor-lista-oci">
+            <div class="encabezado-lista-oci">
+                <h2><i class="fas fa-clipboard-list"></i> Lista de Órdenes de Compra Interna</h2>
+            </div>
+            
+            <div class="filtros-lista">
+                <input type="text" id="filtro-busqueda" placeholder="Buscar por número OCI o usuario..." style="flex: 1;">
+                <select id="filtro-estado">
+                    <option value="">Todos los estados</option>
+                    <option value="PENDIENTE">Pendiente</option>
+                    <option value="APROBADA">Aprobada</option>
+                    <option value="RECHAZADA">Rechazada</option>
+                    <option value="CANCELADA">Cancelada</option>
+                </select>
+                <button onclick="filtrarOrdenes()" class="btn btn-primary">
+                    <i class="fas fa-search"></i>
+                    Filtrar
+                </button>
+                <button onclick="recargarOrdenes()" class="btn btn-secondary">
+                    <i class="fas fa-sync-alt"></i>
+                    Recargar
+                </button>
+            </div>
+            
+            <div class="tabla-oci">
+                <table id="tabla-ordenes">
+                    <thead>
+                        <tr>
+                            <th>Número OCI</th>
+                            <th>Fecha</th>
+                            <th>Usuario</th>
+                            <th>Material</th>
+                            <th>Pallets</th>
+                            <th>Total Piezas</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpo-tabla-ordenes">
+                        <tr>
+                            <td colspan="8" class="cargando">
+                                <div class="spinner-oci"></div>
+                                <p>Cargando órdenes...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // ===== CONFIGURACIÓN GLOBAL =====
+        let supabase = null;
+        let usuarioActual = null;
+        let ordenesOriginal = [];
+
+        // ===== INICIALIZACIÓN =====
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Inicializando revisor de OCI...');
+            
+            // Inicializar Supabase
+            const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
+            supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+            
+            await cargarUsuario();
+            await cargarOrdenes();
+
+            // Configurar búsqueda en tiempo real
+            document.getElementById('filtro-busqueda').addEventListener('keyup', filtrarOrdenes);
+            document.getElementById('filtro-estado').addEventListener('change', filtrarOrdenes);
+        });
+
+        // ===== CARGAR USUARIO =====
+        async function cargarUsuario() {
+            try {
+                const storedUser = localStorage.getItem('current_user');
+                if (!storedUser) {
+                    window.location.href = 'login_completo.html';
+                    return;
+                }
+
+                usuarioActual = JSON.parse(storedUser);
+                document.getElementById('usuario-actual').textContent = usuarioActual.nombre_completo || usuarioActual.username;
+                console.log('Usuario cargado:', usuarioActual.nombre_completo);
+            } catch (error) {
+                console.error('Error cargando usuario:', error);
+            }
+        }
+
+        // ===== CARGAR ÓRDENES =====
+        async function cargarOrdenes() {
+            try {
+                console.log('Cargando órdenes...');
+                const tbody = document.getElementById('cuerpo-tabla-ordenes');
+                
+                const { data, error } = await supabase
+                    .from('ordenes_compra')
+                    .select('*, usuarios_carton!ordenes_compra_usuario_solicitante_id_fkey(nombre_completo)')
+                    .order('fecha_creacion', { ascending: false });
+
+                if (error) {
+                    console.error('Error cargando órdenes:', error);
+                    tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error cargando órdenes</p></td></tr>';
+                    return;
+                }
+
+                ordenesOriginal = data || [];
+                console.log('Órdenes cargadas:', ordenesOriginal.length);
+                
+                if (ordenesOriginal.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-inbox"></i><p>No hay órdenes de compra</p></td></tr>';
+                    return;
+                }
+
+                renderizarTabla(ordenesOriginal);
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('cuerpo-tabla-ordenes').innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error inesperado</p></td></tr>';
+            }
+        }
+
+        // ===== RECARGAR ÓRDENES =====
+        async function recargarOrdenes() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recargando...';
+            
+            await cargarOrdenes();
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Recargar';
+        }
+
+        // ===== FILTRAR ÓRDENES =====
+        function filtrarOrdenes() {
+            const busqueda = document.getElementById('filtro-busqueda').value.toLowerCase();
+            const estado = document.getElementById('filtro-estado').value;
+
+            let ordenesFiltradas = ordenesOriginal.filter(orden => {
+                const cumpleBusqueda = orden.numero_oci.toLowerCase().includes(busqueda) ||
+                                     (orden.usuarios_carton?.nombre_completo || '').toLowerCase().includes(busqueda);
+                
+                const cumpleEstado = !estado || orden.estado === estado;
+
+                return cumpleBusqueda && cumpleEstado;
+            });
+
+            if (ordenesFiltradas.length === 0) {
+                document.getElementById('cuerpo-tabla-ordenes').innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-search"></i><p>No se encontraron órdenes</p></td></tr>';
+                return;
+            }
+
+            renderizarTabla(ordenesFiltradas);
+        }
+
+        // ===== RENDERIZAR TABLA =====
+        function renderizarTabla(ordenes) {
+            const tbody = document.getElementById('cuerpo-tabla-ordenes');
+            
+            tbody.innerHTML = ordenes.map(orden => {
+                const fecha = new Date(orden.fecha_creacion).toLocaleDateString('es-ES');
+                const totalPiezas = orden.cantidad_total_piezas || (orden.piezas_por_pallet * orden.cantidad_pallets);
+                const usuario = orden.usuarios_carton?.nombre_completo || 'N/A';
+                const estadoClass = 'estado-' + orden.estado.toLowerCase();
+                
+                return '<tr>' +
+                    '<td><strong>' + orden.numero_oci + '</strong></td>' +
+                    '<td>' + fecha + '</td>' +
+                    '<td>' + usuario + '</td>' +
+                    '<td>#' + orden.material_numero + '</td>' +
+                    '<td>' + orden.cantidad_pallets + '</td>' +
+                    '<td>' + totalPiezas.toLocaleString() + '</td>' +
+                    '<td><span class="estado ' + estadoClass + '">' + orden.estado + '</span></td>' +
+                    '<td>' +
+                        '<div class="acciones">' +
+                            '<button class="btn btn-sm btn-info" onclick="verDetalles(' + orden.id + ')" title="Ver detalles"><i class="fas fa-eye"></i> Ver</button>' +
+                            '<button class="btn btn-sm btn-success" onclick="aprobarOrden(' + orden.id + ')" title="Aprobar"><i class="fas fa-check"></i> Aprobar</button>' +
+                            '<button class="btn btn-sm btn-danger" onclick="rechazarOrden(' + orden.id + ')" title="Rechazar"><i class="fas fa-times"></i> Rechazar</button>' +
+                        '</div>' +
+                    '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        // ===== VER DETALLES =====
+        async function verDetalles(ociId) {
+            try {
+                const { data: orden, error } = await supabase
+                    .from('ordenes_compra')
+                    .select('*, usuarios_carton!ordenes_compra_usuario_solicitante_id_fkey(nombre_completo)')
+                    .eq('id', ociId)
+                    .single();
+
+                if (error) throw error;
+
+                const totalPiezas = orden.cantidad_total_piezas || (orden.piezas_por_pallet * orden.cantidad_pallets);
+                const detalles = `
+DETALLES DE LA ORDEN
+====================
+
+Número OCI: ${orden.numero_oci}
+Fecha: ${new Date(orden.fecha_creacion).toLocaleDateString('es-ES')}
+Usuario: ${orden.usuarios_carton?.nombre_completo || 'N/A'}
+
+MATERIAL
+--------
+Número: #${orden.material_numero}
+Piezas por Pallet: ${orden.piezas_por_pallet}
+Cantidad de Pallets: ${orden.cantidad_pallets}
+Total de Piezas: ${totalPiezas.toLocaleString()}
+
+ESTADO
+------
+Estado Actual: ${orden.estado}
+Observaciones: ${orden.observaciones || 'Sin observaciones'}
+                `;
+                
+                alert(detalles);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error cargando detalles');
+            }
+        }
+
+        // ===== APROBAR ORDEN =====
+        async function aprobarOrden(ociId) {
+            if (!confirm('¿Deseas aprobar esta orden?')) return;
+
+            try {
+                const { error } = await supabase
+                    .from('ordenes_compra')
+                    .update({ estado: 'APROBADA' })
+                    .eq('id', ociId);
+
+                if (error) throw error;
+
+                alert('Orden aprobada exitosamente');
+                cargarOrdenes();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error aprobando la orden');
+            }
+        }
+
+        // ===== RECHAZAR ORDEN =====
+        async function rechazarOrden(ociId) {
+            if (!confirm('¿Deseas rechazar esta orden?')) return;
+
+            try {
+                const { error } = await supabase
+                    .from('ordenes_compra')
+                    .update({ estado: 'RECHAZADA' })
+                    .eq('id', ociId);
+
+                if (error) throw error;
+
+                alert('Orden rechazada');
+                cargarOrdenes();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error rechazando la orden');
+            }
+        }
+
+        // ===== VOLVER AL INDEX =====
+        function volverAlIndex() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
