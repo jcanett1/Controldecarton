@@ -384,31 +384,38 @@
         </div>
     </div>
 
-    <!-- Supabase JS -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <script>
-        // ===== CONFIGURACIÓN GLOBAL =====
-        let supabase = null;
-        let usuarioActual = null;
-        let ordenesOriginal = [];
+   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        // ===== INICIALIZACIÓN =====
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('Inicializando revisor de OCI...');
-            
-            // Inicializar Supabase
-            const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
-            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
-            supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-            
-            await cargarUsuario();
-            await cargarOrdenes();
+<script>
+    // ===== CONFIGURACIÓN GLOBAL SUPABASE =====
+    if (!window.supabaseClient) {
+        const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
+        const supabaseAnonKey = 'PEGA_AQUI_LA_ANON_KEY_REAL';
 
-            // Configurar búsqueda en tiempo real
-            document.getElementById('filtro-busqueda').addEventListener('keyup', filtrarOrdenes);
-            document.getElementById('filtro-estado').addEventListener('change', filtrarOrdenes);
-        });
+        window.supabaseClient = supabase.createClient(
+            supabaseUrl,
+            supabaseAnonKey
+        );
+    }
+
+    const supabaseClient = window.supabaseClient;
+
+    let usuarioActual = null;
+    let ordenesOriginal = [];
+
+    // ===== INICIALIZACIÓN =====
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log('Inicializando revisor de OCI...');
+
+        await cargarUsuario();
+        await cargarOrdenes();
+
+        document.getElementById('filtro-busqueda')
+            .addEventListener('keyup', filtrarOrdenes);
+
+        document.getElementById('filtro-estado')
+            .addEventListener('change', filtrarOrdenes);
+    });
 
         // ===== CARGAR USUARIO =====
         async function cargarUsuario() {
