@@ -384,13 +384,14 @@
         </div>
     </div>
 
-   <script src="https://cdn.jsdelivr.net/npm/@/supabase-js@2"></script>
+  <!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
     // ===== CONFIGURACIÓN GLOBAL SUPABASE =====
     if (!window.supabaseClient) {
         const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
-        const supabaseAnonKey = 'PEGA_AQUI_LA_ANON_KEY_REAL';
+        const supabaseAnonKey = 'PEGA_AQUI_TU_ANON_KEY_REAL';
 
         window.supabaseClient = supabase.createClient(
             supabaseUrl,
@@ -403,18 +404,10 @@
     let usuarioActual = null;
     let ordenesOriginal = [];
 
-    // ===== INICIALIZACIÓN =====
     document.addEventListener('DOMContentLoaded', async () => {
         console.log('Inicializando revisor de OCI...');
-
         await cargarUsuario();
         await cargarOrdenes();
-
-        document.getElementById('filtro-busqueda')
-            .addEventListener('keyup', filtrarOrdenes);
-
-        document.getElementById('filtro-estado')
-            .addEventListener('change', filtrarOrdenes);
     });
 
         // ===== CARGAR USUARIO =====
