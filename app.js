@@ -176,9 +176,9 @@ function setupEventListeners() {
         const section = this.dataset.section;
         
         // ✨ NUEVO: Verificar si es OCI - abrir como archivo standalone
-        if (section === 'oci-crear' || section === 'oci-revisar' || section === 'oci-recibido') {
-            abrirOCIStandalone(section);
-        } else if (section) {
+        if (section === 'oci-crear') {
+    abrirOCIStandalone(section);
+}else if (section) {
             showSection(section);
         }
     });
