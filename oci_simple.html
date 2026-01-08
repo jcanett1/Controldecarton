@@ -582,12 +582,11 @@
         
         // Usar la instancia de Supabase que ya existe en app.js
         // Si no existe, crearla
-        let supabase = window.supabaseClient;
-        if (!supabase) {
-            const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
-            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
-            supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-        }
+       const supabase = window.supabaseClient || (() => {
+    const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
+    return window.supabase.createClient(supabaseUrl, supabaseKey);
+})();
 
         // Materiales de cartón
         const materiales = [
