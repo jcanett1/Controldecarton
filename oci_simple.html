@@ -731,7 +731,7 @@
                 const año = fecha.getFullYear();
                 const mes = String(fecha.getMonth() + 1).padStart(2, '0');
                 
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('ordenes_compra')
                     .select('numero_oci')
                     .like('numero_oci', 'OCI-' + año + '-%')
@@ -777,7 +777,7 @@
                     estado: 'PENDIENTE'
                 };
 
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('ordenes_compra')
                     .insert([orden])
                     .select();
@@ -817,7 +817,7 @@
         // ===== CARGAR ÓRDENES =====
         async function cargarOrdenes() {
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('ordenes_compra')
                     .select('*, usuarios_carton!ordenes_compra_usuario_solicitante_id_fkey(nombre_completo)')
                     .order('fecha_creacion', { ascending: false });
@@ -881,7 +881,7 @@
         // ===== VER DETALLES =====
         async function verDetallesOrden(ociId) {
             try {
-                const { data: orden, error } = await supabase
+                const { data: orden, error } = await supabaseClient
                     .from('ordenes_compra')
                     .select('*, usuarios_carton!ordenes_compra_usuario_solicitante_id_fkey(nombre_completo)')
                     .eq('id', ociId)
