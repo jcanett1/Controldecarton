@@ -503,7 +503,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
    <script>
-      // ===== CONFIGURACIÓN SUPABASE =====
+       // ===== CONFIGURACIÓN SUPABASE =====
     if (!window.supabaseClient) {
         const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
@@ -536,10 +536,11 @@
     let usuarioActual = null;
     let filtroActual = 'TODOS';
     let materialesEnOrden = [];
+    let historicoConfigurado = false; // <<-- NUEVO: Flag para evitar re-asignar eventos
 
     // ===== INICIALIZACIÓN =====
     document.addEventListener('DOMContentLoaded', function() {
-        // Asignación de eventos
+        // Asignación de eventos para elementos siempre visibles
         document.getElementById('btnVolver').addEventListener('click', volverAlIndex);
         document.getElementById('materialSelect').addEventListener('change', seleccionarMaterial);
         document.getElementById('cantidadPallets').addEventListener('input', calcularTotal);
@@ -555,7 +556,7 @@
         generarNumeroOCI();
     });
 
-    // ===== GESTIÓN DE PESTAÑAS =====
+    // ===== GESTIÓN DE PESTAÑAS (MODIFICADO) =====
     function configurarPestanas() {
         document.querySelectorAll('.tab-button').forEach(button => {
             button.addEventListener('click', function() {
@@ -576,6 +577,16 @@
 
         if (nombrePestana === 'historico') {
             cargarOrdenes();
+            // Asignar eventos de filtro SOLO la primera vez que se abre la pestaña
+            if (!historicoConfigurado) {
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const estado = this.getAttribute('data-estado');
+                        filtrarOrdenes(estado, this);
+                    });
+                });
+                historicoConfigurado = true;
+            }
         }
     }
 
