@@ -381,6 +381,261 @@
             table { font-size: 12px; }
             th, td { padding: 10px; }
         }
+
+        /* MODAL DE DETALLES */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 550px;
+            max-height: 85vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 25px;
+            overflow-y: auto;
+            max-height: calc(85vh - 140px);
+        }
+
+        .detail-section {
+            margin-bottom: 20px;
+        }
+
+        .detail-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #667eea;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .detail-item {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+        }
+
+        .detail-item.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .detail-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            font-size: 15px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .material-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .material-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .material-item:last-child {
+            border-bottom: none;
+        }
+
+        .material-item:hover {
+            background: #e9ecef;
+        }
+
+        .material-numero {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .material-numero i {
+            color: #667eea;
+            margin-right: 6px;
+        }
+
+        .material-cantidad {
+            text-align: right;
+        }
+
+        .material-cantidad .pallets {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .material-cantidad .piezas {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .total-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .total-label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .total-values {
+            text-align: right;
+        }
+
+        .total-values .pallets {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .total-values .piezas {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .observaciones-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 12px 15px;
+            color: #856404;
+            font-size: 14px;
+        }
+
+        .observaciones-box i {
+            margin-right: 8px;
+        }
+
+        .modal-footer {
+            padding: 15px 25px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn-modal {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-modal-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-modal-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -521,6 +776,26 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalles OCI -->
+    <div id="modalDetalles" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-file-invoice"></i> <span id="modalTitulo">Detalles de OCI</span></h2>
+                <button class="modal-close" onclick="cerrarModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Contenido dinámico -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal btn-modal-primary" onclick="cerrarModal()">
+                    <i class="fas fa-check"></i> Aceptar
+                </button>
             </div>
         </div>
     </div>
@@ -925,34 +1200,100 @@
             }
 
             const primeraLinea = data[0];
-            let detalles = 'Detalles de la OCI: ' + primeraLinea.numero_oci + '\n';
-            detalles += 'Fecha: ' + new Date(primeraLinea.fecha_creacion).toLocaleString('es-ES') + '\n';
-            detalles += 'Usuario: ' + (primeraLinea.usuarios_carton ? primeraLinea.usuarios_carton.nombre_completo : 'N/A') + '\n';
-            detalles += 'Estado: ' + primeraLinea.estado + '\n\n';
-            detalles += 'Materiales:\n';
+            const fecha = new Date(primeraLinea.fecha_creacion).toLocaleString('es-ES');
+            const usuario = primeraLinea.usuarios_carton ? primeraLinea.usuarios_carton.nombre_completo : 'N/A';
+            const estado = primeraLinea.estado;
             
             let totalPalletsGeneral = 0;
             let totalPiezasGeneral = 0;
 
+            // Construir lista de materiales
+            let materialesHtml = '';
             data.forEach(function(item) {
                 const totalPiezasItem = item.cantidad_total_piezas || (item.piezas_por_pallet * item.cantidad_pallets);
-                detalles += '- Mat. #' + item.material_numero + ': ' + item.cantidad_pallets + ' pallets, ' + totalPiezasItem.toLocaleString() + ' piezas\n';
                 totalPalletsGeneral += item.cantidad_pallets;
                 totalPiezasGeneral += totalPiezasItem;
+                
+                materialesHtml += '<div class="material-item">' +
+                    '<div class="material-numero"><i class="fas fa-box"></i> #' + item.material_numero + '</div>' +
+                    '<div class="material-cantidad">' +
+                    '<div class="pallets">' + item.cantidad_pallets + ' pallets</div>' +
+                    '<div class="piezas">' + totalPiezasItem.toLocaleString() + ' pzas</div>' +
+                    '</div>' +
+                    '</div>';
             });
 
-            detalles += '\nTotal General: ' + totalPalletsGeneral + ' pallets, ' + totalPiezasGeneral.toLocaleString() + ' piezas.';
-            
-            if(primeraLinea.observaciones) {
-                detalles += '\n\nObservaciones: ' + primeraLinea.observaciones;
+            // Construir contenido del modal
+            let modalContent = '' +
+                '<div class="detail-section">' +
+                '<div class="detail-section-title"><i class="fas fa-info-circle"></i> Informaci\u00f3n General</div>' +
+                '<div class="detail-grid">' +
+                '<div class="detail-item">' +
+                '<div class="detail-label">N\u00famero OCI</div>' +
+                '<div class="detail-value">' + primeraLinea.numero_oci + '</div>' +
+                '</div>' +
+                '<div class="detail-item">' +
+                '<div class="detail-label">Estado</div>' +
+                '<div class="detail-value"><span class="status status-' + estado.toLowerCase() + '">' + estado + '</span></div>' +
+                '</div>' +
+                '<div class="detail-item">' +
+                '<div class="detail-label">Fecha de Creaci\u00f3n</div>' +
+                '<div class="detail-value">' + fecha + '</div>' +
+                '</div>' +
+                '<div class="detail-item">' +
+                '<div class="detail-label">Usuario Solicitante</div>' +
+                '<div class="detail-value">' + usuario + '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '<div class="detail-section">' +
+                '<div class="detail-section-title"><i class="fas fa-boxes"></i> Materiales (' + data.length + ')</div>' +
+                '<div class="material-list">' + materialesHtml + '</div>' +
+                '<div class="total-section">' +
+                '<div class="total-label"><i class="fas fa-calculator"></i> Total General</div>' +
+                '<div class="total-values">' +
+                '<div class="pallets">' + totalPalletsGeneral + ' pallets</div>' +
+                '<div class="piezas">' + totalPiezasGeneral.toLocaleString() + ' piezas</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+
+            // Agregar observaciones si existen
+            if (primeraLinea.observaciones) {
+                modalContent += '<div class="detail-section">' +
+                    '<div class="detail-section-title"><i class="fas fa-sticky-note"></i> Observaciones</div>' +
+                    '<div class="observaciones-box"><i class="fas fa-comment-alt"></i>' + primeraLinea.observaciones + '</div>' +
+                    '</div>';
             }
 
-            alert(detalles);
+            // Mostrar modal
+            document.getElementById('modalTitulo').textContent = 'OCI: ' + primeraLinea.numero_oci;
+            document.getElementById('modalBody').innerHTML = modalContent;
+            document.getElementById('modalDetalles').classList.add('active');
+
         } catch (error) {
             console.error('Error cargando detalles:', error);
             alert('Error al cargar los detalles de la orden.');
         }
     }
+
+    function cerrarModal() {
+        document.getElementById('modalDetalles').classList.remove('active');
+    }
+
+    // Cerrar modal al hacer clic fuera de él
+    document.getElementById('modalDetalles').addEventListener('click', function(e) {
+        if (e.target === this) {
+            cerrarModal();
+        }
+    });
+
+    // Cerrar modal con tecla Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            cerrarModal();
+        }
+    });
 
     // ===== UTILIDADES =====
     async function generarNumeroOCI() {
