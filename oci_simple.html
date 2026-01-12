@@ -503,8 +503,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
    <script>
-    // ===== CONFIGURACIÓN SUPABASE =====
-    if (!window.supabaseClient ) {
+  // ===== CONFIGURACIÓN SUPABASE =====
+    if (!window.supabaseClient) {
         const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
         window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey );
@@ -535,7 +535,7 @@
     let materialSeleccionado = null;
     let usuarioActual = null;
     let filtroActual = 'TODOS';
-    let materialesEnOrden = []; // << NUEVO: Array para guardar los materiales de la OCI actual
+    let materialesEnOrden = [];
 
     // ===== INICIALIZACIÓN =====
     document.addEventListener('DOMContentLoaded', function() {
@@ -544,15 +544,50 @@
         configurarFormulario();
         configurarPestanas();
         generarNumeroOCI();
-        // cargarOrdenes(); // Se carga al cambiar a la pestaña
     });
 
-    // ===== GESTIÓN DE PESTAÑAS (sin cambios) =====
-    function configurarPestanas() { /* ... */ }
-    function cambiarPestana(nombrePestana, elemento) { /* ... */ }
+    // ===== GESTIÓN DE PESTAÑAS =====
+    function configurarPestanas() {
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const nombrePestana = this.getAttribute('data-tab');
+                cambiarPestana(nombrePestana, this);
+            });
+        });
+    }
 
-    // ===== GESTIÓN DE USUARIO (sin cambios) =====
-    async function cargarUsuario() { /* ... */ }
+    function cambiarPestana(nombrePestana, elemento) {
+        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+
+        document.getElementById(nombrePestana).classList.add('active');
+        if (elemento) {
+            elemento.classList.add('active');
+        }
+
+        if (nombrePestana === 'historico') {
+            cargarOrdenes();
+        }
+    }
+
+    // ===== GESTIÓN DE USUARIO =====
+    async function cargarUsuario() {
+        try {
+            const storedUser = localStorage.getItem('current_user');
+            if (!storedUser) {
+                alert('No se encontró sesión de usuario. Redirigiendo al login.');
+                window.location.href = 'login_completo.html';
+                return;
+            }
+            usuarioActual = JSON.parse(storedUser);
+            const nombreUsuario = usuarioActual.nombre_completo || usuarioActual.username;
+            document.getElementById('usuarioSolicitante').value = nombreUsuario;
+            document.getElementById('usuario-actual').textContent = nombreUsuario;
+        } catch (error) {
+            console.error('Error cargando usuario:', error);
+            document.getElementById('usuario-actual').textContent = 'Error al cargar';
+        }
+    }
 
     // ===== FORMULARIO DE CREACIÓN =====
     function cargarMaterialesSelect() {
@@ -574,6 +609,7 @@
             materialSeleccionado = null;
             infoDiv.classList.remove('active');
             infoDiv.innerHTML = '';
+            document.getElementById('totalPiezas').value = '';
             return;
         }
 
@@ -625,10 +661,9 @@
             return;
         }
 
-        // Comprobar si el material ya está en la orden
         const existente = materialesEnOrden.find(item => item.numero === materialSeleccionado.numero);
         if (existente) {
-            alert('Este material ya ha sido agregado a la orden. Puede eliminarlo y volver a agregarlo si desea cambiar la cantidad.');
+            alert('Este material ya ha sido agregado. Puede eliminarlo y volver a agregarlo si desea cambiar la cantidad.');
             return;
         }
 
@@ -641,7 +676,6 @@
         renderizarTablaMateriales();
         actualizarEstadoBotonGuardar();
         
-        // Limpiar campos de selección para el siguiente material
         document.getElementById('materialSelect').value = '';
         seleccionarMaterial();
         document.getElementById('cantidadPallets').value = 1;
@@ -652,6 +686,7 @@
         const tbody = document.getElementById('bodyTablaMaterialesOci');
         if (materialesEnOrden.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="empty-state" style="padding: 20px;">Aún no has agregado materiales a la orden.</td></tr>';
+            actualizarEstadoBotonGuardar();
             return;
         }
 
@@ -668,12 +703,12 @@
                 </td>
             </tr>
         `).join('');
+        actualizarEstadoBotonGuardar();
     }
 
     function eliminarMaterialDeLaOrden(index) {
         materialesEnOrden.splice(index, 1);
         renderizarTablaMateriales();
-        actualizarEstadoBotonGuardar();
     }
 
     function actualizarEstadoBotonGuardar() {
@@ -704,7 +739,7 @@
                 material_numero: item.numero,
                 piezas_por_pallet: item.piezas,
                 cantidad_pallets: item.cantidad_pallets,
-                cantidad_total_piezas: item.total_piezas, // Guardamos el total (posiblemente modificado)
+                cantidad_total_piezas: item.total_piezas,
                 observaciones: observaciones,
                 estado: 'PENDIENTE'
             }));
@@ -737,8 +772,7 @@
         materialesEnOrden = [];
         
         renderizarTablaMateriales();
-        actualizarEstadoBotonGuardar();
-        seleccionarMaterial(); // Limpia el panel de info
+        seleccionarMaterial();
         
         generarNumeroOCI();
         const fecha = new Date();
@@ -747,30 +781,164 @@
     }
 
     function configurarFormulario() {
-        limpiarFormulario(); // Llama a limpiar para establecer el estado inicial
+        limpiarFormulario();
         document.getElementById('ordenForm').addEventListener('submit', guardarOrden);
     }
 
-    // ===== LÓGICA DE HISTÓRICO (con ajustes para agrupar) =====
-    async function cargarOrdenes() { /* ... */ }
-    function filtrarOrdenes(estado, elemento) { /* ... */ }
-    function renderizarTablaOrdenes(ordenes) { /* ... */ }
-    async function verDetallesOrden(ociId) { /* ... */ }
-    
-    // ===== UTILIDADES (sin cambios) =====
-    async function generarNumeroOCI() { /* ... */ }
-    function volverAlIndex() { /* ... */ }
+    // ===== LÓGICA DE HISTÓRICO =====
+    async function cargarOrdenes() {
+        const tbody = document.getElementById('ordenesTableBody');
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i><p>Cargando órdenes...</p></td></tr>';
 
-    // --- RELLENO DE FUNCIONES SIN CAMBIOS PARA EVITAR ERRORES ---
-    function configurarPestanas() {
-        document.querySelectorAll('.tab-button').forEach(button => {
-            button.addEventListener('click', function() {
-                const nombrePestana = this.getAttribute('data-tab');
-                cambiarPestana(nombrePestana, this);
-            });
-        });
+        try {
+            let query = supabaseClient
+                .from('ordenes_compra')
+                .select('*, usuarios_carton!ordenes_compra_usuario_solicitante_id_fkey(nombre_completo)')
+                .order('fecha_creacion', { ascending: false });
+
+            if (filtroActual !== 'TODOS') {
+                query = query.eq('estado', filtroActual);
+            }
+
+            const { data, error } = await query;
+
+            if (error) throw error;
+
+            renderizarTablaOrdenes(data || []);
+
+        } catch (error) {
+            console.error('Error cargando órdenes:', error);
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar las órdenes.</p></td></tr>';
+        }
     }
 
-    function cambiarPestana(nombrePestana, elemento) {
-        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-        document.querySelectorAll('.tab-button').forEach(btn =>
+    function filtrarOrdenes(estado, elemento) {
+        filtroActual = estado;
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        elemento.classList.add('active');
+        cargarOrdenes();
+    }
+
+    function renderizarTablaOrdenes(ordenes) {
+        const tbody = document.getElementById('ordenesTableBody');
+        
+        // Agrupar por numero_oci
+        const ordenesAgrupadas = ordenes.reduce((acc, curr) => {
+            if (!acc[curr.numero_oci]) {
+                acc[curr.numero_oci] = {
+                    ...curr,
+                    materiales: [],
+                    total_pallets: 0,
+                    total_piezas_final: 0,
+                };
+            }
+            acc[curr.numero_oci].materiales.push(curr);
+            acc[curr.numero_oci].total_pallets += curr.cantidad_pallets;
+            acc[curr.numero_oci].total_piezas_final += (curr.cantidad_total_piezas || (curr.piezas_por_pallet * curr.cantidad_pallets));
+            return acc;
+        }, {});
+
+        const ordenesParaTabla = Object.values(ordenesAgrupadas);
+
+        if (ordenesParaTabla.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-inbox"></i><p>No hay órdenes con este estado.</p></td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = ordenesParaTabla.map(orden => {
+            const fecha = new Date(orden.fecha_creacion).toLocaleDateString('es-ES');
+            const usuario = orden.usuarios_carton?.nombre_completo || 'N/A';
+            const materialDisplay = orden.materiales.length > 1 
+                ? `${orden.materiales.length} materiales` 
+                : `#${orden.material_numero}`;
+
+            return `<tr>
+                <td><strong>${orden.numero_oci}</strong></td>
+                <td>${fecha}</td>
+                <td>${materialDisplay}</td>
+                <td>${orden.total_pallets}</td>
+                <td>${orden.total_piezas_final.toLocaleString()}</td>
+                <td>${usuario}</td>
+                <td><span class="status status-${orden.estado.toLowerCase()}">${orden.estado}</span></td>
+                <td><button class="btn btn-sm btn-info" onclick="verDetallesOrden('${orden.numero_oci}')" title="Ver detalles"><i class="fas fa-eye"></i> Ver</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function verDetallesOrden(numeroOci) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('ordenes_compra')
+                .select('*, usuarios_carton!ordenes_compra_usuario_solicitante_id_fkey(nombre_completo)')
+                .eq('numero_oci', numeroOci);
+
+            if (error) throw error;
+            if (data.length === 0) {
+                alert('No se encontraron detalles para la OCI: ' + numeroOci);
+                return;
+            }
+
+            const primeraLinea = data[0];
+            let detalles = `Detalles de la OCI: ${primeraLinea.numero_oci}\n`;
+            detalles += `Fecha: ${new Date(primeraLinea.fecha_creacion).toLocaleString('es-ES')}\n`;
+            detalles += `Usuario: ${primeraLinea.usuarios_carton?.nombre_completo || 'N/A'}\n`;
+            detalles += `Estado: ${primeraLinea.estado}\n\n`;
+            detalles += 'Materiales:\n';
+            
+            let totalPalletsGeneral = 0;
+            let totalPiezasGeneral = 0;
+
+            data.forEach(item => {
+                const totalPiezasItem = item.cantidad_total_piezas || (item.piezas_por_pallet * item.cantidad_pallets);
+                detalles += `- Mat. #${item.material_numero}: ${item.cantidad_pallets} pallets, ${totalPiezasItem.toLocaleString()} piezas\n`;
+                totalPalletsGeneral += item.cantidad_pallets;
+                totalPiezasGeneral += totalPiezasItem;
+            });
+
+            detalles += `\nTotal General: ${totalPalletsGeneral} pallets, ${totalPiezasGeneral.toLocaleString()} piezas.`;
+            
+            if(primeraLinea.observaciones) {
+                detalles += `\n\nObservaciones: ${primeraLinea.observaciones}`;
+            }
+
+            alert(detalles);
+        } catch (error) {
+            console.error('Error cargando detalles:', error);
+            alert('Error al cargar los detalles de la orden.');
+        }
+    }
+
+    // ===== UTILIDADES =====
+    async function generarNumeroOCI() {
+        try {
+            const fecha = new Date();
+            const año = fecha.getFullYear();
+            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            
+            const { data, error } = await supabaseClient
+                .from('ordenes_compra')
+                .select('numero_oci')
+                .like('numero_oci', `OCI-${año}-%`)
+                .order('numero_oci', { ascending: false })
+                .limit(1);
+
+            if (error) throw error;
+
+            let numero = 1;
+            if (data && data.length > 0) {
+                const ultimoNumero = parseInt(data[0].numero_oci.split('-')[3]) || 0;
+                numero = ultimoNumero + 1;
+            }
+
+            const numeroOCI = `OCI-${año}-${mes}-${String(numero).padStart(3, '0')}`;
+            document.getElementById('numeroOci').value = numeroOCI;
+        } catch (error) {
+            console.error('Error generando número OCI:', error);
+            document.getElementById('numeroOci').value = 'Error al generar';
+        }
+    }
+
+    // <<-- FUNCIÓN CORREGIDA -->>
+    function volverAlIndex() {
+        window.location.href = 'index.html';
+    }
