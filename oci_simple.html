@@ -503,7 +503,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
    <script>
-  // ===== CONFIGURACIÓN SUPABASE =====
+      // ===== CONFIGURACIÓN SUPABASE =====
     if (!window.supabaseClient) {
         const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
@@ -539,6 +539,15 @@
 
     // ===== INICIALIZACIÓN =====
     document.addEventListener('DOMContentLoaded', function() {
+        // Asignación de eventos
+        document.getElementById('btnVolver').addEventListener('click', volverAlIndex);
+        document.getElementById('materialSelect').addEventListener('change', seleccionarMaterial);
+        document.getElementById('cantidadPallets').addEventListener('input', calcularTotal);
+        document.getElementById('btnAgregarMaterial').addEventListener('click', agregarMaterialALaOrden);
+        document.getElementById('btnLimpiar').addEventListener('click', limpiarFormulario);
+        document.getElementById('ordenForm').addEventListener('submit', guardarOrden);
+
+        // Carga de datos inicial
         cargarUsuario();
         cargarMaterialesSelect();
         configurarFormulario();
@@ -590,6 +599,10 @@
     }
 
     // ===== FORMULARIO DE CREACIÓN =====
+    function configurarFormulario() {
+        limpiarFormulario();
+    }
+    
     function cargarMaterialesSelect() {
         const select = document.getElementById('materialSelect');
         materiales.forEach((material, index) => {
@@ -674,7 +687,6 @@
         });
 
         renderizarTablaMateriales();
-        actualizarEstadoBotonGuardar();
         
         document.getElementById('materialSelect').value = '';
         seleccionarMaterial();
@@ -686,23 +698,21 @@
         const tbody = document.getElementById('bodyTablaMaterialesOci');
         if (materialesEnOrden.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="empty-state" style="padding: 20px;">Aún no has agregado materiales a la orden.</td></tr>';
-            actualizarEstadoBotonGuardar();
-            return;
-        }
-
-        tbody.innerHTML = materialesEnOrden.map((item, index) => `
-            <tr>
-                <td><strong>#${item.numero}</strong>  
+        } else {
+            tbody.innerHTML = materialesEnOrden.map((item, index) => `
+                <tr>
+                    <td><strong>#${item.numero}</strong>  
 <small>${item.descripcion}</small></td>
-                <td>${item.cantidad_pallets}</td>
-                <td>${item.total_piezas.toLocaleString()}</td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="eliminarMaterialDeLaOrden(${index})" title="Eliminar">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
+                    <td>${item.cantidad_pallets}</td>
+                    <td>${item.total_piezas.toLocaleString()}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="eliminarMaterialDeLaOrden(${index})" title="Eliminar">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
         actualizarEstadoBotonGuardar();
     }
 
@@ -780,11 +790,6 @@
         document.getElementById('fechaCreacion').value = fecha.toISOString().slice(0, 16);
     }
 
-    function configurarFormulario() {
-        limpiarFormulario();
-        document.getElementById('ordenForm').addEventListener('submit', guardarOrden);
-    }
-
     // ===== LÓGICA DE HISTÓRICO =====
     async function cargarOrdenes() {
         const tbody = document.getElementById('ordenesTableBody');
@@ -822,7 +827,6 @@
     function renderizarTablaOrdenes(ordenes) {
         const tbody = document.getElementById('ordenesTableBody');
         
-        // Agrupar por numero_oci
         const ordenesAgrupadas = ordenes.reduce((acc, curr) => {
             if (!acc[curr.numero_oci]) {
                 acc[curr.numero_oci] = {
@@ -938,7 +942,9 @@
         }
     }
 
-    // <<-- FUNCIÓN CORREGIDA -->>
     function volverAlIndex() {
         window.location.href = 'index.html';
     }
+    </script>
+</body>
+</html>
