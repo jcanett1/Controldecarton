@@ -6,7 +6,6 @@
     <title>Orden de Compra - Material de Cartón</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* --- (Tu CSS existente va aquí, no es necesario cambiarlo ) --- */
         * {
             margin: 0;
             padding: 0;
@@ -185,7 +184,7 @@
         select {
             cursor: pointer;
             appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e" );
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
             background-repeat: no-repeat;
             background-position: right 12px center;
             background-size: 20px;
@@ -251,7 +250,7 @@
         .btn-add {
             background: #28a745;
             color: white;
-            flex: none; /* No expandir */
+            flex: none;
             width: auto;
             padding: 12px 20px;
         }
@@ -392,7 +391,7 @@
                 <h1><i class="fas fa-boxes"></i> Gestión de Órdenes de Compra Interna</h1>
                 <p>Sistema de Control de Cartón - OCI</p>
             </div>
-            <button onclick="volverAlIndex()" class="btn-volver">
+            <button class="btn-volver" onclick="volverAlIndex()">
                 <i class="fas fa-arrow-left"></i> Volver
             </button>
         </div>
@@ -446,7 +445,7 @@
                                 <input type="number" id="cantidadPallets" min="1" value="1" oninput="calcularTotal()">
                             </div>
                             <div class="form-group">
-                                <label><i class="fas fa-calculator"></i> Total de Piezas (auto):</label>
+                                <label><i class="fas fa-calculator"></i> Total de Piezas (editable):</label>
                                 <input type="number" id="totalPiezas" min="0">
                             </div>
                             <div class="form-group">
@@ -493,7 +492,34 @@
 
                 <!-- TAB 2: CONSULTA HISTÓRICO -->
                 <div id="historico" class="tab-pane">
-                    <!-- ... (El contenido del histórico no cambia) ... -->
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px; color: #333;"><i class="fas fa-filter"></i> Filtrar por Estado</h3>
+                        <div class="filter-group">
+                            <button class="filter-btn active" onclick="filtrarOrdenes('TODOS', this)"><i class="fas fa-list"></i> Todas</button>
+                            <button class="filter-btn" onclick="filtrarOrdenes('PENDIENTE', this)"><i class="fas fa-clock"></i> Pendiente</button>
+                            <button class="filter-btn" onclick="filtrarOrdenes('APROBADA', this)"><i class="fas fa-check-circle"></i> Aprobada</button>
+                            <button class="filter-btn" onclick="filtrarOrdenes('RECIBIDA', this)"><i class="fas fa-inbox"></i> Recibida</button>
+                            <button class="filter-btn" onclick="filtrarOrdenes('FOLIADA', this)"><i class="fas fa-file-alt"></i> Foliada</button>
+                            <button class="filter-btn" onclick="filtrarOrdenes('PAGADA', this)"><i class="fas fa-credit-card"></i> Pagada</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Número OCI</th>
+                                    <th>Fecha</th>
+                                    <th>Material</th>
+                                    <th>Pallets</th>
+                                    <th>Total Piezas</th>
+                                    <th>Usuario</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordenesTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -502,12 +528,12 @@
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-   <script>
-       // ===== CONFIGURACIÓN SUPABASE =====
+    <script>
+    // ===== CONFIGURACIÓN SUPABASE =====
     if (!window.supabaseClient) {
         const supabaseUrl = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
-        window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey );
+        window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
     }
     const supabaseClient = window.supabaseClient;
 
@@ -536,29 +562,20 @@
     let usuarioActual = null;
     let filtroActual = 'TODOS';
     let materialesEnOrden = [];
-    let historicoConfigurado = false; // <<-- NUEVO: Flag para evitar re-asignar eventos
 
     // ===== INICIALIZACIÓN =====
     document.addEventListener('DOMContentLoaded', function() {
-        // Asignación de eventos para elementos siempre visibles
-        document.getElementById('btnVolver').addEventListener('click', volverAlIndex);
-        document.getElementById('materialSelect').addEventListener('change', seleccionarMaterial);
-        document.getElementById('cantidadPallets').addEventListener('input', calcularTotal);
-        document.getElementById('btnAgregarMaterial').addEventListener('click', agregarMaterialALaOrden);
-        document.getElementById('btnLimpiar').addEventListener('click', limpiarFormulario);
-        document.getElementById('ordenForm').addEventListener('submit', guardarOrden);
-
-        // Carga de datos inicial
         cargarUsuario();
         cargarMaterialesSelect();
         configurarFormulario();
         configurarPestanas();
         generarNumeroOCI();
+        renderizarTablaMateriales();
     });
 
-    // ===== GESTIÓN DE PESTAÑAS (MODIFICADO) =====
+    // ===== GESTIÓN DE PESTAÑAS =====
     function configurarPestanas() {
-        document.querySelectorAll('.tab-button').forEach(button => {
+        document.querySelectorAll('.tab-button').forEach(function(button) {
             button.addEventListener('click', function() {
                 const nombrePestana = this.getAttribute('data-tab');
                 cambiarPestana(nombrePestana, this);
@@ -567,8 +584,12 @@
     }
 
     function cambiarPestana(nombrePestana, elemento) {
-        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(function(pane) {
+            pane.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-button').forEach(function(btn) {
+            btn.classList.remove('active');
+        });
 
         document.getElementById(nombrePestana).classList.add('active');
         if (elemento) {
@@ -577,16 +598,6 @@
 
         if (nombrePestana === 'historico') {
             cargarOrdenes();
-            // Asignar eventos de filtro SOLO la primera vez que se abre la pestaña
-            if (!historicoConfigurado) {
-                document.querySelectorAll('.filter-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const estado = this.getAttribute('data-estado');
-                        filtrarOrdenes(estado, this);
-                    });
-                });
-                historicoConfigurado = true;
-            }
         }
     }
 
@@ -610,16 +621,12 @@
     }
 
     // ===== FORMULARIO DE CREACIÓN =====
-    function configurarFormulario() {
-        limpiarFormulario();
-    }
-    
     function cargarMaterialesSelect() {
         const select = document.getElementById('materialSelect');
-        materiales.forEach((material, index) => {
+        materiales.forEach(function(material, index) {
             const option = document.createElement('option');
             option.value = index;
-            option.textContent = `${material.numero} - ${material.descripcion} (${material.piezas} pz/pallet)`;
+            option.textContent = material.numero + ' - ' + material.descripcion + ' (' + material.piezas + ' pz/pallet)';
             select.appendChild(option);
         });
     }
@@ -639,20 +646,18 @@
 
         materialSeleccionado = materiales[index];
         
-        infoDiv.innerHTML = `
-            <div class="material-info-row">
-                <span class="material-info-label">Número:</span>
-                <span class="material-info-value">${materialSeleccionado.numero}</span>
-            </div>
-            <div class="material-info-row">
-                <span class="material-info-label">Piezas/Pallet:</span>
-                <span class="material-info-value">${materialSeleccionado.piezas}</span>
-            </div>
-            <div class="material-info-row">
-                <span class="material-info-label">Descripción:</span>
-                <span class="material-info-value">${materialSeleccionado.descripcion}</span>
-            </div>
-        `;
+        infoDiv.innerHTML = '<div class="material-info-row">' +
+            '<span class="material-info-label">Número:</span>' +
+            '<span class="material-info-value">' + materialSeleccionado.numero + '</span>' +
+            '</div>' +
+            '<div class="material-info-row">' +
+            '<span class="material-info-label">Piezas/Pallet:</span>' +
+            '<span class="material-info-value">' + materialSeleccionado.piezas + '</span>' +
+            '</div>' +
+            '<div class="material-info-row">' +
+            '<span class="material-info-label">Descripción:</span>' +
+            '<span class="material-info-value">' + materialSeleccionado.descripcion + '</span>' +
+            '</div>';
         infoDiv.classList.add('active');
         
         document.getElementById('cantidadPallets').value = 1;
@@ -685,20 +690,26 @@
             return;
         }
 
-        const existente = materialesEnOrden.find(item => item.numero === materialSeleccionado.numero);
+        const existente = materialesEnOrden.find(function(item) {
+            return item.numero === materialSeleccionado.numero;
+        });
         if (existente) {
             alert('Este material ya ha sido agregado. Puede eliminarlo y volver a agregarlo si desea cambiar la cantidad.');
             return;
         }
 
         materialesEnOrden.push({
-            ...materialSeleccionado,
+            numero: materialSeleccionado.numero,
+            piezas: materialSeleccionado.piezas,
+            descripcion: materialSeleccionado.descripcion,
             cantidad_pallets: cantidadPallets,
             total_piezas: totalPiezas
         });
 
         renderizarTablaMateriales();
+        actualizarEstadoBotonGuardar();
         
+        // Limpiar selección para el siguiente material
         document.getElementById('materialSelect').value = '';
         seleccionarMaterial();
         document.getElementById('cantidadPallets').value = 1;
@@ -709,21 +720,25 @@
         const tbody = document.getElementById('bodyTablaMaterialesOci');
         if (materialesEnOrden.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="empty-state" style="padding: 20px;">Aún no has agregado materiales a la orden.</td></tr>';
-        } else {
-            tbody.innerHTML = materialesEnOrden.map((item, index) => `
-                <tr>
-                    <td><strong>#${item.numero}</strong>  
-<small>${item.descripcion}</small></td>
-                    <td>${item.cantidad_pallets}</td>
-                    <td>${item.total_piezas.toLocaleString()}</td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="eliminarMaterialDeLaOrden(${index})" title="Eliminar">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
+            actualizarEstadoBotonGuardar();
+            return;
         }
+
+        let html = '';
+        for (let i = 0; i < materialesEnOrden.length; i++) {
+            const item = materialesEnOrden[i];
+            html += '<tr>' +
+                '<td><strong>#' + item.numero + '</strong><br><small>' + item.descripcion + '</small></td>' +
+                '<td>' + item.cantidad_pallets + '</td>' +
+                '<td>' + item.total_piezas.toLocaleString() + '</td>' +
+                '<td>' +
+                '<button type="button" class="btn btn-sm btn-danger" onclick="eliminarMaterialDeLaOrden(' + i + ')" title="Eliminar">' +
+                '<i class="fas fa-trash-alt"></i>' +
+                '</button>' +
+                '</td>' +
+                '</tr>';
+        }
+        tbody.innerHTML = html;
         actualizarEstadoBotonGuardar();
     }
 
@@ -753,17 +768,19 @@
             const fechaCreacion = new Date(document.getElementById('fechaCreacion').value).toISOString();
             const observaciones = document.getElementById('observaciones').value || null;
 
-            const registrosParaInsertar = materialesEnOrden.map(item => ({
-                numero_oci: numeroOci,
-                fecha_creacion: fechaCreacion,
-                usuario_solicitante_id: usuarioActual.id,
-                material_numero: item.numero,
-                piezas_por_pallet: item.piezas,
-                cantidad_pallets: item.cantidad_pallets,
-                cantidad_total_piezas: item.total_piezas,
-                observaciones: observaciones,
-                estado: 'PENDIENTE'
-            }));
+            const registrosParaInsertar = materialesEnOrden.map(function(item) {
+                return {
+                    numero_oci: numeroOci,
+                    fecha_creacion: fechaCreacion,
+                    usuario_solicitante_id: usuarioActual.id,
+                    material_numero: item.numero,
+                    piezas_por_pallet: item.piezas,
+                    cantidad_pallets: item.cantidad_pallets,
+                    cantidad_total_piezas: item.total_piezas,
+                    observaciones: observaciones,
+                    estado: 'PENDIENTE'
+                };
+            });
 
             const { data, error } = await supabaseClient
                 .from('ordenes_compra')
@@ -774,7 +791,7 @@
                 throw new Error('Error guardando la orden: ' + error.message);
             }
 
-            alert(`Orden de compra ${numeroOci} creada exitosamente con ${registrosParaInsertar.length} materiales.`);
+            alert('Orden de compra ' + numeroOci + ' creada exitosamente con ' + registrosParaInsertar.length + ' materiales.');
             limpiarFormulario();
             
         } catch (error) {
@@ -799,6 +816,11 @@
         const fecha = new Date();
         fecha.setMinutes(fecha.getMinutes() - fecha.getTimezoneOffset());
         document.getElementById('fechaCreacion').value = fecha.toISOString().slice(0, 16);
+    }
+
+    function configurarFormulario() {
+        limpiarFormulario();
+        document.getElementById('ordenForm').addEventListener('submit', guardarOrden);
     }
 
     // ===== LÓGICA DE HISTÓRICO =====
@@ -830,7 +852,9 @@
 
     function filtrarOrdenes(estado, elemento) {
         filtroActual = estado;
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.filter-btn').forEach(function(btn) {
+            btn.classList.remove('active');
+        });
         elemento.classList.add('active');
         cargarOrdenes();
     }
@@ -838,20 +862,25 @@
     function renderizarTablaOrdenes(ordenes) {
         const tbody = document.getElementById('ordenesTableBody');
         
-        const ordenesAgrupadas = ordenes.reduce((acc, curr) => {
-            if (!acc[curr.numero_oci]) {
-                acc[curr.numero_oci] = {
-                    ...curr,
+        // Agrupar por numero_oci
+        const ordenesAgrupadas = {};
+        ordenes.forEach(function(curr) {
+            if (!ordenesAgrupadas[curr.numero_oci]) {
+                ordenesAgrupadas[curr.numero_oci] = {
+                    numero_oci: curr.numero_oci,
+                    fecha_creacion: curr.fecha_creacion,
+                    estado: curr.estado,
+                    usuarios_carton: curr.usuarios_carton,
+                    material_numero: curr.material_numero,
                     materiales: [],
                     total_pallets: 0,
-                    total_piezas_final: 0,
+                    total_piezas_final: 0
                 };
             }
-            acc[curr.numero_oci].materiales.push(curr);
-            acc[curr.numero_oci].total_pallets += curr.cantidad_pallets;
-            acc[curr.numero_oci].total_piezas_final += (curr.cantidad_total_piezas || (curr.piezas_por_pallet * curr.cantidad_pallets));
-            return acc;
-        }, {});
+            ordenesAgrupadas[curr.numero_oci].materiales.push(curr);
+            ordenesAgrupadas[curr.numero_oci].total_pallets += curr.cantidad_pallets;
+            ordenesAgrupadas[curr.numero_oci].total_piezas_final += (curr.cantidad_total_piezas || (curr.piezas_por_pallet * curr.cantidad_pallets));
+        });
 
         const ordenesParaTabla = Object.values(ordenesAgrupadas);
 
@@ -860,24 +889,26 @@
             return;
         }
 
-        tbody.innerHTML = ordenesParaTabla.map(orden => {
+        let html = '';
+        ordenesParaTabla.forEach(function(orden) {
             const fecha = new Date(orden.fecha_creacion).toLocaleDateString('es-ES');
-            const usuario = orden.usuarios_carton?.nombre_completo || 'N/A';
+            const usuario = orden.usuarios_carton ? orden.usuarios_carton.nombre_completo : 'N/A';
             const materialDisplay = orden.materiales.length > 1 
-                ? `${orden.materiales.length} materiales` 
-                : `#${orden.material_numero}`;
+                ? orden.materiales.length + ' materiales' 
+                : '#' + orden.material_numero;
 
-            return `<tr>
-                <td><strong>${orden.numero_oci}</strong></td>
-                <td>${fecha}</td>
-                <td>${materialDisplay}</td>
-                <td>${orden.total_pallets}</td>
-                <td>${orden.total_piezas_final.toLocaleString()}</td>
-                <td>${usuario}</td>
-                <td><span class="status status-${orden.estado.toLowerCase()}">${orden.estado}</span></td>
-                <td><button class="btn btn-sm btn-info" onclick="verDetallesOrden('${orden.numero_oci}')" title="Ver detalles"><i class="fas fa-eye"></i> Ver</button></td>
-            </tr>`;
-        }).join('');
+            html += '<tr>' +
+                '<td><strong>' + orden.numero_oci + '</strong></td>' +
+                '<td>' + fecha + '</td>' +
+                '<td>' + materialDisplay + '</td>' +
+                '<td>' + orden.total_pallets + '</td>' +
+                '<td>' + orden.total_piezas_final.toLocaleString() + '</td>' +
+                '<td>' + usuario + '</td>' +
+                '<td><span class="status status-' + orden.estado.toLowerCase() + '">' + orden.estado + '</span></td>' +
+                '<td><button class="btn btn-sm btn-info" onclick="verDetallesOrden(\'' + orden.numero_oci + '\')" title="Ver detalles"><i class="fas fa-eye"></i> Ver</button></td>' +
+                '</tr>';
+        });
+        tbody.innerHTML = html;
     }
 
     async function verDetallesOrden(numeroOci) {
@@ -894,26 +925,26 @@
             }
 
             const primeraLinea = data[0];
-            let detalles = `Detalles de la OCI: ${primeraLinea.numero_oci}\n`;
-            detalles += `Fecha: ${new Date(primeraLinea.fecha_creacion).toLocaleString('es-ES')}\n`;
-            detalles += `Usuario: ${primeraLinea.usuarios_carton?.nombre_completo || 'N/A'}\n`;
-            detalles += `Estado: ${primeraLinea.estado}\n\n`;
+            let detalles = 'Detalles de la OCI: ' + primeraLinea.numero_oci + '\n';
+            detalles += 'Fecha: ' + new Date(primeraLinea.fecha_creacion).toLocaleString('es-ES') + '\n';
+            detalles += 'Usuario: ' + (primeraLinea.usuarios_carton ? primeraLinea.usuarios_carton.nombre_completo : 'N/A') + '\n';
+            detalles += 'Estado: ' + primeraLinea.estado + '\n\n';
             detalles += 'Materiales:\n';
             
             let totalPalletsGeneral = 0;
             let totalPiezasGeneral = 0;
 
-            data.forEach(item => {
+            data.forEach(function(item) {
                 const totalPiezasItem = item.cantidad_total_piezas || (item.piezas_por_pallet * item.cantidad_pallets);
-                detalles += `- Mat. #${item.material_numero}: ${item.cantidad_pallets} pallets, ${totalPiezasItem.toLocaleString()} piezas\n`;
+                detalles += '- Mat. #' + item.material_numero + ': ' + item.cantidad_pallets + ' pallets, ' + totalPiezasItem.toLocaleString() + ' piezas\n';
                 totalPalletsGeneral += item.cantidad_pallets;
                 totalPiezasGeneral += totalPiezasItem;
             });
 
-            detalles += `\nTotal General: ${totalPalletsGeneral} pallets, ${totalPiezasGeneral.toLocaleString()} piezas.`;
+            detalles += '\nTotal General: ' + totalPalletsGeneral + ' pallets, ' + totalPiezasGeneral.toLocaleString() + ' piezas.';
             
             if(primeraLinea.observaciones) {
-                detalles += `\n\nObservaciones: ${primeraLinea.observaciones}`;
+                detalles += '\n\nObservaciones: ' + primeraLinea.observaciones;
             }
 
             alert(detalles);
@@ -933,7 +964,7 @@
             const { data, error } = await supabaseClient
                 .from('ordenes_compra')
                 .select('numero_oci')
-                .like('numero_oci', `OCI-${año}-%`)
+                .like('numero_oci', 'OCI-' + año + '-%')
                 .order('numero_oci', { ascending: false })
                 .limit(1);
 
@@ -945,7 +976,7 @@
                 numero = ultimoNumero + 1;
             }
 
-            const numeroOCI = `OCI-${año}-${mes}-${String(numero).padStart(3, '0')}`;
+            const numeroOCI = 'OCI-' + año + '-' + mes + '-' + String(numero).padStart(3, '0');
             document.getElementById('numeroOci').value = numeroOCI;
         } catch (error) {
             console.error('Error generando número OCI:', error);
