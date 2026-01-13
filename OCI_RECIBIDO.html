@@ -329,6 +329,102 @@
             gap: 5px;
         }
 
+        /* Estilos para campos de la tabla */
+        .oc-mtk-display {
+            background: #e8f0fe;
+            color: #1967d2;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .zor-display {
+            background: #d1fae5;
+            color: #059669;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .field-empty {
+            color: #999;
+            font-style: italic;
+            font-size: 11px;
+        }
+
+        .qty-recibida-input {
+            width: 70px;
+            padding: 4px 6px;
+            border: 1px solid #28a745;
+            border-radius: 4px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .qty-recibida-input:focus {
+            outline: none;
+            border-color: #28a745;
+            box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+        }
+
+        .qty-recibida-input.saved {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .comentarios-input {
+            width: 120px;
+            padding: 4px 6px;
+            border: 1px solid #6c757d;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .comentarios-input:focus {
+            outline: none;
+            border-color: #6c757d;
+            box-shadow: 0 0 0 2px rgba(108, 117, 125, 0.2);
+        }
+
+        .comentarios-input.saved {
+            background: #e9ecef;
+            border-color: #6c757d;
+        }
+
+        .invoice-input {
+            width: 100px;
+            padding: 4px 6px;
+            border: 1px solid #fd7e14;
+            border-radius: 4px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .invoice-input:focus {
+            outline: none;
+            border-color: #fd7e14;
+            box-shadow: 0 0 0 2px rgba(253, 126, 20, 0.2);
+        }
+
+        .invoice-input.saved {
+            background: #fff3cd;
+            border-color: #fd7e14;
+        }
+
+        .invoice-display {
+            background: #fff3cd;
+            color: #856404;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
         /* MODAL DE DETALLES */
         .modal-overlay {
             display: none;
@@ -757,18 +853,21 @@
                     <thead>
                         <tr>
                             <th>Número OCI</th>
-                            <th>Fecha Aprobación</th>
-                            <th>Usuario</th>
+                            <th>Fecha</th>
                             <th>Material</th>
                             <th>Pallets</th>
-                            <th>Total Piezas</th>
+                            <th>OC-MTK</th>
+                            <th>ZOR</th>
+                            <th>Qty Recibida</th>
+                            <th>Comentarios</th>
+                            <th>Invoice</th>
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="cuerpo-tabla-ordenes">
                         <tr>
-                            <td colspan="8" class="cargando">
+                            <td colspan="11" class="cargando">
                                 <div class="spinner-oci"></div>
                                 <p>Cargando órdenes...</p>
                             </td>
@@ -939,24 +1038,65 @@
         const tbody = document.getElementById('cuerpo-tabla-ordenes');
 
         if (!ordenes || ordenes.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-inbox"></i><p>No hay órdenes para mostrar</p></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="empty-state"><i class="fas fa-inbox"></i><p>No hay órdenes para mostrar</p></td></tr>';
             return;
         }
 
         tbody.innerHTML = ordenes.map(function(orden) {
             const fecha = new Date(orden.fecha_creacion).toLocaleDateString('es-ES');
-            const totalPiezas = orden.cantidad_total_piezas || (orden.piezas_por_pallet * orden.cantidad_pallets);
-            const usuario = orden.usuarios_carton ? orden.usuarios_carton.nombre_completo : 'N/A';
             const estadoClass = 'estado-' + orden.estado.toLowerCase();
             const esAprobada = orden.estado === 'APROBADA';
             
-            return '<tr>' +
+            // OC-MTK y ZOR se jalan automáticamente (solo lectura)
+            const ocMtkDisplay = orden.oc_mtk 
+                ? '<span class="oc-mtk-display">' + orden.oc_mtk + '</span>' 
+                : '<span class="field-empty">-</span>';
+            
+            const zorDisplay = orden.zor 
+                ? '<span class="zor-display">' + orden.zor + '</span>' 
+                : '<span class="field-empty">-</span>';
+            
+            // Qty Recibida - campo editable
+            const qtyRecibida = orden.qty_recibida || '';
+            const qtyClass = orden.qty_recibida ? 'saved' : '';
+            
+            // Comentarios - campo editable
+            const comentarios = orden.comentarios_recepcion || '';
+            const comentariosClass = orden.comentarios_recepcion ? 'saved' : '';
+            
+            // Invoice - campo editable
+            const invoice = orden.invoice || '';
+            const invoiceClass = orden.invoice ? 'saved' : '';
+            
+            return '<tr data-id="' + orden.id + '">' +
                 '<td><strong>' + orden.numero_oci + '</strong></td>' +
                 '<td>' + fecha + '</td>' +
-                '<td>' + usuario + '</td>' +
                 '<td>#' + orden.material_numero + '</td>' +
                 '<td>' + orden.cantidad_pallets + '</td>' +
-                '<td>' + totalPiezas.toLocaleString() + '</td>' +
+                '<td>' + ocMtkDisplay + '</td>' +
+                '<td>' + zorDisplay + '</td>' +
+                '<td>' +
+                    '<input type="number" class="qty-recibida-input ' + qtyClass + '" ' +
+                        'value="' + qtyRecibida + '" ' +
+                        'placeholder="0" ' +
+                        'min="0" ' +
+                        'onchange="guardarQtyRecibida(' + orden.id + ', this.value)" ' +
+                        'title="Cantidad de pallets recibidos">' +
+                '</td>' +
+                '<td>' +
+                    '<input type="text" class="comentarios-input ' + comentariosClass + '" ' +
+                        'value="' + comentarios + '" ' +
+                        'placeholder="Comentarios..." ' +
+                        'onchange="guardarComentarios(' + orden.id + ', this.value)" ' +
+                        'title="Comentarios de recepción">' +
+                '</td>' +
+                '<td>' +
+                    '<input type="text" class="invoice-input ' + invoiceClass + '" ' +
+                        'value="' + invoice + '" ' +
+                        'placeholder="Invoice" ' +
+                        'onchange="guardarInvoice(' + orden.id + ', this.value)" ' +
+                        'title="Número de Invoice">' +
+                '</td>' +
                 '<td><span class="estado ' + estadoClass + '">' + orden.estado + '</span></td>' +
                 '<td>' +
                     '<div class="acciones">' +
@@ -1026,16 +1166,50 @@
                 '</div>' +
                 '</div>';
 
+            // Sección de Datos de Envío (OC-MTK, ZOR)
+            modalContent += '<div class="detail-section">' +
+                '<div class="detail-section-title"><i class="fas fa-shipping-fast"></i> Datos de Envío</div>' +
+                '<div class="detail-grid">' +
+                '<div class="detail-item">' +
+                '<div class="detail-label">OC-MTK</div>' +
+                '<div class="detail-value">' + (orden.oc_mtk ? '<span class="oc-mtk-display">' + orden.oc_mtk + '</span>' : '<span class="field-empty">Sin asignar</span>') + '</div>' +
+                '</div>' +
+                '<div class="detail-item">' +
+                '<div class="detail-label">ZOR</div>' +
+                '<div class="detail-value">' + (orden.zor ? '<span class="zor-display">' + orden.zor + '</span>' : '<span class="field-empty">Sin asignar</span>') + '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+
+            // Sección de Recepción (Qty Recibida, Comentarios, Invoice)
+            modalContent += '<div class="detail-section">' +
+                '<div class="detail-section-title"><i class="fas fa-clipboard-check"></i> Datos de Recepción</div>' +
+                '<div class="detail-grid">' +
+                '<div class="detail-item">' +
+                '<div class="detail-label">Qty Recibida</div>' +
+                '<div class="detail-value">' + (orden.qty_recibida ? orden.qty_recibida + ' pallets' : '<span class="field-empty">Sin registrar</span>') + '</div>' +
+                '</div>' +
+                '<div class="detail-item">' +
+                '<div class="detail-label">Invoice</div>' +
+                '<div class="detail-value">' + (orden.invoice ? '<span class="invoice-display">' + orden.invoice + '</span>' : '<span class="field-empty">Sin asignar</span>') + '</div>' +
+                '</div>' +
+                '<div class="detail-item full-width">' +
+                '<div class="detail-label">Comentarios de Recepción</div>' +
+                '<div class="detail-value">' + (orden.comentarios_recepcion || '<span class="field-empty">Sin comentarios</span>') + '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+
             if (orden.observaciones) {
                 modalContent += '<div class="detail-section">' +
-                    '<div class="detail-section-title"><i class="fas fa-sticky-note"></i> Observaciones</div>' +
+                    '<div class="detail-section-title"><i class="fas fa-sticky-note"></i> Observaciones Originales</div>' +
                     '<div class="observaciones-box"><i class="fas fa-comment-alt"></i>' + orden.observaciones + '</div>' +
                     '</div>';
             }
 
             if (orden.fecha_recepcion) {
                 modalContent += '<div class="detail-section">' +
-                    '<div class="detail-section-title"><i class="fas fa-truck-loading"></i> Recepción</div>' +
+                    '<div class="detail-section-title"><i class="fas fa-truck-loading"></i> Confirmación de Recepción</div>' +
                     '<div class="recepcion-info">' +
                     '<h4><i class="fas fa-check-circle"></i> Material Recibido</h4>' +
                     '<p>Fecha de recepción: ' + new Date(orden.fecha_recepcion).toLocaleString('es-ES') + '</p>' +
@@ -1159,6 +1333,99 @@
             cerrarModal();
         }
     });
+
+    // ===== GUARDAR QTY RECIBIDA =====
+    async function guardarQtyRecibida(ordenId, cantidad) {
+        const input = document.querySelector('tr[data-id="' + ordenId + '"] .qty-recibida-input');
+        
+        try {
+            const cantidadNum = parseInt(cantidad) || null;
+
+            const { error } = await supabaseClient
+                .from('ordenes_compra')
+                .update({ qty_recibida: cantidadNum })
+                .eq('id', ordenId);
+
+            if (error) throw error;
+
+            // Actualizar visualmente
+            if (cantidadNum) {
+                input.classList.add('saved');
+            } else {
+                input.classList.remove('saved');
+            }
+            
+            // Actualizar en el array local
+            const orden = todasLasOrdenes.find(function(o) { return o.id === ordenId; });
+            if (orden) orden.qty_recibida = cantidadNum;
+
+        } catch (error) {
+            console.error('Error guardando qty recibida:', error);
+            alert('Error al guardar la cantidad recibida');
+        }
+    }
+
+    // ===== GUARDAR COMENTARIOS =====
+    async function guardarComentarios(ordenId, comentarios) {
+        const input = document.querySelector('tr[data-id="' + ordenId + '"] .comentarios-input');
+        
+        try {
+            const comentariosValue = comentarios.trim() || null;
+
+            const { error } = await supabaseClient
+                .from('ordenes_compra')
+                .update({ comentarios_recepcion: comentariosValue })
+                .eq('id', ordenId);
+
+            if (error) throw error;
+
+            // Actualizar visualmente
+            if (comentariosValue) {
+                input.classList.add('saved');
+            } else {
+                input.classList.remove('saved');
+            }
+            
+            // Actualizar en el array local
+            const orden = todasLasOrdenes.find(function(o) { return o.id === ordenId; });
+            if (orden) orden.comentarios_recepcion = comentariosValue;
+
+        } catch (error) {
+            console.error('Error guardando comentarios:', error);
+            alert('Error al guardar los comentarios');
+        }
+    }
+
+    // ===== GUARDAR INVOICE =====
+    async function guardarInvoice(ordenId, invoice) {
+        const input = document.querySelector('tr[data-id="' + ordenId + '"] .invoice-input');
+        
+        try {
+            const invoiceValue = invoice.trim() || null;
+
+            const { error } = await supabaseClient
+                .from('ordenes_compra')
+                .update({ invoice: invoiceValue })
+                .eq('id', ordenId);
+
+            if (error) throw error;
+
+            // Actualizar visualmente
+            if (invoiceValue) {
+                input.classList.add('saved');
+            } else {
+                input.classList.remove('saved');
+            }
+            
+            // Actualizar en el array local
+            const orden = todasLasOrdenes.find(function(o) { return o.id === ordenId; });
+            if (orden) orden.invoice = invoiceValue;
+
+        } catch (error) {
+            console.error('Error guardando invoice:', error);
+            alert('Error al guardar el número de invoice');
+        }
+    }
 
     // ===== VOLVER AL INDEX =====
     function volverAlIndex() {
