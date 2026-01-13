@@ -694,7 +694,7 @@
                             <div id="materialInfo" class="material-info"></div>
                         </div>
                         
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; align-items: flex-end;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; align-items: flex-end;">
                             <div class="form-group">
                                 <label><i class="fas fa-layer-group"></i> Cantidad de Pallets:</label>
                                 <input type="number" id="cantidadPallets" min="1" value="1" oninput="calcularTotal()">
@@ -702,6 +702,10 @@
                             <div class="form-group">
                                 <label><i class="fas fa-calculator"></i> Total de Piezas (editable):</label>
                                 <input type="number" id="totalPiezas" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-tag"></i> Asignar OC-MTK:</label>
+                                <input type="text" id="ocMtkNumero" placeholder="Ej: MTK-12345">
                             </div>
                             <div class="form-group">
                                 <button type="button" class="btn btn-add" onclick="agregarMaterialALaOrden()">
@@ -720,6 +724,7 @@
                                         <th>Material</th>
                                         <th>Pallets</th>
                                         <th>Total Piezas</th>
+                                        <th>OC-MTK</th>
                                         <th>Acción</th>
                                     </tr>
                                 </thead>
@@ -955,6 +960,7 @@
 
         const cantidadPallets = parseInt(document.getElementById('cantidadPallets').value);
         const totalPiezas = parseInt(document.getElementById('totalPiezas').value);
+        const ocMtkNumero = document.getElementById('ocMtkNumero').value.trim();
 
         if (!cantidadPallets || cantidadPallets <= 0) {
             alert('La cantidad de pallets debe ser mayor a cero.');
@@ -962,6 +968,10 @@
         }
         if (isNaN(totalPiezas) || totalPiezas < 0) {
             alert('El total de piezas no es válido.');
+            return;
+        }
+        if (!ocMtkNumero) {
+            alert('Por favor, ingresa el número de OC-MTK para este material.');
             return;
         }
 
@@ -978,7 +988,8 @@
             piezas: materialSeleccionado.piezas,
             descripcion: materialSeleccionado.descripcion,
             cantidad_pallets: cantidadPallets,
-            total_piezas: totalPiezas
+            total_piezas: totalPiezas,
+            oc_mtk: ocMtkNumero
         });
 
         renderizarTablaMateriales();
@@ -989,12 +1000,13 @@
         seleccionarMaterial();
         document.getElementById('cantidadPallets').value = 1;
         document.getElementById('totalPiezas').value = '';
+        document.getElementById('ocMtkNumero').value = '';
     }
 
     function renderizarTablaMateriales() {
         const tbody = document.getElementById('bodyTablaMaterialesOci');
         if (materialesEnOrden.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="empty-state" style="padding: 20px;">Aún no has agregado materiales a la orden.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-state" style="padding: 20px;">Aún no has agregado materiales a la orden.</td></tr>';
             actualizarEstadoBotonGuardar();
             return;
         }
@@ -1006,6 +1018,7 @@
                 '<td><strong>#' + item.numero + '</strong><br><small>' + item.descripcion + '</small></td>' +
                 '<td>' + item.cantidad_pallets + '</td>' +
                 '<td>' + item.total_piezas.toLocaleString() + '</td>' +
+                '<td><span style="background: #e8f0fe; color: #1967d2; padding: 4px 8px; border-radius: 4px; font-weight: 600;">' + (item.oc_mtk || 'N/A') + '</span></td>' +
                 '<td>' +
                 '<button type="button" class="btn btn-sm btn-danger" onclick="eliminarMaterialDeLaOrden(' + i + ')" title="Eliminar">' +
                 '<i class="fas fa-trash-alt"></i>' +
@@ -1052,6 +1065,7 @@
                     piezas_por_pallet: item.piezas,
                     cantidad_pallets: item.cantidad_pallets,
                     cantidad_total_piezas: item.total_piezas,
+                    oc_mtk: item.oc_mtk,
                     observaciones: observaciones,
                     estado: 'PENDIENTE'
                 };
@@ -1214,8 +1228,13 @@
                 totalPalletsGeneral += item.cantidad_pallets;
                 totalPiezasGeneral += totalPiezasItem;
                 
+                const ocMtkDisplay = item.oc_mtk ? '<span style="background: #e8f0fe; color: #1967d2; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">OC-MTK: ' + item.oc_mtk + '</span>' : '';
+                
                 materialesHtml += '<div class="material-item">' +
-                    '<div class="material-numero"><i class="fas fa-box"></i> #' + item.material_numero + '</div>' +
+                    '<div class="material-numero">' +
+                    '<i class="fas fa-box"></i> #' + item.material_numero +
+                    (ocMtkDisplay ? '<br>' + ocMtkDisplay : '') +
+                    '</div>' +
                     '<div class="material-cantidad">' +
                     '<div class="pallets">' + item.cantidad_pallets + ' pallets</div>' +
                     '<div class="piezas">' + totalPiezasItem.toLocaleString() + ' pzas</div>' +
