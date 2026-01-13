@@ -284,6 +284,174 @@
         .acciones {
             display: flex;
             gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        /* Estilos para botones de documentos */
+        .btn-doc {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: white;
+        }
+
+        .btn-doc:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn-doc.btn-oc-mtk {
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+
+        .btn-doc.btn-oc-mtk:hover {
+            background: #6366f1;
+            color: white;
+        }
+
+        .btn-doc.btn-oc-mtk.has-file {
+            background: #6366f1;
+            color: white;
+        }
+
+        .btn-doc.btn-zor {
+            border-color: #059669;
+            color: #059669;
+        }
+
+        .btn-doc.btn-zor:hover {
+            background: #059669;
+            color: white;
+        }
+
+        .btn-doc.btn-zor.has-file {
+            background: #059669;
+            color: white;
+        }
+
+        .qty-input {
+            width: 70px;
+            padding: 4px 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .qty-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        .qty-saved {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+
+        .doc-actions {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-indicator {
+            font-size: 10px;
+            color: #666;
+        }
+
+        /* Input file oculto */
+        .hidden-file-input {
+            display: none;
+        }
+
+        /* Modal de subida de archivos */
+        .upload-modal-content {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            padding: 40px 20px;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .upload-area i {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .upload-area p {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-area .file-types {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .file-preview {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-preview i {
+            font-size: 24px;
+            color: #ef4444;
+        }
+
+        .file-preview .file-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .file-preview .file-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .file-preview .file-size {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .file-preview .remove-file {
+            background: #fee2e2;
+            color: #ef4444;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
         }
 
         @media (max-width: 768px) {
@@ -636,13 +804,16 @@
                             <th>Material</th>
                             <th>Pallets</th>
                             <th>Total Piezas</th>
+                            <th>OC-MTK</th>
+                            <th>Qty a Enviar</th>
+                            <th>ZOR</th>
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="cuerpo-tabla-ordenes">
                         <tr>
-                            <td colspan="8" class="cargando">
+                            <td colspan="11" class="cargando">
                                 <div class="spinner-oci"></div>
                                 <p>Cargando órdenes...</p>
                             </td>
@@ -776,7 +947,7 @@
             });
 
             if (ordenesFiltradas.length === 0) {
-                document.getElementById('cuerpo-tabla-ordenes').innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-search"></i><p>No se encontraron órdenes</p></td></tr>';
+                document.getElementById('cuerpo-tabla-ordenes').innerHTML = '<tr><td colspan="11" class="empty-state"><i class="fas fa-search"></i><p>No se encontraron órdenes</p></td></tr>';
                 return;
             }
 
@@ -793,13 +964,44 @@
                 const usuario = orden.usuarios_carton?.nombre_completo || 'N/A';
                 const estadoClass = 'estado-' + orden.estado.toLowerCase();
                 
-                return '<tr>' +
+                // Verificar si tiene archivos subidos
+                const tieneOcMtk = orden.oc_mtk_url ? 'has-file' : '';
+                const tieneZor = orden.zor_url ? 'has-file' : '';
+                const qtyEnviar = orden.qty_a_enviar || '';
+                const qtyClass = orden.qty_a_enviar ? 'qty-saved' : '';
+                
+                return '<tr data-id="' + orden.id + '">' +
                     '<td><strong>' + orden.numero_oci + '</strong></td>' +
                     '<td>' + fecha + '</td>' +
                     '<td>' + usuario + '</td>' +
                     '<td>#' + orden.material_numero + '</td>' +
                     '<td>' + orden.cantidad_pallets + '</td>' +
                     '<td>' + totalPiezas.toLocaleString() + '</td>' +
+                    '<td>' +
+                        '<div class="doc-actions">' +
+                            '<button class="btn-doc btn-oc-mtk ' + tieneOcMtk + '" onclick="abrirModalSubirArchivo(' + orden.id + ', \x27oc_mtk\x27)" title="' + (orden.oc_mtk_url ? 'Ver/Cambiar OC-MTK' : 'Subir OC-MTK') + '">' +
+                                '<i class="fas fa-' + (orden.oc_mtk_url ? 'file-pdf' : 'upload') + '"></i>' +
+                                (orden.oc_mtk_url ? 'Ver' : 'Subir') +
+                            '</button>' +
+                        '</div>' +
+                    '</td>' +
+                    '<td>' +
+                        '<input type="number" class="qty-input ' + qtyClass + '" ' +
+                            'value="' + qtyEnviar + '" ' +
+                            'placeholder="0" ' +
+                            'min="0" ' +
+                            'max="' + orden.cantidad_pallets + '" ' +
+                            'onchange="guardarQtyEnviar(' + orden.id + ', this.value)" ' +
+                            'title="Cantidad de pallets a enviar">' +
+                    '</td>' +
+                    '<td>' +
+                        '<div class="doc-actions">' +
+                            '<button class="btn-doc btn-zor ' + tieneZor + '" onclick="abrirModalSubirArchivo(' + orden.id + ', \x27zor\x27)" title="' + (orden.zor_url ? 'Ver/Cambiar ZOR' : 'Subir ZOR') + '">' +
+                                '<i class="fas fa-' + (orden.zor_url ? 'file-pdf' : 'upload') + '"></i>' +
+                                (orden.zor_url ? 'Ver' : 'Subir') +
+                            '</button>' +
+                        '</div>' +
+                    '</td>' +
                     '<td><span class="estado ' + estadoClass + '">' + orden.estado + '</span></td>' +
                     '<td>' +
                         '<div class="acciones">' +
@@ -952,6 +1154,215 @@
         // ===== VOLVER AL INDEX =====
         function volverAlIndex() {
             window.location.href = 'index.html';
+        }
+
+        // ===== VARIABLES PARA SUBIDA DE ARCHIVOS =====
+        let ordenActualId = null;
+        let tipoArchivoActual = null;
+        let archivoSeleccionado = null;
+
+        // ===== ABRIR MODAL SUBIR ARCHIVO =====
+        function abrirModalSubirArchivo(ordenId, tipoArchivo) {
+            ordenActualId = ordenId;
+            tipoArchivoActual = tipoArchivo;
+            archivoSeleccionado = null;
+
+            // Buscar la orden para ver si ya tiene archivo
+            const orden = ordenesOriginal.find(o => o.id === ordenId);
+            const urlExistente = tipoArchivo === 'oc_mtk' ? orden.oc_mtk_url : orden.zor_url;
+            const nombreTipo = tipoArchivo === 'oc_mtk' ? 'OC-MTK' : 'ZOR';
+
+            let modalContent = '' +
+                '<div class="upload-modal-content">' +
+                '<p>Subir documento PDF para <strong>' + nombreTipo + '</strong></p>' +
+                '<p style="font-size: 12px; color: #666;">OCI: ' + orden.numero_oci + ' | Material: #' + orden.material_numero + '</p>';
+
+            if (urlExistente) {
+                modalContent += '' +
+                    '<div class="file-preview" id="archivo-existente">' +
+                    '<i class="fas fa-file-pdf"></i>' +
+                    '<div class="file-info">' +
+                    '<div class="file-name">Documento actual</div>' +
+                    '<div class="file-size"><a href="' + urlExistente + '" target="_blank">Ver PDF</a></div>' +
+                    '</div>' +
+                    '</div>';
+            }
+
+            modalContent += '' +
+                '<div class="upload-area" id="upload-area" onclick="document.getElementById(\x27file-input\x27).click()">' +
+                '<i class="fas fa-cloud-upload-alt"></i>' +
+                '<p>' + (urlExistente ? 'Subir nuevo archivo para reemplazar' : 'Haz clic o arrastra un archivo aquí') + '</p>' +
+                '<span class="file-types">Solo archivos PDF (máx. 10MB)</span>' +
+                '</div>' +
+                '<input type="file" id="file-input" class="hidden-file-input" accept=".pdf" onchange="archivoSeleccionadoHandler(this)">' +
+                '<div id="file-preview-container"></div>' +
+                '</div>';
+
+            document.getElementById('modalTitulo').textContent = 'Subir ' + nombreTipo;
+            document.getElementById('modalBody').innerHTML = modalContent;
+            document.getElementById('modalDetalles').classList.add('active');
+
+            // Configurar drag and drop
+            setTimeout(function() {
+                const uploadArea = document.getElementById('upload-area');
+                if (uploadArea) {
+                    uploadArea.addEventListener('dragover', function(e) {
+                        e.preventDefault();
+                        this.classList.add('dragover');
+                    });
+                    uploadArea.addEventListener('dragleave', function(e) {
+                        e.preventDefault();
+                        this.classList.remove('dragover');
+                    });
+                    uploadArea.addEventListener('drop', function(e) {
+                        e.preventDefault();
+                        this.classList.remove('dragover');
+                        if (e.dataTransfer.files.length > 0) {
+                            document.getElementById('file-input').files = e.dataTransfer.files;
+                            archivoSeleccionadoHandler(document.getElementById('file-input'));
+                        }
+                    });
+                }
+            }, 100);
+        }
+
+        // ===== ARCHIVO SELECCIONADO HANDLER =====
+        function archivoSeleccionadoHandler(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                
+                // Validar tipo de archivo
+                if (file.type !== 'application/pdf') {
+                    alert('Solo se permiten archivos PDF');
+                    input.value = '';
+                    return;
+                }
+
+                // Validar tamaño (10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('El archivo no puede superar los 10MB');
+                    input.value = '';
+                    return;
+                }
+
+                archivoSeleccionado = file;
+                const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+                if (file.size > 1024 * 1024) {
+                    fileSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+                }
+
+                document.getElementById('file-preview-container').innerHTML = '' +
+                    '<div class="file-preview">' +
+                    '<i class="fas fa-file-pdf"></i>' +
+                    '<div class="file-info">' +
+                    '<div class="file-name">' + file.name + '</div>' +
+                    '<div class="file-size">' + fileSize + '</div>' +
+                    '</div>' +
+                    '<button class="remove-file" onclick="removerArchivo()"><i class="fas fa-times"></i></button>' +
+                    '</div>' +
+                    '<button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="subirArchivo()">' +
+                    '<i class="fas fa-upload"></i> Subir Archivo' +
+                    '</button>';
+            }
+        }
+
+        // ===== REMOVER ARCHIVO =====
+        function removerArchivo() {
+            archivoSeleccionado = null;
+            document.getElementById('file-input').value = '';
+            document.getElementById('file-preview-container').innerHTML = '';
+        }
+
+        // ===== SUBIR ARCHIVO =====
+        async function subirArchivo() {
+            if (!archivoSeleccionado || !ordenActualId || !tipoArchivoActual) {
+                alert('No hay archivo seleccionado');
+                return;
+            }
+
+            const btn = document.querySelector('#file-preview-container .btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...';
+
+            try {
+                // Generar nombre único para el archivo
+                const timestamp = Date.now();
+                const nombreArchivo = tipoArchivoActual + '_' + ordenActualId + '_' + timestamp + '.pdf';
+                const rutaArchivo = 'oci_documentos/' + nombreArchivo;
+
+                // Subir a Supabase Storage
+                const { data: uploadData, error: uploadError } = await supabaseClient
+                    .storage
+                    .from('documentos')
+                    .upload(rutaArchivo, archivoSeleccionado, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+
+                if (uploadError) throw uploadError;
+
+                // Obtener URL pública
+                const { data: urlData } = supabaseClient
+                    .storage
+                    .from('documentos')
+                    .getPublicUrl(rutaArchivo);
+
+                const urlPublica = urlData.publicUrl;
+
+                // Actualizar la orden con la URL del archivo
+                const campoActualizar = tipoArchivoActual === 'oc_mtk' ? 'oc_mtk_url' : 'zor_url';
+                const updateData = {};
+                updateData[campoActualizar] = urlPublica;
+
+                const { error: updateError } = await supabaseClient
+                    .from('ordenes_compra')
+                    .update(updateData)
+                    .eq('id', ordenActualId);
+
+                if (updateError) throw updateError;
+
+                alert('Archivo subido exitosamente');
+                cerrarModal();
+                cargarOrdenes();
+
+            } catch (error) {
+                console.error('Error subiendo archivo:', error);
+                alert('Error al subir el archivo: ' + error.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-upload"></i> Subir Archivo';
+            }
+        }
+
+        // ===== GUARDAR QTY A ENVIAR =====
+        async function guardarQtyEnviar(ordenId, cantidad) {
+            const input = document.querySelector('tr[data-id="' + ordenId + '"] .qty-input');
+            
+            try {
+                const cantidadNum = parseInt(cantidad) || 0;
+
+                const { error } = await supabaseClient
+                    .from('ordenes_compra')
+                    .update({ qty_a_enviar: cantidadNum })
+                    .eq('id', ordenId);
+
+                if (error) throw error;
+
+                // Actualizar visualmente
+                input.classList.add('qty-saved');
+                
+                // Actualizar en el array local
+                const orden = ordenesOriginal.find(o => o.id === ordenId);
+                if (orden) orden.qty_a_enviar = cantidadNum;
+
+                // Mostrar feedback temporal
+                setTimeout(function() {
+                    input.classList.remove('qty-saved');
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error guardando cantidad:', error);
+                alert('Error al guardar la cantidad');
+            }
         }
     </script>
 </body>
