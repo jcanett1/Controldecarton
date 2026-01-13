@@ -1065,8 +1065,8 @@
     <i class="fas fa-check-circle"></i>
     <span>Revisar OCI</span>
 </li>
-                <li class="menu-item" data-section="oci-recibido">
-                    <i class="fas fa-truck"></i>
+                <li class="menu-item" onclick="abrirOCIRecibido()">
+                    <i class="fas fa-truck-loading"></i>
                     <span>Recibido</span>
                 </li>
                 <li class="menu-item" data-section="produccion">
@@ -1339,6 +1339,19 @@
     </div>
 
     <script src="app.js"></script>
+    <script>
+        // Función para abrir la página de Recepción de OCI
+        function abrirOCIRecibido() {
+            window.location.href = 'OCI_RECIBIDO.html';
+        }
+
+        // Función para abrir la página de Revisar OCI (si no existe en app.js)
+        if (typeof abrirRevisarOCI === 'undefined') {
+            function abrirRevisarOCI() {
+                window.location.href = 'revisar_oci.html';
+            }
+        }
+    </script>
 </body>
 
 </html>
