@@ -337,6 +337,42 @@
             color: white;
         }
 
+        .zor-input {
+            width: 90px;
+            padding: 4px 6px;
+            border: 1px solid #059669;
+            border-radius: 4px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .zor-input:focus {
+            outline: none;
+            border-color: #059669;
+            box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+        }
+
+        .zor-input.zor-saved {
+            background: #d1fae5;
+            border-color: #059669;
+        }
+
+        .oc-mtk-display {
+            background: #e8f0fe;
+            color: #1967d2;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .oc-mtk-empty {
+            color: #999;
+            font-style: italic;
+            font-size: 12px;
+        }
+
         .qty-input {
             width: 70px;
             padding: 4px 6px;
@@ -964,11 +1000,18 @@
                 const usuario = orden.usuarios_carton?.nombre_completo || 'N/A';
                 const estadoClass = 'estado-' + orden.estado.toLowerCase();
                 
-                // Verificar si tiene archivos subidos
-                const tieneOcMtk = orden.oc_mtk_url ? 'has-file' : '';
-                const tieneZor = orden.zor_url ? 'has-file' : '';
+                // OC-MTK viene de la creación de la orden (solo lectura)
+                const ocMtkDisplay = orden.oc_mtk 
+                    ? '<span class="oc-mtk-display">' + orden.oc_mtk + '</span>' 
+                    : '<span class="oc-mtk-empty">Sin asignar</span>';
+                
+                // Qty a Enviar - campo editable
                 const qtyEnviar = orden.qty_a_enviar || '';
                 const qtyClass = orden.qty_a_enviar ? 'qty-saved' : '';
+                
+                // ZOR - campo de texto editable
+                const zorNumero = orden.zor || '';
+                const zorClass = orden.zor ? 'zor-saved' : '';
                 
                 return '<tr data-id="' + orden.id + '">' +
                     '<td><strong>' + orden.numero_oci + '</strong></td>' +
@@ -977,30 +1020,21 @@
                     '<td>#' + orden.material_numero + '</td>' +
                     '<td>' + orden.cantidad_pallets + '</td>' +
                     '<td>' + totalPiezas.toLocaleString() + '</td>' +
-                    '<td>' +
-                        '<div class="doc-actions">' +
-                            '<button class="btn-doc btn-oc-mtk ' + tieneOcMtk + '" onclick="abrirModalSubirArchivo(' + orden.id + ', \x27oc_mtk\x27)" title="' + (orden.oc_mtk_url ? 'Ver/Cambiar OC-MTK' : 'Subir OC-MTK') + '">' +
-                                '<i class="fas fa-' + (orden.oc_mtk_url ? 'file-pdf' : 'upload') + '"></i>' +
-                                (orden.oc_mtk_url ? 'Ver' : 'Subir') +
-                            '</button>' +
-                        '</div>' +
-                    '</td>' +
+                    '<td>' + ocMtkDisplay + '</td>' +
                     '<td>' +
                         '<input type="number" class="qty-input ' + qtyClass + '" ' +
                             'value="' + qtyEnviar + '" ' +
                             'placeholder="0" ' +
                             'min="0" ' +
-                            'max="' + orden.cantidad_pallets + '" ' +
                             'onchange="guardarQtyEnviar(' + orden.id + ', this.value)" ' +
                             'title="Cantidad de pallets a enviar">' +
                     '</td>' +
                     '<td>' +
-                        '<div class="doc-actions">' +
-                            '<button class="btn-doc btn-zor ' + tieneZor + '" onclick="abrirModalSubirArchivo(' + orden.id + ', \x27zor\x27)" title="' + (orden.zor_url ? 'Ver/Cambiar ZOR' : 'Subir ZOR') + '">' +
-                                '<i class="fas fa-' + (orden.zor_url ? 'file-pdf' : 'upload') + '"></i>' +
-                                (orden.zor_url ? 'Ver' : 'Subir') +
-                            '</button>' +
-                        '</div>' +
+                        '<input type="text" class="zor-input ' + zorClass + '" ' +
+                            'value="' + zorNumero + '" ' +
+                            'placeholder="ZOR" ' +
+                            'onchange="guardarZor(' + orden.id + ', this.value)" ' +
+                            'title="Número ZOR">' +
                     '</td>' +
                     '<td><span class="estado ' + estadoClass + '">' + orden.estado + '</span></td>' +
                     '<td>' +
@@ -1033,10 +1067,10 @@
                 // Construir contenido del modal
                 let modalContent = '' +
                     '<div class="detail-section">' +
-                    '<div class="detail-section-title"><i class="fas fa-info-circle"></i> Informaci\u00f3n General</div>' +
+                    '<div class="detail-section-title"><i class="fas fa-info-circle"></i> Información General</div>' +
                     '<div class="detail-grid">' +
                     '<div class="detail-item">' +
-                    '<div class="detail-label">N\u00famero OCI</div>' +
+                    '<div class="detail-label">Número OCI</div>' +
                     '<div class="detail-value">' + orden.numero_oci + '</div>' +
                     '</div>' +
                     '<div class="detail-item">' +
@@ -1044,7 +1078,7 @@
                     '<div class="detail-value"><span class="status status-' + estado.toLowerCase() + '">' + estado + '</span></div>' +
                     '</div>' +
                     '<div class="detail-item">' +
-                    '<div class="detail-label">Fecha de Creaci\u00f3n</div>' +
+                    '<div class="detail-label">Fecha de Creación</div>' +
                     '<div class="detail-value">' + fecha + '</div>' +
                     '</div>' +
                     '<div class="detail-item">' +
@@ -1069,6 +1103,25 @@
                     '<div class="total-values">' +
                     '<div class="pallets">' + orden.cantidad_pallets + ' pallets</div>' +
                     '<div class="piezas">' + totalPiezas.toLocaleString() + ' piezas</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+
+                // Agregar sección de Datos de Envío (OC-MTK, Qty a Enviar, ZOR)
+                modalContent += '<div class="detail-section">' +
+                    '<div class="detail-section-title"><i class="fas fa-shipping-fast"></i> Datos de Envío</div>' +
+                    '<div class="detail-grid">' +
+                    '<div class="detail-item">' +
+                    '<div class="detail-label">OC-MTK</div>' +
+                    '<div class="detail-value">' + (orden.oc_mtk ? '<span class="oc-mtk-display">' + orden.oc_mtk + '</span>' : '<span class="oc-mtk-empty">Sin asignar</span>') + '</div>' +
+                    '</div>' +
+                    '<div class="detail-item">' +
+                    '<div class="detail-label">Qty a Enviar</div>' +
+                    '<div class="detail-value">' + (orden.qty_a_enviar ? orden.qty_a_enviar + ' pallets' : '<span class="oc-mtk-empty">Sin definir</span>') + '</div>' +
+                    '</div>' +
+                    '<div class="detail-item">' +
+                    '<div class="detail-label">ZOR</div>' +
+                    '<div class="detail-value">' + (orden.zor ? '<span style="background: #d1fae5; color: #059669; padding: 4px 8px; border-radius: 4px; font-weight: 600;">' + orden.zor + '</span>' : '<span class="oc-mtk-empty">Sin asignar</span>') + '</div>' +
                     '</div>' +
                     '</div>' +
                     '</div>';
@@ -1362,6 +1415,44 @@
             } catch (error) {
                 console.error('Error guardando cantidad:', error);
                 alert('Error al guardar la cantidad');
+            }
+        }
+
+        // ===== GUARDAR ZOR =====
+        async function guardarZor(ordenId, zorNumero) {
+            const input = document.querySelector('tr[data-id="' + ordenId + '"] .zor-input');
+            
+            try {
+                const zorValue = zorNumero.trim() || null;
+
+                const { error } = await supabaseClient
+                    .from('ordenes_compra')
+                    .update({ zor: zorValue })
+                    .eq('id', ordenId);
+
+                if (error) throw error;
+
+                // Actualizar visualmente
+                if (zorValue) {
+                    input.classList.add('zor-saved');
+                } else {
+                    input.classList.remove('zor-saved');
+                }
+                
+                // Actualizar en el array local
+                const orden = ordenesOriginal.find(o => o.id === ordenId);
+                if (orden) orden.zor = zorValue;
+
+                // Mostrar feedback temporal
+                setTimeout(function() {
+                    if (zorValue) {
+                        input.classList.add('zor-saved');
+                    }
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error guardando ZOR:', error);
+                alert('Error al guardar el número ZOR');
             }
         }
     </script>
