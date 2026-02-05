@@ -15,6 +15,7 @@ from src.routes.productos import productos_bp
 from src.routes.inventario import inventario_bp
 from src.routes.movimientos import movimientos_bp
 from src.routes.reportes import reportes_bp
+from src.routes.balances import balances_bp
 from src.config.supabase_config import FlaskSupabaseConfig
 
 def create_app(config_name='default'):
@@ -68,6 +69,7 @@ def create_app(config_name='default'):
     app.register_blueprint(inventario_bp, url_prefix='/api')
     app.register_blueprint(movimientos_bp, url_prefix='/api')
     app.register_blueprint(reportes_bp, url_prefix='/api')
+    app.register_blueprint(balances_bp, url_prefix='/api')
     
     # Inicializar base de datos
     db.init_app(app)

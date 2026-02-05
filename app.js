@@ -251,6 +251,7 @@ function updateHeader(sectionName) {
         'oci-crear': { title: 'Crear OCI', subtitle: 'Generar nueva orden de compra interna' },
         'oci-revisar': { title: 'Revisar OCI', subtitle: 'Aprobar o rechazar órdenes pendientes' },
         'oci-recibido': { title: 'Recibido', subtitle: 'Confirmar recepción física de materiales' },
+        balance: { title: 'Balance Veritiv', subtitle: 'Gestión de balances y órdenes de compra' },
         produccion: { title: 'Producción', subtitle: 'Almacén en piso - Control de producción' },
         reportes: { title: 'Reportes', subtitle: 'Análisis y estadísticas' }
     };
@@ -292,6 +293,9 @@ async function loadSectionData(sectionName) {
     break;
         case 'produccion':
             await loadProduccion();
+            break;
+        case 'balance':
+            await cargarBalances();
             break;
         case 'reportes':
             break;
@@ -2865,3 +2869,381 @@ function limpiarFormularioOCI() {
     
     showToast('Formulario limpiado', 'info');
 }
+
+// ===== FUNCIONES PARA BALANCE VERITIV =====
+
+let balances = [];
+let balanceEditando = null;
+
+/**
+ * Cargar todos los balances desde la base de datos
+ */
+async function cargarBalances() {
+    try {
+        console.log('🔄 Cargando balances...');
+        
+        const { data, error } = await supabase
+            .from('balances_veritiv')
+            .select(`
+                *,
+                producto:productos_carton(id, numero_parte, descripcion)
+            `)
+            .eq('activo', true)
+            .order('fecha_creacion', { ascending: false });
+        
+        if (error) {
+            console.error('❌ Error cargando balances:', error);
+            mostrarErrorBalances('Error al cargar balances');
+            return;
+        }
+        
+        balances = data || [];
+        console.log('✅ Balances cargados:', balances.length);
+        renderizarBalances(balances);
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        mostrarErrorBalances('Error al cargar balances');
+    }
+}
+
+/**
+ * Renderizar la tabla de balances
+ */
+function renderizarBalances(balancesData) {
+    const tbody = document.getElementById('tabla-balances-body');
+    
+    if (!tbody) {
+        console.error('❌ No se encontró el elemento tabla-balances-body');
+        return;
+    }
+    
+    if (!balancesData || balancesData.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h4>No hay balances registrados</h4>
+                    <small>Haz clic en "Nuevo Balance" para agregar uno</small>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = balancesData.map(balance => `
+        <tr>
+            <td><strong>${balance.orden_compra}</strong></td>
+            <td>${formatearFecha(balance.fecha_orden_compra)}</td>
+            <td>
+                <div class="product-info">
+                    <strong>${balance.material_carton}</strong>
+                    ${balance.producto ? `<br><small>${balance.producto.numero_parte} - ${balance.producto.descripcion}</small>` : ''}
+                </div>
+            </td>
+            <td>
+                <span class="quantity-badge status-normal">
+                    ${formatearNumero(balance.balance)}
+                </span>
+            </td>
+            <td>${formatearFechaHora(balance.fecha_creacion)}</td>
+            <td>
+                <div class="inventory-actions">
+                    <button class="btn-action" onclick="editarBalance(${balance.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-action" onclick="eliminarBalance(${balance.id})" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Abrir modal para crear nuevo balance
+ */
+function abrirModalBalance() {
+    balanceEditando = null;
+    document.getElementById('modal-balance-titulo').textContent = 'Nuevo Balance Veritiv';
+    document.getElementById('form-balance').reset();
+    document.getElementById('balance-id').value = '';
+    
+    // Cargar productos en el select
+    cargarProductosSelect();
+    
+    // Mostrar modal
+    document.getElementById('modal-balance').style.display = 'block';
+}
+
+/**
+ * Cerrar modal de balance
+ */
+function cerrarModalBalance() {
+    document.getElementById('modal-balance').style.display = 'none';
+    balanceEditando = null;
+}
+
+/**
+ * Cargar productos en el select del formulario
+ */
+async function cargarProductosSelect() {
+    try {
+        const { data, error } = await supabase
+            .from('productos_carton')
+            .select('id, numero_parte, descripcion')
+            .eq('activo', true)
+            .order('numero_parte');
+        
+        if (error) {
+            console.error('❌ Error cargando productos:', error);
+            return;
+        }
+        
+        const select = document.getElementById('balance-producto');
+        select.innerHTML = '<option value="">Seleccione un producto...</option>';
+        
+        data.forEach(producto => {
+            const option = document.createElement('option');
+            option.value = producto.id;
+            option.textContent = `${producto.numero_parte} - ${producto.descripcion}`;
+            select.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+    }
+}
+
+/**
+ * Guardar balance (crear o actualizar)
+ */
+async function guardarBalance(event) {
+    event.preventDefault();
+    
+    try {
+        const balanceData = {
+            orden_compra: document.getElementById('balance-orden-compra').value,
+            fecha_orden_compra: document.getElementById('balance-fecha-orden').value,
+            producto_id: document.getElementById('balance-producto').value || null,
+            material_carton: document.getElementById('balance-material').value,
+            balance: parseFloat(document.getElementById('balance-cantidad').value)
+        };
+        
+        const balanceId = document.getElementById('balance-id').value;
+        
+        let result;
+        if (balanceId) {
+            // Actualizar balance existente
+            result = await supabase
+                .from('balances_veritiv')
+                .update(balanceData)
+                .eq('id', balanceId)
+                .select();
+        } else {
+            // Crear nuevo balance
+            result = await supabase
+                .from('balances_veritiv')
+                .insert([balanceData])
+                .select();
+        }
+        
+        if (result.error) {
+            console.error('❌ Error guardando balance:', result.error);
+            alert('Error al guardar el balance: ' + result.error.message);
+            return;
+        }
+        
+        console.log('✅ Balance guardado exitosamente');
+        alert(balanceId ? 'Balance actualizado exitosamente' : 'Balance creado exitosamente');
+        
+        cerrarModalBalance();
+        cargarBalances();
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        alert('Error al guardar el balance');
+    }
+}
+
+/**
+ * Editar un balance existente
+ */
+async function editarBalance(balanceId) {
+    try {
+        const { data, error } = await supabase
+            .from('balances_veritiv')
+            .select('*')
+            .eq('id', balanceId)
+            .single();
+        
+        if (error || !data) {
+            console.error('❌ Error cargando balance:', error);
+            alert('Error al cargar el balance');
+            return;
+        }
+        
+        balanceEditando = data;
+        
+        // Llenar el formulario
+        document.getElementById('modal-balance-titulo').textContent = 'Editar Balance Veritiv';
+        document.getElementById('balance-id').value = data.id;
+        document.getElementById('balance-orden-compra').value = data.orden_compra;
+        document.getElementById('balance-fecha-orden').value = data.fecha_orden_compra;
+        document.getElementById('balance-material').value = data.material_carton;
+        document.getElementById('balance-cantidad').value = data.balance;
+        
+        // Cargar productos y seleccionar el actual
+        await cargarProductosSelect();
+        if (data.producto_id) {
+            document.getElementById('balance-producto').value = data.producto_id;
+        }
+        
+        // Mostrar modal
+        document.getElementById('modal-balance').style.display = 'block';
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        alert('Error al cargar el balance');
+    }
+}
+
+/**
+ * Eliminar un balance (soft delete)
+ */
+async function eliminarBalance(balanceId) {
+    if (!confirm('¿Estás seguro de que deseas eliminar este balance?')) {
+        return;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('balances_veritiv')
+            .update({ activo: false })
+            .eq('id', balanceId);
+        
+        if (error) {
+            console.error('❌ Error eliminando balance:', error);
+            alert('Error al eliminar el balance');
+            return;
+        }
+        
+        console.log('✅ Balance eliminado exitosamente');
+        alert('Balance eliminado exitosamente');
+        cargarBalances();
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        alert('Error al eliminar el balance');
+    }
+}
+
+/**
+ * Filtrar balances
+ */
+async function filtrarBalances() {
+    try {
+        const ordenCompra = document.getElementById('filtro-balance-orden').value;
+        const fecha = document.getElementById('filtro-balance-fecha').value;
+        
+        let query = supabase
+            .from('balances_veritiv')
+            .select(`
+                *,
+                producto:productos_carton(id, numero_parte, descripcion)
+            `)
+            .eq('activo', true);
+        
+        if (ordenCompra) {
+            query = query.ilike('orden_compra', `%${ordenCompra}%`);
+        }
+        
+        if (fecha) {
+            query = query.eq('fecha_orden_compra', fecha);
+        }
+        
+        const { data, error } = await query.order('fecha_creacion', { ascending: false });
+        
+        if (error) {
+            console.error('❌ Error filtrando balances:', error);
+            return;
+        }
+        
+        renderizarBalances(data || []);
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+    }
+}
+
+/**
+ * Mostrar error en la tabla de balances
+ */
+function mostrarErrorBalances(mensaje) {
+    const tbody = document.getElementById('tabla-balances-body');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h4>Error</h4>
+                    <p>${mensaje}</p>
+                    <button class="btn-retry" onclick="cargarBalances()">
+                        <i class="fas fa-redo"></i>
+                        Reintentar
+                    </button>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+/**
+ * Formatear fecha (YYYY-MM-DD a DD/MM/YYYY)
+ */
+function formatearFecha(fecha) {
+    if (!fecha) return '-';
+    const date = new Date(fecha + 'T00:00:00');
+    return date.toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+/**
+ * Formatear fecha y hora
+ */
+function formatearFechaHora(fecha) {
+    if (!fecha) return '-';
+    const date = new Date(fecha);
+    return date.toLocaleString('es-MX', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+/**
+ * Formatear número con separadores de miles
+ */
+function formatearNumero(numero) {
+    if (!numero) return '0';
+    return parseFloat(numero).toLocaleString('es-MX', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+// Cerrar modal al hacer clic fuera de él
+window.onclick = function(event) {
+    const modal = document.getElementById('modal-balance');
+    if (event.target === modal) {
+        cerrarModalBalance();
+    }
+}
+
+// ===== FIN DE FUNCIONES PARA BALANCE VERITIV =====

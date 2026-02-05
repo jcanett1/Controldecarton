@@ -1026,6 +1026,108 @@
     }
 }
 
+/* ===== ESTILOS PARA BALANCE ===== */
+.modal-balance {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    overflow: auto;
+}
+
+.modal-balance-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-balance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.modal-balance-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #64748b;
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    color: #ef4444;
+}
+
+.form-group-balance {
+    margin-bottom: 1.5rem;
+}
+
+.form-group-balance label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.form-group-balance input,
+.form-group-balance select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.form-group-balance input:focus,
+.form-group-balance select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.modal-balance-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+}
+
+.btn-cancelar {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.btn-cancelar:hover {
+    background: #d1d5db;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 /* ===== FIN DE ESTILOS CRÍTICOS ===== */
     </style>
 </head>
@@ -1068,6 +1170,10 @@
                 <li class="menu-item" onclick="abrirOCIRecibido()">
                     <i class="fas fa-truck-loading"></i>
                     <span>Recibido</span>
+                </li>
+                <li class="menu-item" data-section="balance">
+                    <i class="fas fa-balance-scale"></i>
+                    <span>Balance</span>
                 </li>
                 <li class="menu-item" data-section="produccion">
                     <i class="fas fa-industry"></i>
@@ -1311,6 +1417,52 @@
                     </div>
                 </section>
 
+                <!-- Balance Section -->
+                <section id="balance-section" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Balance Veritiv</h3>
+                            <button class="btn btn-primary" onclick="abrirModalBalance()">
+                                <i class="fas fa-plus"></i>
+                                Nuevo Balance
+                            </button>
+                        </div>
+                        <div class="card-content">
+                            <div class="filtros-lista">
+                                <input type="text" id="filtro-balance-orden" placeholder="Buscar por orden de compra..." style="flex: 1;">
+                                <input type="date" id="filtro-balance-fecha" placeholder="Fecha">
+                                <button onclick="filtrarBalances()" class="btn btn-primary">
+                                    <i class="fas fa-search"></i>
+                                    Filtrar
+                                </button>
+                            </div>
+                            
+                            <div class="inventory-table">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Orden Compra</th>
+                                            <th>Fecha Orden</th>
+                                            <th>Material de Cartón</th>
+                                            <th>Balance</th>
+                                            <th>Fecha Creación</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabla-balances-body">
+                                        <tr>
+                                            <td colspan="6" class="loading">
+                                                <div class="spinner"></div>
+                                                <p>Cargando balances...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Producción Section -->
                 <section id="produccion-section" class="content-section">
                     <div class="card">
@@ -1336,6 +1488,57 @@
                 </section>
             </div>
         </main>
+    </div>
+
+    <!-- Modal para Balance -->
+    <div id="modal-balance" class="modal-balance">
+        <div class="modal-balance-content">
+            <div class="modal-balance-header">
+                <h2 id="modal-balance-titulo">Nuevo Balance Veritiv</h2>
+                <button class="modal-close" onclick="cerrarModalBalance()">&times;</button>
+            </div>
+            <form id="form-balance" onsubmit="guardarBalance(event)">
+                <input type="hidden" id="balance-id">
+                
+                <div class="form-group-balance">
+                    <label for="balance-orden-compra">Orden de Compra *</label>
+                    <input type="text" id="balance-orden-compra" required placeholder="Ej: OC-2026-001">
+                </div>
+                
+                <div class="form-group-balance">
+                    <label for="balance-fecha-orden">Fecha de Orden de Compra *</label>
+                    <input type="date" id="balance-fecha-orden" required>
+                </div>
+                
+                <div class="form-group-balance">
+                    <label for="balance-producto">Producto de Cartón *</label>
+                    <select id="balance-producto" required>
+                        <option value="">Seleccione un producto...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group-balance">
+                    <label for="balance-material">Material de Cartón *</label>
+                    <input type="text" id="balance-material" required placeholder="Descripción del material">
+                </div>
+                
+                <div class="form-group-balance">
+                    <label for="balance-cantidad">Balance (Cantidad) *</label>
+                    <input type="number" id="balance-cantidad" step="0.01" required placeholder="0.00">
+                </div>
+                
+                <div class="modal-balance-actions">
+                    <button type="button" class="btn btn-cancelar" onclick="cerrarModalBalance()">
+                        <i class="fas fa-times"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="app.js"></script>
