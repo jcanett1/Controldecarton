@@ -81,7 +81,7 @@ def crear_balance():
         data = request.get_json()
         
         # Validar datos requeridos
-        campos_requeridos = ['orden_compra', 'fecha_orden_compra', 'material_carton', 'balance']
+        campos_requeridos = ['orden_compra', 'fecha_orden_compra', 'balance']
         for campo in campos_requeridos:
             if campo not in data:
                 return jsonify({
@@ -89,7 +89,10 @@ def crear_balance():
                     'error': f'Campo requerido faltante: {campo}'
                 }), 400
         
-        # Validar que el producto existe si se proporciona
+        # Variable para almacenar el material_carton
+        material_carton = data.get('material_carton', '')
+        
+        # Si se proporciona producto_id, obtener automáticamente la descripción
         if 'producto_id' in data and data['producto_id']:
             producto = ProductoCarton.query.get(data['producto_id'])
             if not producto:
@@ -97,6 +100,16 @@ def crear_balance():
                     'success': False,
                     'error': 'Producto no encontrado'
                 }), 404
+            
+            # Autocompletar material_carton con la descripción del producto
+            material_carton = producto.descripcion
+        
+        # Validar que material_carton no esté vacío
+        if not material_carton:
+            return jsonify({
+                'success': False,
+                'error': 'Debe proporcionar un producto_id o un material_carton'
+            }), 400
         
         # Convertir fecha de string a date
         fecha_orden = datetime.strptime(data['fecha_orden_compra'], '%Y-%m-%d').date()
@@ -106,7 +119,7 @@ def crear_balance():
             orden_compra=data['orden_compra'],
             fecha_orden_compra=fecha_orden,
             producto_id=data.get('producto_id'),
-            material_carton=data['material_carton'],
+            material_carton=material_carton,
             balance=float(data['balance'])
         )
         
@@ -153,6 +166,7 @@ def actualizar_balance(balance_id):
         if 'fecha_orden_compra' in data:
             balance.fecha_orden_compra = datetime.strptime(data['fecha_orden_compra'], '%Y-%m-%d').date()
         
+        # Si se actualiza el producto_id, autocompletar material_carton
         if 'producto_id' in data:
             if data['producto_id']:
                 producto = ProductoCarton.query.get(data['producto_id'])
@@ -161,8 +175,12 @@ def actualizar_balance(balance_id):
                         'success': False,
                         'error': 'Producto no encontrado'
                     }), 404
+                
+                # Autocompletar material_carton con la descripción del producto
+                balance.material_carton = producto.descripcion
             balance.producto_id = data['producto_id']
         
+        # Permitir sobrescribir material_carton manualmente si se proporciona
         if 'material_carton' in data:
             balance.material_carton = data['material_carton']
         
