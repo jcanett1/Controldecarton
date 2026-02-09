@@ -3008,13 +3008,41 @@ async function cargarProductosSelect() {
             const option = document.createElement('option');
             option.value = producto.id;
             option.textContent = `${producto.numero_parte} - ${producto.descripcion}`;
+            // ✨ NUEVO: Guardar la descripción como data attribute
+            option.setAttribute('data-descripcion', producto.descripcion);
             select.appendChild(option);
         });
+        
+        // ✨ NUEVO: Agregar event listener para autocompletar
+        select.addEventListener('change', autocompletarMaterialCarton);
         
     } catch (error) {
         console.error('❌ Error:', error);
     }
 }
+
+function autocompletarMaterialCarton() {
+    const select = document.getElementById('balance-producto');
+    const materialInput = document.getElementById('balance-material');
+    
+    // Obtener la opción seleccionada
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (selectedOption && selectedOption.value) {
+        // Obtener la descripción del data attribute
+        const descripcion = selectedOption.getAttribute('data-descripcion');
+        
+        if (descripcion) {
+            // Autocompletar el campo de material
+            materialInput.value = descripcion;
+            console.log('✅ Material autocompletado:', descripcion);
+        }
+    } else {
+        // Si no hay producto seleccionado, limpiar el campo
+        materialInput.value = '';
+    }
+}
+
 
 /**
  * Guardar balance (crear o actualizar)
@@ -3050,20 +3078,16 @@ async function guardarBalance(event) {
         }
         
         if (result.error) {
-            console.error('❌ Error guardando balance:', result.error);
-            alert('Error al guardar el balance: ' + result.error.message);
-            return;
+            throw result.error;
         }
         
-        console.log('✅ Balance guardado exitosamente');
-        alert(balanceId ? 'Balance actualizado exitosamente' : 'Balance creado exitosamente');
-        
+        alert('✅ Balance guardado exitosamente');
         cerrarModalBalance();
-        cargarBalances();
+        await cargarBalances();
         
     } catch (error) {
-        console.error('❌ Error:', error);
-        alert('Error al guardar el balance');
+        console.error('❌ Error guardando balance:', error);
+        alert('Error al guardar el balance: ' + error.message);
     }
 }
 
