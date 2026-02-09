@@ -705,7 +705,14 @@
                             </div>
                             <div class="form-group">
                                 <label><i class="fas fa-tag"></i> Asignar OC-MTK:</label>
-                                <input type="text" id="ocMtkNumero" placeholder="Ej: MTK-12345">
+                                <select id="ocMtkNumero">
+                                    <option value="">-- Selecciona una OC o escribe manualmente --</option>
+                                </select>
+                                <input type="text" id="ocMtkManual" placeholder="O escribe manualmente: MTK-12345" style="margin-top: 5px;">
+                            </div>
+                            <div class="form-group" id="balanceRealContainer" style="display: none;">
+                                <label><i class="fas fa-balance-scale"></i> Balance Real:</label>
+                                <input type="text" id="balanceReal" readonly style="background: #f0f0f0; font-weight: bold;">
                             </div>
                             <div class="form-group">
                                 <button type="button" class="btn btn-add" onclick="agregarMaterialALaOrden()">
@@ -918,7 +925,7 @@
         });
     }
 
-    function seleccionarMaterial() {
+    async function seleccionarMaterial() {
         const select = document.getElementById('materialSelect');
         const index = select.value;
         const infoDiv = document.getElementById('materialInfo');
@@ -928,6 +935,9 @@
             infoDiv.classList.remove('active');
             infoDiv.innerHTML = '';
             document.getElementById('totalPiezas').value = '';
+            // Limpiar select de OC-MTK
+            document.getElementById('ocMtkNumero').innerHTML = '<option value="">-- Selecciona una OC o escribe manualmente --</option>';
+            document.getElementById('balanceRealContainer').style.display = 'none';
             return;
         }
 
@@ -949,6 +959,9 @@
         
         document.getElementById('cantidadPallets').value = 1;
         calcularTotal();
+        
+        // ✨ NUEVO: Cargar órdenes de compra desde balances_veritiv
+        await cargarOrdenesCompraDelMaterial(materialSeleccionado.descripcion);
     }
 
     function calcularTotal() {
@@ -956,6 +969,76 @@
             const cantidadPallets = parseInt(document.getElementById('cantidadPallets').value) || 0;
             const total = cantidadPallets * materialSeleccionado.piezas;
             document.getElementById('totalPiezas').value = total;
+        }
+    }
+
+    /**
+     * ✨ NUEVA FUNCIÓN: Cargar órdenes de compra desde balances_veritiv
+     * Busca todas las OC relacionadas con el material seleccionado
+     */
+    async function cargarOrdenesCompraDelMaterial(descripcionMaterial) {
+        try {
+            console.log('🔍 Buscando órdenes de compra para:', descripcionMaterial);
+            
+            const { data, error } = await supabaseClient
+                .from('balances_veritiv')
+                .select('orden_compra, balance, id')
+                .eq('material_carton', descripcionMaterial)
+                .eq('activo', true)
+                .order('fecha_orden_compra', { ascending: false });
+            
+            if (error) {
+                console.error('❌ Error cargando órdenes:', error);
+                return;
+            }
+            
+            const selectOC = document.getElementById('ocMtkNumero');
+            selectOC.innerHTML = '<option value="">-- Selecciona una OC --</option>';
+            
+            if (data && data.length > 0) {
+                console.log('✅ Se encontraron', data.length, 'órdenes de compra');
+                
+                data.forEach(balance => {
+                    const option = document.createElement('option');
+                    option.value = balance.orden_compra;
+                    option.setAttribute('data-balance', balance.balance);
+                    option.setAttribute('data-balance-id', balance.id);
+                    option.textContent = `${balance.orden_compra} (Balance: ${balance.balance.toLocaleString()} pz)`;
+                    selectOC.appendChild(option);
+                });
+                
+                // Agregar event listener para mostrar balance al seleccionar OC
+                selectOC.addEventListener('change', mostrarBalanceSeleccionado);
+            } else {
+                console.log('⚠️ No se encontraron órdenes de compra para este material');
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No hay órdenes de compra disponibles';
+                selectOC.appendChild(option);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error:', error);
+        }
+    }
+
+    /**
+     * ✨ NUEVA FUNCIÓN: Mostrar balance real cuando se selecciona una OC
+     */
+    function mostrarBalanceSeleccionado() {
+        const selectOC = document.getElementById('ocMtkNumero');
+        const selectedOption = selectOC.options[selectOC.selectedIndex];
+        const balanceContainer = document.getElementById('balanceRealContainer');
+        const balanceInput = document.getElementById('balanceReal');
+        
+        if (selectedOption && selectedOption.value) {
+            const balance = selectedOption.getAttribute('data-balance');
+            if (balance) {
+                balanceInput.value = parseFloat(balance).toLocaleString() + ' piezas';
+                balanceContainer.style.display = 'block';
+            }
+        } else {
+            balanceContainer.style.display = 'none';
         }
     }
 
@@ -967,7 +1050,12 @@
 
         const cantidadPallets = parseInt(document.getElementById('cantidadPallets').value);
         const totalPiezas = parseInt(document.getElementById('totalPiezas').value);
-        const ocMtkNumero = document.getElementById('ocMtkNumero').value.trim();
+        let ocMtkNumero = document.getElementById('ocMtkNumero').value.trim();
+        const ocMtkManual = document.getElementById('ocMtkManual').value.trim();
+        
+        if (!ocMtkNumero && ocMtkManual) {
+            ocMtkNumero = ocMtkManual;
+        }
 
         if (!cantidadPallets || cantidadPallets <= 0) {
             alert('La cantidad de pallets debe ser mayor a cero.');
@@ -1008,6 +1096,8 @@
         document.getElementById('cantidadPallets').value = 1;
         document.getElementById('totalPiezas').value = '';
         document.getElementById('ocMtkNumero').value = '';
+        document.getElementById('ocMtkManual').value = '';
+        document.getElementById('balanceRealContainer').style.display = 'none';
     }
 
     function renderizarTablaMateriales() {
