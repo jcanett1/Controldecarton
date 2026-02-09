@@ -817,42 +817,48 @@
     }
     const supabaseClient = window.supabaseClient;
 
-    // ===== DATOS Y ESTADO GLOBAL =====
-    const materiales = [
-        { numero: '1482388', piezas: 760, descripcion: 'Material cartón 1482388' },
-        { numero: '1482387', piezas: 350, descripcion: 'Material cartón 1482387' },
-        { numero: '632545', piezas: 10, descripcion: 'Material cartón 632545 (10 x Caja)' },
-        { numero: '1482386', piezas: 500, descripcion: 'Material cartón 1482386' },
-        { numero: '1482385', piezas: 600, descripcion: 'Material cartón 1482385' },
-        { numero: '1482384', piezas: 800, descripcion: 'Material cartón 1482384' },
-        { numero: '1482383', piezas: 400, descripcion: 'Material cartón 1482383' },
-        { numero: '1482382', piezas: 550, descripcion: 'Material cartón 1482382' },
-        { numero: '1482381', piezas: 700, descripcion: 'Material cartón 1482381' },
-        { numero: '1482380', piezas: 450, descripcion: 'Material cartón 1482380' },
-        { numero: '1482379', piezas: 650, descripcion: 'Material cartón 1482379' },
-        { numero: '1482378', piezas: 750, descripcion: 'Material cartón 1482378' },
-        { numero: '1482377', piezas: 520, descripcion: 'Material cartón 1482377' },
-        { numero: '1482376', piezas: 680, descripcion: 'Material cartón 1482376' },
-        { numero: '1482375', piezas: 580, descripcion: 'Material cartón 1482375' },
-        { numero: '1482374', piezas: 720, descripcion: 'Material cartón 1482374' },
-        { numero: '1482373', piezas: 480, descripcion: 'Material cartón 1482373' }
-    ];
+  // ===== DATOS Y ESTADO GLOBAL =====
+let materiales = []; // Se cargará dinámicamente desde Supabase
+
+// Función para cargar materiales desde Supabase
+async function cargarMaterialesDesdeSupabase() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('productos_carton')
+            .select('*')
+            .eq('activo', true)
+            .order('numero_parte', { ascending: true });
+
+        if (error) throw error;
+
+        materiales = data.map(item => ({
+            numero: item.numero_parte,
+            piezas: item.cajas_por_pallet,
+            descripcion: item.descripcion
+        }));
+
+        console.log('Materiales cargados desde Supabase:', materiales.length);
+        cargarMaterialesSelect(); // Recargar el select con los nuevos datos
+    } catch (error) {
+        console.error('Error al cargar materiales:', error);
+        alert('Error al cargar los materiales desde la base de datos');
+    }
+}
 
     let materialSeleccionado = null;
     let usuarioActual = null;
     let filtroActual = 'TODOS';
     let materialesEnOrden = [];
 
-    // ===== INICIALIZACIÓN =====
-    document.addEventListener('DOMContentLoaded', function() {
-        cargarUsuario();
-        cargarMaterialesSelect();
-        configurarFormulario();
-        configurarPestanas();
-        generarNumeroOCI();
-        renderizarTablaMateriales();
-    });
-
+   // ===== INICIALIZACIÓN =====
+document.addEventListener('DOMContentLoaded', async function() {
+    cargarUsuario();
+    await cargarMaterialesDesdeSupabase(); // Cargar materiales desde Supabase primero
+    configurarFormulario();
+    configurarPestanas();
+    generarNumeroOCI();
+    renderizarTablaMateriales();
+});
     // ===== GESTIÓN DE PESTAÑAS =====
     function configurarPestanas() {
         document.querySelectorAll('.tab-button').forEach(function(button) {
