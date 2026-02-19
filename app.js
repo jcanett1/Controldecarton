@@ -3233,7 +3233,7 @@ function mostrarErrorBalances(mensaje) {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="error-message">
+                <td colspan="7" class="error-message">
                     <i class="fas fa-exclamation-triangle"></i>
                     <h4>Error</h4>
                     <p>${mensaje}</p>
@@ -3349,7 +3349,7 @@ async function cargarBalancesUsados() {
         // Mostrar loading
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="loading">
+                <td colspan="7" class="loading">
                     <div class="spinner"></div>
                     <p>Cargando balances usados...</p>
                 </td>
@@ -3376,7 +3376,7 @@ async function cargarBalancesUsados() {
             console.error('❌ Error cargando balances agotados:', errorBalances);
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="error-message">
+                    <td colspan="7" class="error-message">
                         <i class="fas fa-exclamation-triangle"></i>
                         <p>Error al cargar balances usados</p>
                     </td>
@@ -3388,7 +3388,7 @@ async function cargarBalancesUsados() {
         if (!balancesAgotados || balancesAgotados.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="empty-state">
+                    <td colspan="7" class="empty-state">
                         <i class="fas fa-check-circle"></i>
                         <h4>No hay balances agotados</h4>
                         <small>Todos los balances tienen cantidad disponible</small>
@@ -3419,12 +3419,25 @@ async function cargarBalancesUsados() {
                     };
                 }
                 
-                // Calcular total usado (suma de todas las piezas usadas)
-                const totalUsado = usosOCI ? usosOCI.reduce((sum, uso) => sum + uso.cantidad_piezas_usadas, 0) : 0;
+                // Calcular balance pedido (suma de todas las piezas pedidas en OCIs)
+                const balancePedido = usosOCI ? usosOCI.reduce((sum, uso) => sum + uso.cantidad_piezas_usadas, 0) : 0;
                 
-                // ✨ NUEVO: Calcular balance inicial (balance actual + total usado)
-                // Si el balance está en 0 y se usaron X piezas, el balance inicial era X
-                const balanceInicial = parseFloat(balance.balance) + totalUsado;
+                // ✨ NUEVO: Obtener balance enviado (real) de ordenes_compra aprobadas
+                // Buscar OCIs aprobadas que tengan este material
+                const { data: ordenesAprobadas } = await supabase
+                    .from('ordenes_compra')
+                    .select('numero_oci, material_numero, qty_a_enviar, piezas_por_pallet, estado')
+                    .eq('material_numero', balance.producto ? balance.producto.numero_parte : balance.material_carton)
+                    .eq('estado', 'APROBADA');
+                
+                // Calcular balance enviado (suma de qty_a_enviar * piezas_por_pallet)
+                const balanceEnviado = ordenesAprobadas ? ordenesAprobadas.reduce((sum, orden) => {
+                    const piezasEnviadas = (orden.qty_a_enviar || 0) * (orden.piezas_por_pallet || 1);
+                    return sum + piezasEnviadas;
+                }, 0) : 0;
+                
+                // Calcular balance inicial (balance actual + balance pedido)
+                const balanceInicial = parseFloat(balance.balance) + balancePedido;
                 
                 // Obtener fecha del último uso (agotamiento)
                 const fechaAgotamiento = usosOCI && usosOCI.length > 0 
@@ -3435,7 +3448,8 @@ async function cargarBalancesUsados() {
                     ...balance,
                     ocis: usosOCI || [],
                     balance_inicial: balanceInicial,
-                    total_usado: totalUsado,
+                    balance_pedido: balancePedido,
+                    balance_enviado: balanceEnviado,
                     fecha_agotamiento: fechaAgotamiento
                 };
             })
@@ -3469,7 +3483,12 @@ async function cargarBalancesUsados() {
                     </td>
                     <td>
                         <span class="quantity-badge status-agotado">
-                            ${formatearNumero(balance.total_usado)}
+                            ${formatearNumero(balance.balance_pedido)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="quantity-badge status-normal">
+                            ${formatearNumero(balance.balance_enviado)}
                         </span>
                     </td>
                     <td>
@@ -3491,7 +3510,7 @@ async function cargarBalancesUsados() {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="error-message">
+                    <td colspan="7" class="error-message">
                         <i class="fas fa-exclamation-triangle"></i>
                         <p>Error al cargar balances usados: ${error.message}</p>
                     </td>
@@ -3513,7 +3532,7 @@ async function filtrarBalancesUsados() {
         const tbody = document.getElementById('tabla-balances-usados-body');
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="loading">
+                <td colspan="7" class="loading">
                     <div class="spinner"></div>
                     <p>Filtrando...</p>
                 </td>
@@ -3548,7 +3567,7 @@ async function filtrarBalancesUsados() {
         if (!balancesAgotados || balancesAgotados.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="empty-state">
+                    <td colspan="7" class="empty-state">
                         <i class="fas fa-search"></i>
                         <h4>No se encontraron resultados</h4>
                         <small>Intenta con otro término de búsqueda</small>
@@ -3567,10 +3586,21 @@ async function filtrarBalancesUsados() {
                     .eq('balance_id', balance.id)
                     .order('fecha_uso', { ascending: false });
                 
-                const totalUsado = usosOCI ? usosOCI.reduce((sum, uso) => sum + uso.cantidad_piezas_usadas, 0) : 0;
+                const balancePedido = usosOCI ? usosOCI.reduce((sum, uso) => sum + uso.cantidad_piezas_usadas, 0) : 0;
                 
-                // ✨ NUEVO: Calcular balance inicial
-                const balanceInicial = parseFloat(balance.balance) + totalUsado;
+                // ✨ NUEVO: Obtener balance enviado de ordenes_compra aprobadas
+                const { data: ordenesAprobadas } = await supabase
+                    .from('ordenes_compra')
+                    .select('numero_oci, material_numero, qty_a_enviar, piezas_por_pallet, estado')
+                    .eq('material_numero', balance.producto ? balance.producto.numero_parte : balance.material_carton)
+                    .eq('estado', 'APROBADA');
+                
+                const balanceEnviado = ordenesAprobadas ? ordenesAprobadas.reduce((sum, orden) => {
+                    const piezasEnviadas = (orden.qty_a_enviar || 0) * (orden.piezas_por_pallet || 1);
+                    return sum + piezasEnviadas;
+                }, 0) : 0;
+                
+                const balanceInicial = parseFloat(balance.balance) + balancePedido;
                 
                 const fechaAgotamiento = usosOCI && usosOCI.length > 0 
                     ? usosOCI[0].fecha_uso 
@@ -3580,7 +3610,8 @@ async function filtrarBalancesUsados() {
                     ...balance,
                     ocis: usosOCI || [],
                     balance_inicial: balanceInicial,
-                    total_usado: totalUsado,
+                    balance_pedido: balancePedido,
+                    balance_enviado: balanceEnviado,
                     fecha_agotamiento: fechaAgotamiento
                 };
             })
@@ -3612,7 +3643,12 @@ async function filtrarBalancesUsados() {
                     </td>
                     <td>
                         <span class="quantity-badge status-agotado">
-                            ${formatearNumero(balance.total_usado)}
+                            ${formatearNumero(balance.balance_pedido)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="quantity-badge status-normal">
+                            ${formatearNumero(balance.balance_enviado)}
                         </span>
                     </td>
                     <td>
