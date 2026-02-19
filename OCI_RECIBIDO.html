@@ -1122,7 +1122,11 @@
             const fecha = new Date(orden.fecha_creacion).toLocaleString('es-ES');
             const usuario = orden.usuarios_carton ? orden.usuarios_carton.nombre_completo : 'N/A';
             const estado = orden.estado;
-            const totalPiezas = orden.cantidad_total_piezas || (orden.piezas_por_pallet * orden.cantidad_pallets);
+            
+            // ✨ CORREGIDO: Usar qty_a_enviar_piezas (total real enviado)
+            const totalEnviado = orden.qty_a_enviar_piezas 
+                ? orden.qty_a_enviar_piezas 
+                : (orden.cantidad_total_piezas || (orden.piezas_por_pallet * orden.cantidad_pallets));
 
             let modalContent = '' +
                 '<div class="detail-section">' +
@@ -1158,15 +1162,14 @@
                 '</div>' +
                 '</div>' +
                 '<div class="total-section">' +
-                '<div class="total-label"><i class="fas fa-calculator"></i> Total</div>' +
+                '<div class="total-label"><i class="fas fa-truck-loading"></i> TOTAL ENVIADO</div>' +
                 '<div class="total-values">' +
-                '<div class="pallets">' + orden.cantidad_pallets + ' pallets</div>' +
-                '<div class="piezas">' + totalPiezas.toLocaleString() + ' piezas</div>' +
+                '<div class="piezas" style="font-size: 24px; font-weight: 700; color: #0f9d58;">' + totalEnviado.toLocaleString() + ' piezas</div>' +
                 '</div>' +
                 '</div>' +
                 '</div>';
 
-            // Sección de Datos de Envío (OC-MTK, ZOR)
+            // ✨ Sección de Datos de Envío (OC-MTK, ZOR, TOTAL REAL A ENVIAR)
             modalContent += '<div class="detail-section">' +
                 '<div class="detail-section-title"><i class="fas fa-shipping-fast"></i> Datos de Envío</div>' +
                 '<div class="detail-grid">' +
@@ -1177,9 +1180,18 @@
                 '<div class="detail-item">' +
                 '<div class="detail-label">ZOR</div>' +
                 '<div class="detail-value">' + (orden.zor ? '<span class="zor-display">' + orden.zor + '</span>' : '<span class="field-empty">Sin asignar</span>') + '</div>' +
-                '</div>' +
-                '</div>' +
                 '</div>';
+            
+            // ✨ Agregar TOTAL REAL A ENVIAR si existe
+            if (orden.qty_a_enviar_piezas) {
+                modalContent += '<div class="detail-item">' +
+                    '<div class="detail-label">TOTAL REAL A ENVIAR</div>' +
+                    '<div class="detail-value" style="color: #1967d2; font-weight: 600; font-size: 16px;">' + 
+                    orden.qty_a_enviar_piezas.toLocaleString() + ' piezas</div>' +
+                    '</div>';
+            }
+            
+            modalContent += '</div></div>';
 
             // Sección de Recepción (Qty Recibida, Comentarios, Invoice)
             modalContent += '<div class="detail-section">' +
