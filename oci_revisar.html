@@ -1005,10 +1005,12 @@
                     ? '<span class="oc-mtk-display">' + orden.oc_mtk + '</span>' 
                     : '<span class="oc-mtk-empty">Sin asignar</span>';
                 
-                // ✨ MODIFICADO: Total Real a Enviar en piezas
-                const qtyEnviarPallets = orden.qty_a_enviar || '';
-                const qtyEnviarPiezas = qtyEnviarPallets ? (qtyEnviarPallets * (orden.piezas_por_pallet || 1)) : '';
-                const qtyClass = orden.qty_a_enviar ? 'qty-saved' : '';
+                // ✨ MODIFICADO: Mostrar valor manual guardado (no recalcular)
+                // Si existe qty_a_enviar_piezas (valor manual), usarlo; si no, calcular de qty_a_enviar
+                const qtyEnviarPiezas = orden.qty_a_enviar_piezas 
+                    ? orden.qty_a_enviar_piezas 
+                    : (orden.qty_a_enviar ? (orden.qty_a_enviar * (orden.piezas_por_pallet || 1)) : '');
+                const qtyClass = orden.qty_a_enviar_piezas || orden.qty_a_enviar ? 'qty-saved' : '';
                 
                 // ZOR - campo de texto editable
                 const zorNumero = orden.zor || '';
@@ -1119,7 +1121,12 @@
                     '</div>' +
                     '<div class="detail-item">' +
                     '<div class="detail-label" style="font-weight: 700; font-size: 16px;">TOTAL REAL A ENVIAR</div>' +
-                    '<div class="detail-value" style="font-size: 18px; font-weight: 700; text-decoration: underline; color: #2563eb;">' + (orden.qty_a_enviar ? (orden.qty_a_enviar * (orden.piezas_por_pallet || 1)).toLocaleString() + ' piezas' : '<span class="oc-mtk-empty">Sin definir</span>') + '</div>' +
+                    '<div class="detail-value" style="font-size: 18px; font-weight: 700; text-decoration: underline; color: #2563eb;">' + 
+                    // ✨ CORREGIDO: Mostrar valor manual guardado (qty_a_enviar_piezas), no recalcular
+                    (orden.qty_a_enviar_piezas 
+                        ? orden.qty_a_enviar_piezas.toLocaleString() + ' piezas' 
+                        : (orden.qty_a_enviar ? (orden.qty_a_enviar * (orden.piezas_por_pallet || 1)).toLocaleString() + ' piezas' : '<span class="oc-mtk-empty">Sin definir</span>')) + 
+                    '</div>' +
                     '</div>' +
                     '<div class="detail-item">' +
                     '<div class="detail-label">ZOR</div>' +
@@ -1191,12 +1198,14 @@
                 if (errorUpdate) throw errorUpdate;
 
                 // 3. ✨ NUEVO: Actualizar balance si tiene qty_a_enviar y material_numero
-                if (orden.qty_a_enviar && orden.material_numero) {
+                if ((orden.qty_a_enviar_piezas || orden.qty_a_enviar) && orden.material_numero) {
                     console.log('🔄 Actualizando balance para material:', orden.material_numero);
                     
-                    // Calcular piezas enviadas (qty_a_enviar * piezas_por_pallet)
-                    const piezasEnviadas = orden.qty_a_enviar * (orden.piezas_por_pallet || 1);
-                    console.log('📦 Piezas enviadas:', piezasEnviadas);
+                    // ✨ CORREGIDO: Usar qty_a_enviar_piezas (valor manual) si existe
+                    const piezasEnviadas = orden.qty_a_enviar_piezas 
+                        ? orden.qty_a_enviar_piezas 
+                        : (orden.qty_a_enviar * (orden.piezas_por_pallet || 1));
+                    console.log('📦 Piezas enviadas (manual):', piezasEnviadas);
 
                     // Buscar balance por material_numero (número de parte del producto)
                     const { data: balances, error: errorBalances } = await supabaseClient
@@ -1459,22 +1468,31 @@
             
             try {
                 const cantidadPiezasNum = parseInt(cantidadPiezas) || 0;
-                // Convertir piezas a pallets para guardar en la BD
+                // Convertir piezas a pallets para compatibilidad
                 const cantidadPallets = Math.ceil(cantidadPiezasNum / piezasPorPallet);
 
+                // ✨ NUEVO: Guardar AMBOS valores - piezas manual y pallets calculado
                 const { error } = await supabaseClient
                     .from('ordenes_compra')
-                    .update({ qty_a_enviar: cantidadPallets })
+                    .update({ 
+                        qty_a_enviar: cantidadPallets,
+                        qty_a_enviar_piezas: cantidadPiezasNum  // 👈 Valor manual en piezas
+                    })
                     .eq('id', ordenId);
 
                 if (error) throw error;
+
+                console.log('✅ Guardado: Piezas manuales =', cantidadPiezasNum, ', Pallets =', cantidadPallets);
 
                 // Actualizar visualmente
                 input.classList.add('qty-saved');
                 
                 // Actualizar en el array local
                 const orden = ordenesOriginal.find(o => o.id === ordenId);
-                if (orden) orden.qty_a_enviar = cantidadPallets;
+                if (orden) {
+                    orden.qty_a_enviar = cantidadPallets;
+                    orden.qty_a_enviar_piezas = cantidadPiezasNum;  // 👈 Actualizar también en local
+                }
 
                 // Mostrar feedback temporal
                 setTimeout(function() {
@@ -1483,7 +1501,7 @@
 
             } catch (error) {
                 console.error('Error guardando cantidad:', error);
-                alert('Error al guardar la cantidad');
+                alert('Error al guardar la cantidad: ' + error.message);
             }
         }
 
