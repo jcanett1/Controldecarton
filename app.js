@@ -3075,29 +3075,35 @@ async function guardarBalance(event) {
     event.preventDefault();
     
     try {
+        const balanceCantidad = parseFloat(document.getElementById('balance-cantidad').value);
+        
         const balanceData = {
             orden_compra: document.getElementById('balance-orden-compra').value,
             fecha_orden_compra: document.getElementById('balance-fecha-orden').value,
             producto_id: document.getElementById('balance-producto').value || null,
             material_carton: document.getElementById('balance-material').value,
-            balance: parseFloat(document.getElementById('balance-cantidad').value)
+            balance: balanceCantidad
         };
         
         const balanceId = document.getElementById('balance-id').value;
         
         let result;
         if (balanceId) {
-            // Actualizar balance existente
+            // Actualizar balance existente (NO actualizar balance_inicial)
             result = await supabase
                 .from('balances_veritiv')
                 .update(balanceData)
                 .eq('id', balanceId)
                 .select();
         } else {
-            // Crear nuevo balance
+            // ✨ Crear nuevo balance (incluir balance_inicial)
+            const nuevoBalanceData = {
+                ...balanceData,
+                balance_inicial: balanceCantidad  // ✨ Guardar balance inicial (valor fijo)
+            };
             result = await supabase
                 .from('balances_veritiv')
-                .insert([balanceData])
+                .insert([nuevoBalanceData])
                 .select();
         }
         
@@ -3364,6 +3370,7 @@ async function cargarBalancesUsados() {
                 orden_compra,
                 material_carton,
                 balance,
+                balance_inicial,
                 fecha_orden_compra,
                 fecha_actualizacion,
                 producto:productos_carton(numero_parte, descripcion)
@@ -3439,8 +3446,8 @@ async function cargarBalancesUsados() {
                     return sum + piezasEnviadas;
                 }, 0) : 0;
                 
-                // Calcular balance inicial (balance actual + balance pedido)
-                const balanceInicial = parseFloat(balance.balance) + balancePedido;
+                // ✨ CORREGIDO: Usar balance_inicial de la BD (valor fijo que no cambia)
+                const balanceInicial = balance.balance_inicial ? parseFloat(balance.balance_inicial) : (parseFloat(balance.balance) + balancePedido);
                 
                 // Obtener fecha del último uso (agotamiento)
                 const fechaAgotamiento = usosOCI && usosOCI.length > 0 
@@ -3450,7 +3457,7 @@ async function cargarBalancesUsados() {
                 return {
                     ...balance,
                     ocis: usosOCI || [],
-                    balance_inicial: balanceInicial,
+                    balance_inicial: balanceInicial,  // ✨ Valor fijo de la BD (no cambia)
                     balance_pedido: balancePedido,
                     balance_enviado: balanceEnviado,
                     fecha_agotamiento: fechaAgotamiento
@@ -3549,6 +3556,7 @@ async function filtrarBalancesUsados() {
                 orden_compra,
                 material_carton,
                 balance,
+                balance_inicial,
                 fecha_orden_compra,
                 fecha_actualizacion,
                 producto:productos_carton(numero_parte, descripcion)
@@ -3615,7 +3623,7 @@ async function filtrarBalancesUsados() {
                 return {
                     ...balance,
                     ocis: usosOCI || [],
-                    balance_inicial: balanceInicial,
+                    balance_inicial: balanceInicial,  // ✨ Valor fijo de la BD (no cambia)
                     balance_pedido: balancePedido,
                     balance_enviado: balanceEnviado,
                     fecha_agotamiento: fechaAgotamiento
