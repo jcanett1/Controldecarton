@@ -1205,49 +1205,64 @@
                     const piezasEnviadas = orden.qty_a_enviar_piezas 
                         ? orden.qty_a_enviar_piezas 
                         : (orden.qty_a_enviar * (orden.piezas_por_pallet || 1));
-                    console.log('📦 Piezas enviadas (manual):', piezasEnviadas);
+                    console.log('📦 Piezas enviadas (real):', piezasEnviadas);
 
-                    // Buscar balance por material_numero (número de parte del producto)
-                    const { data: balances, error: errorBalances } = await supabaseClient
-                        .from('balances_veritiv')
-                        .select('id, balance, material_carton, producto:productos_carton(numero_parte)')
-                        .eq('activo', true);
+                    // ✨ NUEVO: Obtener piezas pedidas del historial de uso
+                    const { data: historialUso, error: errorHistorial } = await supabaseClient
+                        .from('oci_balances_usados')
+                        .select('cantidad_piezas_usadas, balance_id')
+                        .eq('numero_oci', orden.numero_oci)
+                        .eq('material_numero', orden.material_numero)
+                        .single();
 
-                    if (errorBalances) {
-                        console.error('⚠️ Error buscando balances:', errorBalances);
-                    } else {
-                        // Buscar el balance que coincida con el material
-                        const balanceEncontrado = balances.find(b => 
-                            b.producto && b.producto.numero_parte === orden.material_numero
-                        );
-
-                        if (balanceEncontrado) {
-                            console.log('✅ Balance encontrado:', balanceEncontrado);
-                            
-                            // Calcular nuevo balance (balance actual - piezas enviadas)
-                            const balanceActual = parseFloat(balanceEncontrado.balance);
-                            const nuevoBalance = balanceActual - piezasEnviadas;
-
-                            console.log(`📊 Balance actual: ${balanceActual}, Nuevo balance: ${nuevoBalance}`);
-
-                            // Actualizar balance
-                            const { error: errorUpdateBalance } = await supabaseClient
-                                .from('balances_veritiv')
-                                .update({ 
-                                    balance: nuevoBalance >= 0 ? nuevoBalance : 0,
-                                    fecha_actualizacion: new Date().toISOString()
-                                })
-                                .eq('id', balanceEncontrado.id);
-
-                            if (errorUpdateBalance) {
-                                console.error('❌ Error actualizando balance:', errorUpdateBalance);
-                            } else {
-                                console.log('✅ Balance actualizado exitosamente');
-                            }
-                        } else {
-                            console.log('⚠️ No se encontró balance para el material:', orden.material_numero);
-                        }
+                    if (errorHistorial || !historialUso) {
+                        console.error('⚠️ No se encontró historial de uso para esta OCI');
+                        return;
                     }
+
+                    const piezasPedidas = historialUso.cantidad_piezas_usadas;
+                    const balanceId = historialUso.balance_id;
+                    console.log('📝 Piezas pedidas:', piezasPedidas);
+
+                    // Calcular diferencia (lo que se debe devolver al balance)
+                    const diferencia = piezasPedidas - piezasEnviadas;
+                    console.log('🧮 Diferencia (pedido - enviado):', diferencia);
+
+                    // Buscar balance por ID
+                    const { data: balanceEncontrado, error: errorBalance } = await supabaseClient
+                        .from('balances_veritiv')
+                        .select('id, balance, material_carton')
+                        .eq('id', balanceId)
+                        .single();
+
+                    if (errorBalance || !balanceEncontrado) {
+                        console.error('⚠️ Error buscando balance:', errorBalance);
+                        return;
+                    }
+
+                    console.log('✅ Balance encontrado:', balanceEncontrado);
+                    
+                    // ✨ CORREGIDO: Devolver la diferencia al balance
+                    const balanceActual = parseFloat(balanceEncontrado.balance);
+                    const nuevoBalance = balanceActual + diferencia;
+
+                    console.log(`📊 Balance actual: ${balanceActual} + Diferencia: ${diferencia} = Nuevo balance: ${nuevoBalance}`);
+
+                    // Actualizar balance
+                    const { error: errorUpdateBalance } = await supabaseClient
+                        .from('balances_veritiv')
+                        .update({ 
+                            balance: nuevoBalance >= 0 ? nuevoBalance : 0,
+                            fecha_actualizacion: new Date().toISOString()
+                        })
+                        .eq('id', balanceEncontrado.id);
+
+                    if (errorUpdateBalance) {
+                        console.error('❌ Error actualizando balance:', errorUpdateBalance);
+                    } else {
+                        console.log('✅ Balance actualizado exitosamente: ', nuevoBalance);
+                    }
+                
                 } else {
                     console.log('ℹ️ No hay qty_a_enviar o material_numero, no se actualiza balance');
                 }
