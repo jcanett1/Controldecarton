@@ -1050,8 +1050,18 @@
 
         const cantidadPallets = parseInt(document.getElementById('cantidadPallets').value);
         const totalPiezas = parseInt(document.getElementById('totalPiezas').value);
-        let ocMtkNumero = document.getElementById('ocMtkNumero').value.trim();
+        const selectOC = document.getElementById('ocMtkNumero');
+        let ocMtkNumero = selectOC.value.trim();
         const ocMtkManual = document.getElementById('ocMtkManual').value.trim();
+        
+        // Capturar balance_id y balance disponible si se seleccionó de la lista
+        let balanceId = null;
+        let balanceDisponible = null;
+        if (ocMtkNumero && selectOC.selectedIndex > 0) {
+            const selectedOption = selectOC.options[selectOC.selectedIndex];
+            balanceId = selectedOption.getAttribute('data-balance-id');
+            balanceDisponible = parseFloat(selectedOption.getAttribute('data-balance'));
+        }
         
         if (!ocMtkNumero && ocMtkManual) {
             ocMtkNumero = ocMtkManual;
@@ -1078,13 +1088,23 @@
             return;
         }
 
+        // Validar que hay suficiente balance si se seleccionó de la lista
+        if (balanceId && balanceDisponible !== null) {
+            if (totalPiezas > balanceDisponible) {
+                alert('⚠️ Balance insuficiente\n\nBalance disponible: ' + balanceDisponible.toLocaleString() + ' piezas\nCantidad solicitada: ' + totalPiezas.toLocaleString() + ' piezas\n\nPor favor, reduce la cantidad de pallets o selecciona otra OC-MTK.');
+                return;
+            }
+        }
+
         materialesEnOrden.push({
             numero: materialSeleccionado.numero,
             piezas: materialSeleccionado.piezas,
             descripcion: materialSeleccionado.descripcion,
             cantidad_pallets: cantidadPallets,
             total_piezas: totalPiezas,
-            oc_mtk: ocMtkNumero
+            oc_mtk: ocMtkNumero,
+            balance_id: balanceId,
+            balance_disponible: balanceDisponible
         });
 
         renderizarTablaMateriales();
@@ -1177,7 +1197,81 @@
                 throw new Error('Error guardando la orden: ' + error.message);
             }
 
-            alert('Orden de compra ' + numeroOci + ' creada exitosamente con ' + registrosParaInsertar.length + ' materiales.');
+            // ✨ NUEVO: Descontar balances automáticamente
+            console.log('🔄 Procesando descuento de balances...');
+            let balancesActualizados = 0;
+            
+            for (const item of materialesEnOrden) {
+                // Solo procesar si tiene balance_id (fue seleccionado de la lista)
+                if (item.balance_id) {
+                    try {
+                        console.log('📋 Procesando material:', item.numero, 'Balance ID:', item.balance_id);
+                        
+                        // 1. Obtener balance actual
+                        const { data: balanceActual, error: errorBalance } = await supabaseClient
+                            .from('balances_veritiv')
+                            .select('balance')
+                            .eq('id', item.balance_id)
+                            .single();
+                        
+                        if (errorBalance) {
+                            console.error('❌ Error obteniendo balance:', errorBalance);
+                            continue;
+                        }
+                        
+                        // 2. Calcular nuevo balance
+                        const nuevoBalance = parseFloat(balanceActual.balance) - item.total_piezas;
+                        console.log('📊 Balance actual:', balanceActual.balance, '- Usado:', item.total_piezas, '= Nuevo:', nuevoBalance);
+                        
+                        // 3. Actualizar balance en balances_veritiv
+                        const { error: errorUpdate } = await supabaseClient
+                            .from('balances_veritiv')
+                            .update({ 
+                                balance: nuevoBalance,
+                                fecha_actualizacion: new Date().toISOString()
+                            })
+                            .eq('id', item.balance_id);
+                        
+                        if (errorUpdate) {
+                            console.error('❌ Error actualizando balance:', errorUpdate);
+                            continue;
+                        }
+                        
+                        // 4. Registrar en historial de uso
+                        const { error: errorHistorial } = await supabaseClient
+                            .from('oci_balances_usados')
+                            .insert({
+                                numero_oci: numeroOci,
+                                balance_id: item.balance_id,
+                                material_numero: item.numero,
+                                material_descripcion: item.descripcion,
+                                cantidad_piezas_usadas: item.total_piezas,
+                                fecha_uso: new Date().toISOString()
+                            });
+                        
+                        if (errorHistorial) {
+                            console.error('⚠️ Error registrando historial:', errorHistorial);
+                            // No detener el proceso si falla el historial
+                        }
+                        
+                        balancesActualizados++;
+                        console.log('✅ Balance actualizado correctamente');
+                        
+                    } catch (err) {
+                        console.error('❌ Error procesando balance para material', item.numero, ':', err);
+                        // Continuar con los demás materiales
+                    }
+                }
+            }
+            
+            console.log('✅ Proceso completado. Balances actualizados:', balancesActualizados);
+            
+            let mensaje = 'Orden de compra ' + numeroOci + ' creada exitosamente con ' + registrosParaInsertar.length + ' materiales.';
+            if (balancesActualizados > 0) {
+                mensaje += '\n\n📊 ' + balancesActualizados + ' balance(s) actualizado(s) automáticamente.';
+            }
+            
+            alert(mensaje);
             limpiarFormulario();
             
         } catch (error) {

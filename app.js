@@ -2921,7 +2921,7 @@ function renderizarBalances(balancesData) {
     if (!balancesData || balancesData.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="empty-state">
+                <td colspan="7" class="empty-state">
                     <i class="fas fa-inbox"></i>
                     <h4>No hay balances registrados</h4>
                     <small>Haz clic en "Nuevo Balance" para agregar uno</small>
@@ -2931,21 +2931,44 @@ function renderizarBalances(balancesData) {
         return;
     }
     
-    tbody.innerHTML = balancesData.map(balance => `
-        <tr>
+    tbody.innerHTML = balancesData.map(balance => {
+        // ✨ NUEVO: Determinar estado del balance
+        const balanceNum = parseFloat(balance.balance);
+        const esAgotado = balanceNum === 0;
+        const esBajo = balanceNum > 0 && balanceNum < 1000;
+        
+        let estadoBadge = '';
+        let balanceClass = 'status-normal';
+        let rowStyle = '';
+        
+        if (esAgotado) {
+            estadoBadge = '<span class="status-badge status-agotado"><i class="fas fa-times-circle"></i> Agotado</span>';
+            balanceClass = 'status-agotado';
+            rowStyle = 'background-color: #fee; border-left: 4px solid #dc2626;';
+        } else if (esBajo) {
+            estadoBadge = '<span class="status-badge status-bajo"><i class="fas fa-exclamation-triangle"></i> Bajo</span>';
+            balanceClass = 'status-bajo';
+        } else {
+            estadoBadge = '<span class="status-badge status-disponible"><i class="fas fa-check-circle"></i> Disponible</span>';
+            balanceClass = 'status-disponible';
+        }
+        
+        return `
+        <tr style="${rowStyle}">
             <td><strong>${balance.orden_compra}</strong></td>
             <td>${formatearFecha(balance.fecha_orden_compra)}</td>
             <td>
                 <div class="product-info">
-                    <strong>${balance.material_carton}</strong>
+                    <strong style="${esAgotado ? 'color: #dc2626;' : ''}">${balance.material_carton}</strong>
                     ${balance.producto ? `<br><small>${balance.producto.numero_parte} - ${balance.producto.descripcion}</small>` : ''}
                 </div>
             </td>
             <td>
-                <span class="quantity-badge status-normal">
+                <span class="quantity-badge ${balanceClass}">
                     ${formatearNumero(balance.balance)}
                 </span>
             </td>
+            <td>${estadoBadge}</td>
             <td>${formatearFechaHora(balance.fecha_creacion)}</td>
             <td>
                 <div class="inventory-actions">
@@ -2958,7 +2981,8 @@ function renderizarBalances(balancesData) {
                 </div>
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 }
 
 /**
@@ -3271,3 +3295,332 @@ window.onclick = function(event) {
 }
 
 // ===== FIN DE FUNCIONES PARA BALANCE VERITIV =====
+
+// ===== ✨ NUEVAS FUNCIONES PARA BALANCES USADOS =====
+
+/**
+ * Cambiar entre pestañas de Balances Activos y Balances Usados
+ */
+function cambiarTabBalance(tab) {
+    console.log('🔄 Cambiando a pestaña:', tab);
+    
+    // Actualizar botones de pestañas
+    const botones = document.querySelectorAll('.balance-tab-btn');
+    botones.forEach(btn => {
+        if (btn.getAttribute('data-tab') === tab) {
+            btn.classList.add('active');
+            btn.style.color = '#3b82f6';
+            btn.style.borderBottom = '3px solid #3b82f6';
+        } else {
+            btn.classList.remove('active');
+            btn.style.color = '#64748b';
+            btn.style.borderBottom = '3px solid transparent';
+        }
+    });
+    
+    // Mostrar/ocultar contenido de pestañas
+    const tabActivos = document.getElementById('tab-balances-activos');
+    const tabUsados = document.getElementById('tab-balances-usados');
+    
+    if (tab === 'activos') {
+        tabActivos.style.display = 'block';
+        tabUsados.style.display = 'none';
+        cargarBalances();
+    } else if (tab === 'usados') {
+        tabActivos.style.display = 'none';
+        tabUsados.style.display = 'block';
+        cargarBalancesUsados();
+    }
+}
+
+/**
+ * Cargar balances usados (balance = 0) con información de OCIs ligadas
+ */
+async function cargarBalancesUsados() {
+    try {
+        console.log('🔄 Cargando balances usados...');
+        
+        const tbody = document.getElementById('tabla-balances-usados-body');
+        if (!tbody) {
+            console.error('❌ No se encontró el elemento tabla-balances-usados-body');
+            return;
+        }
+        
+        // Mostrar loading
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="loading">
+                    <div class="spinner"></div>
+                    <p>Cargando balances usados...</p>
+                </td>
+            </tr>
+        `;
+        
+        // 1. Obtener balances con cantidad = 0
+        const { data: balancesAgotados, error: errorBalances } = await supabase
+            .from('balances_veritiv')
+            .select(`
+                id,
+                orden_compra,
+                material_carton,
+                balance,
+                fecha_orden_compra,
+                fecha_actualizacion,
+                producto:productos_carton(numero_parte, descripcion)
+            `)
+            .eq('balance', 0)
+            .eq('activo', true)
+            .order('fecha_actualizacion', { ascending: false });
+        
+        if (errorBalances) {
+            console.error('❌ Error cargando balances agotados:', errorBalances);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error al cargar balances usados</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        if (!balancesAgotados || balancesAgotados.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <h4>No hay balances agotados</h4>
+                        <small>Todos los balances tienen cantidad disponible</small>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        console.log('✅ Balances agotados encontrados:', balancesAgotados.length);
+        
+        // 2. Para cada balance agotado, obtener las OCIs que lo usaron
+        const balancesConOCIs = await Promise.all(
+            balancesAgotados.map(async (balance) => {
+                const { data: usosOCI, error: errorUsos } = await supabase
+                    .from('oci_balances_usados')
+                    .select('numero_oci, cantidad_piezas_usadas, fecha_uso')
+                    .eq('balance_id', balance.id)
+                    .order('fecha_uso', { ascending: false });
+                
+                if (errorUsos) {
+                    console.error('⚠️ Error obteniendo usos para balance', balance.id, ':', errorUsos);
+                    return {
+                        ...balance,
+                        ocis: [],
+                        total_usado: 0,
+                        fecha_agotamiento: balance.fecha_actualizacion
+                    };
+                }
+                
+                // Calcular total usado
+                const totalUsado = usosOCI ? usosOCI.reduce((sum, uso) => sum + uso.cantidad_piezas_usadas, 0) : 0;
+                
+                // Obtener fecha del último uso (agotamiento)
+                const fechaAgotamiento = usosOCI && usosOCI.length > 0 
+                    ? usosOCI[0].fecha_uso 
+                    : balance.fecha_actualizacion;
+                
+                return {
+                    ...balance,
+                    ocis: usosOCI || [],
+                    total_usado: totalUsado,
+                    fecha_agotamiento: fechaAgotamiento
+                };
+            })
+        );
+        
+        console.log('✅ Datos completos de balances usados:', balancesConOCIs.length);
+        
+        // 3. Renderizar tabla
+        tbody.innerHTML = balancesConOCIs.map(balance => {
+            const ocisLista = balance.ocis.length > 0
+                ? balance.ocis.map(oci => `
+                    <span class="oci-badge" title="${formatearNumero(oci.cantidad_piezas_usadas)} piezas - ${formatearFechaHora(oci.fecha_uso)}">
+                        ${oci.numero_oci}
+                    </span>
+                `).join('')
+                : '<span style="color: #94a3b8;">Sin registros</span>';
+            
+            return `
+                <tr>
+                    <td><strong>${balance.orden_compra}</strong></td>
+                    <td>
+                        <div class="product-info">
+                            <strong>${balance.material_carton}</strong>
+                            ${balance.producto ? `<br><small>${balance.producto.numero_parte} - ${balance.producto.descripcion}</small>` : ''}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="quantity-badge status-normal">
+                            ${formatearNumero(balance.total_usado)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="quantity-badge status-agotado">
+                            ${formatearNumero(balance.total_usado)}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="ocis-container" style="display: flex; flex-wrap: wrap; gap: 5px;">
+                            ${ocisLista}
+                        </div>
+                        <small style="color: #64748b; display: block; margin-top: 5px;">
+                            ${balance.ocis.length} OCI(s)
+                        </small>
+                    </td>
+                    <td>${formatearFechaHora(balance.fecha_agotamiento)}</td>
+                </tr>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        const tbody = document.getElementById('tabla-balances-usados-body');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error al cargar balances usados: ${error.message}</p>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+/**
+ * Filtrar balances usados por orden de compra
+ */
+async function filtrarBalancesUsados() {
+    try {
+        const ordenCompra = document.getElementById('filtro-balance-usados-orden').value.trim();
+        
+        console.log('🔍 Filtrando balances usados por:', ordenCompra);
+        
+        const tbody = document.getElementById('tabla-balances-usados-body');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="loading">
+                    <div class="spinner"></div>
+                    <p>Filtrando...</p>
+                </td>
+            </tr>
+        `;
+        
+        let query = supabase
+            .from('balances_veritiv')
+            .select(`
+                id,
+                orden_compra,
+                material_carton,
+                balance,
+                fecha_orden_compra,
+                fecha_actualizacion,
+                producto:productos_carton(numero_parte, descripcion)
+            `)
+            .eq('balance', 0)
+            .eq('activo', true);
+        
+        if (ordenCompra) {
+            query = query.ilike('orden_compra', `%${ordenCompra}%`);
+        }
+        
+        const { data: balancesAgotados, error } = await query.order('fecha_actualizacion', { ascending: false });
+        
+        if (error) {
+            console.error('❌ Error filtrando balances usados:', error);
+            return;
+        }
+        
+        if (!balancesAgotados || balancesAgotados.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <h4>No se encontraron resultados</h4>
+                        <small>Intenta con otro término de búsqueda</small>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        // Obtener OCIs para cada balance
+        const balancesConOCIs = await Promise.all(
+            balancesAgotados.map(async (balance) => {
+                const { data: usosOCI } = await supabase
+                    .from('oci_balances_usados')
+                    .select('numero_oci, cantidad_piezas_usadas, fecha_uso')
+                    .eq('balance_id', balance.id)
+                    .order('fecha_uso', { ascending: false });
+                
+                const totalUsado = usosOCI ? usosOCI.reduce((sum, uso) => sum + uso.cantidad_piezas_usadas, 0) : 0;
+                const fechaAgotamiento = usosOCI && usosOCI.length > 0 
+                    ? usosOCI[0].fecha_uso 
+                    : balance.fecha_actualizacion;
+                
+                return {
+                    ...balance,
+                    ocis: usosOCI || [],
+                    total_usado: totalUsado,
+                    fecha_agotamiento: fechaAgotamiento
+                };
+            })
+        );
+        
+        // Renderizar resultados (mismo código que en cargarBalancesUsados)
+        tbody.innerHTML = balancesConOCIs.map(balance => {
+            const ocisLista = balance.ocis.length > 0
+                ? balance.ocis.map(oci => `
+                    <span class="oci-badge" title="${formatearNumero(oci.cantidad_piezas_usadas)} piezas - ${formatearFechaHora(oci.fecha_uso)}">
+                        ${oci.numero_oci}
+                    </span>
+                `).join('')
+                : '<span style="color: #94a3b8;">Sin registros</span>';
+            
+            return `
+                <tr>
+                    <td><strong>${balance.orden_compra}</strong></td>
+                    <td>
+                        <div class="product-info">
+                            <strong>${balance.material_carton}</strong>
+                            ${balance.producto ? `<br><small>${balance.producto.numero_parte} - ${balance.producto.descripcion}</small>` : ''}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="quantity-badge status-normal">
+                            ${formatearNumero(balance.total_usado)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="quantity-badge status-agotado">
+                            ${formatearNumero(balance.total_usado)}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="ocis-container" style="display: flex; flex-wrap: wrap; gap: 5px;">
+                            ${ocisLista}
+                        </div>
+                        <small style="color: #64748b; display: block; margin-top: 5px;">
+                            ${balance.ocis.length} OCI(s)
+                        </small>
+                    </td>
+                    <td>${formatearFechaHora(balance.fecha_agotamiento)}</td>
+                </tr>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+    }
+}
+
+// ===== FIN DE FUNCIONES PARA BALANCES USADOS =====
