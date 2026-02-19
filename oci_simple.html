@@ -1412,12 +1412,29 @@
             let totalPalletsGeneral = 0;
             let totalPiezasGeneral = 0;
 
-            // Construir lista de materiales
+            // Construir lista de materiales y obtener datos de envío
             let materialesHtml = '';
+            let datosEnvio = {
+                oc_mtk: null,
+                zor: null,
+                qty_a_enviar_piezas: null
+            };
+            
             data.forEach(function(item) {
                 const totalPiezasItem = item.cantidad_total_piezas || (item.piezas_por_pallet * item.cantidad_pallets);
                 totalPalletsGeneral += item.cantidad_pallets;
                 totalPiezasGeneral += totalPiezasItem;
+                
+                // Capturar datos de envío del primer item que los tenga
+                if (item.oc_mtk && !datosEnvio.oc_mtk) {
+                    datosEnvio.oc_mtk = item.oc_mtk;
+                }
+                if (item.zor && !datosEnvio.zor) {
+                    datosEnvio.zor = item.zor;
+                }
+                if (item.qty_a_enviar_piezas && !datosEnvio.qty_a_enviar_piezas) {
+                    datosEnvio.qty_a_enviar_piezas = item.qty_a_enviar_piezas;
+                }
                 
                 const ocMtkDisplay = item.oc_mtk ? '<span style="background: #e8f0fe; color: #1967d2; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">OC-MTK: ' + item.oc_mtk + '</span>' : '';
                 
@@ -1468,6 +1485,37 @@
                 '</div>' +
                 '</div>';
 
+            // ✨ Agregar sección DATOS DE ENVÍO si existen
+            if (datosEnvio.oc_mtk || datosEnvio.zor || datosEnvio.qty_a_enviar_piezas) {
+                modalContent += '<div class="detail-section">' +
+                    '<div class="detail-section-title"><i class="fas fa-shipping-fast"></i> DATOS DE ENVÍO</div>' +
+                    '<div class="detail-grid">';
+                
+                if (datosEnvio.oc_mtk) {
+                    modalContent += '<div class="detail-item">' +
+                        '<div class="detail-label">OC-MTK</div>' +
+                        '<div class="detail-value" style="color: #1967d2; font-weight: 600;">' + datosEnvio.oc_mtk + '</div>' +
+                        '</div>';
+                }
+                
+                if (datosEnvio.zor) {
+                    modalContent += '<div class="detail-item">' +
+                        '<div class="detail-label">ZOR</div>' +
+                        '<div class="detail-value" style="color: #0f9d58; font-weight: 600;">' + datosEnvio.zor + '</div>' +
+                        '</div>';
+                }
+                
+                if (datosEnvio.qty_a_enviar_piezas) {
+                    modalContent += '<div class="detail-item">' +
+                        '<div class="detail-label">TOTAL REAL A ENVIAR</div>' +
+                        '<div class="detail-value" style="color: #d93025; font-weight: 700; font-size: 18px; text-decoration: underline;">' + 
+                        datosEnvio.qty_a_enviar_piezas.toLocaleString() + ' piezas</div>' +
+                        '</div>';
+                }
+                
+                modalContent += '</div></div>';
+            }
+            
             // Agregar observaciones si existen
             if (primeraLinea.observaciones) {
                 modalContent += '<div class="detail-section">' +
