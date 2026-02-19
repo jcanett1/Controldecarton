@@ -3426,13 +3426,16 @@ async function cargarBalancesUsados() {
                 // Buscar OCIs aprobadas que tengan este material
                 const { data: ordenesAprobadas } = await supabase
                     .from('ordenes_compra')
-                    .select('numero_oci, material_numero, qty_a_enviar, piezas_por_pallet, estado')
+                    .select('numero_oci, material_numero, qty_a_enviar, qty_a_enviar_piezas, piezas_por_pallet, estado')
                     .eq('material_numero', balance.producto ? balance.producto.numero_parte : balance.material_carton)
                     .eq('estado', 'APROBADA');
                 
-                // Calcular balance enviado (suma de qty_a_enviar * piezas_por_pallet)
+                // ✨ CORREGIDO: Calcular balance enviado usando qty_a_enviar_piezas (valor manual) si existe
                 const balanceEnviado = ordenesAprobadas ? ordenesAprobadas.reduce((sum, orden) => {
-                    const piezasEnviadas = (orden.qty_a_enviar || 0) * (orden.piezas_por_pallet || 1);
+                    // Priorizar qty_a_enviar_piezas (valor manual), si no existe usar cálculo
+                    const piezasEnviadas = orden.qty_a_enviar_piezas 
+                        ? orden.qty_a_enviar_piezas 
+                        : ((orden.qty_a_enviar || 0) * (orden.piezas_por_pallet || 1));
                     return sum + piezasEnviadas;
                 }, 0) : 0;
                 
@@ -3591,12 +3594,15 @@ async function filtrarBalancesUsados() {
                 // ✨ NUEVO: Obtener balance enviado de ordenes_compra aprobadas
                 const { data: ordenesAprobadas } = await supabase
                     .from('ordenes_compra')
-                    .select('numero_oci, material_numero, qty_a_enviar, piezas_por_pallet, estado')
+                    .select('numero_oci, material_numero, qty_a_enviar, qty_a_enviar_piezas, piezas_por_pallet, estado')
                     .eq('material_numero', balance.producto ? balance.producto.numero_parte : balance.material_carton)
                     .eq('estado', 'APROBADA');
                 
+                // ✨ CORREGIDO: Usar qty_a_enviar_piezas (valor manual) si existe
                 const balanceEnviado = ordenesAprobadas ? ordenesAprobadas.reduce((sum, orden) => {
-                    const piezasEnviadas = (orden.qty_a_enviar || 0) * (orden.piezas_por_pallet || 1);
+                    const piezasEnviadas = orden.qty_a_enviar_piezas 
+                        ? orden.qty_a_enviar_piezas 
+                        : ((orden.qty_a_enviar || 0) * (orden.piezas_por_pallet || 1));
                     return sum + piezasEnviadas;
                 }, 0) : 0;
                 
