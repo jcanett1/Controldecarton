@@ -3419,8 +3419,12 @@ async function cargarBalancesUsados() {
                     };
                 }
                 
-                // Calcular total usado
+                // Calcular total usado (suma de todas las piezas usadas)
                 const totalUsado = usosOCI ? usosOCI.reduce((sum, uso) => sum + uso.cantidad_piezas_usadas, 0) : 0;
+                
+                // ✨ NUEVO: Calcular balance inicial (balance actual + total usado)
+                // Si el balance está en 0 y se usaron X piezas, el balance inicial era X
+                const balanceInicial = parseFloat(balance.balance) + totalUsado;
                 
                 // Obtener fecha del último uso (agotamiento)
                 const fechaAgotamiento = usosOCI && usosOCI.length > 0 
@@ -3430,6 +3434,7 @@ async function cargarBalancesUsados() {
                 return {
                     ...balance,
                     ocis: usosOCI || [],
+                    balance_inicial: balanceInicial,
                     total_usado: totalUsado,
                     fecha_agotamiento: fechaAgotamiento
                 };
@@ -3459,7 +3464,7 @@ async function cargarBalancesUsados() {
                     </td>
                     <td>
                         <span class="quantity-badge status-normal">
-                            ${formatearNumero(balance.total_usado)}
+                            ${formatearNumero(balance.balance_inicial)}
                         </span>
                     </td>
                     <td>
@@ -3563,6 +3568,10 @@ async function filtrarBalancesUsados() {
                     .order('fecha_uso', { ascending: false });
                 
                 const totalUsado = usosOCI ? usosOCI.reduce((sum, uso) => sum + uso.cantidad_piezas_usadas, 0) : 0;
+                
+                // ✨ NUEVO: Calcular balance inicial
+                const balanceInicial = parseFloat(balance.balance) + totalUsado;
+                
                 const fechaAgotamiento = usosOCI && usosOCI.length > 0 
                     ? usosOCI[0].fecha_uso 
                     : balance.fecha_actualizacion;
@@ -3570,6 +3579,7 @@ async function filtrarBalancesUsados() {
                 return {
                     ...balance,
                     ocis: usosOCI || [],
+                    balance_inicial: balanceInicial,
                     total_usado: totalUsado,
                     fecha_agotamiento: fechaAgotamiento
                 };
@@ -3597,7 +3607,7 @@ async function filtrarBalancesUsados() {
                     </td>
                     <td>
                         <span class="quantity-badge status-normal">
-                            ${formatearNumero(balance.total_usado)}
+                            ${formatearNumero(balance.balance_inicial)}
                         </span>
                     </td>
                     <td>
