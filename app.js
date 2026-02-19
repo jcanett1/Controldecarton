@@ -3429,13 +3429,13 @@ async function cargarBalancesUsados() {
                 // Calcular balance pedido (suma de todas las piezas pedidas en OCIs)
                 const balancePedido = usosOCI ? usosOCI.reduce((sum, uso) => sum + uso.cantidad_piezas_usadas, 0) : 0;
                 
-                // ✨ NUEVO: Obtener balance enviado (real) de ordenes_compra aprobadas
-                // Buscar OCIs aprobadas que tengan este material
+                // ✨ NUEVO: Obtener balance enviado (real) de ordenes_compra aprobadas o recibidas
+                // Buscar OCIs aprobadas o recibidas que tengan este material
                 const { data: ordenesAprobadas } = await supabase
                     .from('ordenes_compra')
                     .select('numero_oci, material_numero, qty_a_enviar, qty_a_enviar_piezas, piezas_por_pallet, estado')
                     .eq('material_numero', balance.producto ? balance.producto.numero_parte : balance.material_carton)
-                    .eq('estado', 'APROBADA');
+                    .in('estado', ['APROBADA', 'RECIBIDA']);  // ✅ Incluir ambos estados
                 
                 // ✨ CORREGIDO: Calcular balance enviado usando qty_a_enviar_piezas (valor manual) si existe
                 const balanceEnviado = ordenesAprobadas ? ordenesAprobadas.reduce((sum, orden) => {
@@ -3599,12 +3599,12 @@ async function filtrarBalancesUsados() {
                 
                 const balancePedido = usosOCI ? usosOCI.reduce((sum, uso) => sum + uso.cantidad_piezas_usadas, 0) : 0;
                 
-                // ✨ NUEVO: Obtener balance enviado de ordenes_compra aprobadas
+                // ✨ NUEVO: Obtener balance enviado de ordenes_compra aprobadas o recibidas
                 const { data: ordenesAprobadas } = await supabase
                     .from('ordenes_compra')
                     .select('numero_oci, material_numero, qty_a_enviar, qty_a_enviar_piezas, piezas_por_pallet, estado')
                     .eq('material_numero', balance.producto ? balance.producto.numero_parte : balance.material_carton)
-                    .eq('estado', 'APROBADA');
+                    .in('estado', ['APROBADA', 'RECIBIDA']);  // ✅ Incluir ambos estados
                 
                 // ✨ CORREGIDO: Usar qty_a_enviar_piezas (valor manual) si existe
                 const balanceEnviado = ordenesAprobadas ? ordenesAprobadas.reduce((sum, orden) => {
