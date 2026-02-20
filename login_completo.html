@@ -27,17 +27,39 @@
             min-height: 100vh;
         }
 
-        /* Lado izquierdo con imagen de fondo */
+        /* Lado izquierdo con slideshow de imágenes */
         .login-left {
             flex: 1;
-            background-image: url('login-background.jpg');
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slideshow-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            position: relative;
         }
 
-        .login-left::before {
+        .slide.active {
+            opacity: 1;
+        }
+
+        .slide::before {
             content: '';
             position: absolute;
             top: 0;
@@ -248,45 +270,6 @@
             border: 1px solid #f5c6cb;
         }
 
-        /* Botones de prueba */
-        .test-data {
-            background: #fff9e6;
-            border: 1px solid #ffe5a3;
-            border-radius: 4px;
-            padding: 12px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .test-data strong {
-            display: block;
-            margin-bottom: 10px;
-            color: #856404;
-            font-size: 0.9rem;
-        }
-
-        .test-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-test {
-            flex: 1;
-            padding: 8px 12px;
-            border: 1px solid #0078d4;
-            background: white;
-            color: #0078d4;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-test:hover {
-            background: #0078d4;
-            color: white;
-        }
-
         /* Responsive */
         @media (max-width: 1024px) {
             .login-left {
@@ -317,8 +300,19 @@
 </head>
 <body>
     <div class="login-container">
-        <!-- Lado izquierdo con imagen -->
-        <div class="login-left"></div>
+        <!-- Lado izquierdo con slideshow -->
+        <div class="login-left">
+            <div class="slideshow-container">
+                <div class="slide active" style="background-image: url('login-bg-1.jpg');"></div>
+                <div class="slide" style="background-image: url('login-bg-2.jpg');"></div>
+                <div class="slide" style="background-image: url('login-bg-3.jpg');"></div>
+                <div class="slide" style="background-image: url('login-bg-4.jpg');"></div>
+                <div class="slide" style="background-image: url('login-bg-5.jpg');"></div>
+                <div class="slide" style="background-image: url('login-bg-6.jpg');"></div>
+                <div class="slide" style="background-image: url('login-bg-7.jpg');"></div>
+                <div class="slide" style="background-image: url('login-bg-8.jpg');"></div>
+            </div>
+        </div>
 
         <!-- Lado derecho con formulario -->
         <div class="login-right">
@@ -338,15 +332,6 @@
             <!-- Sección de credenciales -->
             <div class="credentials-section">
                 <h2 class="credentials-title">Enter credentials</h2>
-
-                <!-- Botones de prueba -->
-                <div class="test-data">
-                    <strong>Credenciales de Prueba:</strong>
-                    <div class="test-buttons">
-                        <button class="btn-test" onclick="fillTestData('julio')">Julio</button>
-                        <button class="btn-test" onclick="fillTestData('admin')">Admin</button>
-                    </div>
-                </div>
 
                 <!-- Alertas -->
                 <div id="alert-container"></div>
@@ -397,16 +382,19 @@
         // Variables globales
         let currentUser = null;
 
-        // Llenar datos de prueba
-        function fillTestData(role) {
-            if (role === 'julio') {
-                document.getElementById('login-username').value = 'julio';
-                document.getElementById('login-password').value = 'Edel1ewy';
-            } else if (role === 'admin') {
-                document.getElementById('login-username').value = 'admin';
-                document.getElementById('login-password').value = 'admin123';
-            }
+        // Slideshow automático
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function showNextSlide() {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (currentSlide + 1) % totalSlides;
+            slides[currentSlide].classList.add('active');
         }
+
+        // Cambiar imagen cada 10 segundos
+        setInterval(showNextSlide, 10000);
 
         // Mostrar alertas
         function showAlert(message, type = 'error') {
