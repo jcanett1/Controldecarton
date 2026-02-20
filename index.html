@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Almacén de Cartón</title>
+    <title>Gestión y Control de Órdenes de Compra de Cartón - PXG México</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -18,26 +18,29 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: #f8fafc;
-            color: #1e293b;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
+            color: #e5e7eb;
             line-height: 1.6;
+            min-height: 100vh;
         }
 
         .app-container {
             display: flex;
+            flex-direction: column;
             min-height: 100vh;
         }
 
         /* Sidebar */
         .sidebar {
             width: 280px;
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            background: linear-gradient(180deg, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
             color: white;
             padding: 0;
             position: fixed;
             height: 100vh;
             overflow-y: auto;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.5);
+            border-right: 1px solid #404040;
         }
 
         .sidebar-header {
@@ -93,28 +96,30 @@
         .main-content {
             flex: 1;
             margin-left: 280px;
-            background: #f8fafc;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #404040 100%);
+            display: flex;
+            flex-direction: column;
         }
 
         .header {
-            background: white;
+            background: linear-gradient(90deg, #000000 0%, #1a1a1a 100%);
             padding: 1.5rem 2rem;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #404040;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         }
 
         .header-left h1 {
             font-size: 1.875rem;
             font-weight: 700;
-            color: #1e293b;
+            color: #ffffff;
             margin-bottom: 0.25rem;
         }
 
         .header-left p {
-            color: #64748b;
+            color: #9ca3af;
             font-size: 0.875rem;
         }
 
@@ -129,13 +134,14 @@
             align-items: center;
             gap: 12px;
             padding: 8px 16px;
-            background: #f1f5f9;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
             border-radius: 8px;
+            border: 1px solid #404040;
         }
 
         .user-profile i {
             font-size: 1.5rem;
-            color: #64748b;
+            color: #9ca3af;
         }
 
         .user-details {
@@ -146,18 +152,18 @@
         .user-name {
             font-weight: 600;
             font-size: 0.875rem;
-            color: #1e293b;
+            color: #ffffff;
         }
 
         .user-role {
             font-size: 0.75rem;
-            color: #64748b;
+            color: #9ca3af;
         }
 
         .logout-btn {
             background: none;
             border: none;
-            color: #64748b;
+            color: #9ca3af;
             cursor: pointer;
             padding: 4px;
             border-radius: 4px;
@@ -194,6 +200,7 @@
         /* Content Area */
         .content-area {
             padding: 2rem;
+            flex: 1;
         }
 
         .content-section {
@@ -213,11 +220,11 @@
         }
 
         .stat-card {
-            background: white;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
             padding: 1.5rem;
             border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            border: 1px solid #404040;
             display: flex;
             align-items: center;
             gap: 1rem;
@@ -226,7 +233,8 @@
 
         .stat-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+            border-color: #525252;
         }
 
         .stat-icon {
@@ -259,35 +267,35 @@
         .stat-content h3 {
             font-size: 2rem;
             font-weight: 700;
-            color: #1e293b;
+            color: #ffffff;
             margin-bottom: 0.25rem;
         }
 
         .stat-content p {
-            color: #64748b;
+            color: #9ca3af;
             font-size: 0.875rem;
             font-weight: 500;
         }
 
         /* Cards */
         .card {
-            background: white;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
             border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            border: 1px solid #404040;
             overflow: hidden;
         }
 
         .card-header {
             padding: 1.5rem;
-            border-bottom: 1px solid #e2e8f0;
-            background: #f8fafc;
+            border-bottom: 1px solid #404040;
+            background: linear-gradient(90deg, #000000 0%, #1a1a1a 100%);
         }
 
         .card-header h3 {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #1e293b;
+            color: #ffffff;
         }
 
         .card-content {
@@ -1205,6 +1213,38 @@
     align-items: center;
 }
 
+/* ===== FOOTER GLOBAL ===== */
+.footer-global {
+    background: linear-gradient(90deg, #000000 0%, #1a1a1a 100%);
+    color: #9ca3af;
+    text-align: center;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #404040;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    margin-top: auto;
+}
+
+.footer-global p {
+    margin: 0.25rem 0;
+}
+
+.footer-global strong {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.footer-global a {
+    color: #60a5fa;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.footer-global a:hover {
+    color: #93c5fd;
+    text-decoration: underline;
+}
+
 /* ===== FIN DE ESTILOS CRÍTICOS ===== */
     </style>
 </head>
@@ -1214,9 +1254,12 @@
         <!-- Sidebar -->
         <nav class="sidebar">
             <div class="sidebar-header">
-                <div class="logo">
-                    <i class="fas fa-boxes"></i>
-                    <span>Almacén Cartón</span>
+                <div class="logo" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-boxes"></i>
+                        <span style="font-size: 1.1rem; line-height: 1.3;">Gestión y Control de<br>Órdenes de Compra de Cartón</span>
+                    </div>
+                    <span style="font-size: 0.75rem; color: #9ca3af; margin-left: 44px;">The Cloud ERP - PXG México</span>
                 </div>
             </div>
             <ul class="sidebar-menu">
@@ -1587,6 +1630,13 @@
                 </div>
             </form>
         </div>
+
+        <!-- Footer Global -->
+        <footer class="footer-global">
+            <p><strong>Sistema OCI PXG MÉXICO</strong></p>
+            <p>Creado por <strong>IT Tequila</strong></p>
+            <p>Soporte: <a href="mailto:jcanett@pxg.com">jcanett@pxg.com</a></p>
+        </footer>
     </div>
 
     <script src="app.js"></script>

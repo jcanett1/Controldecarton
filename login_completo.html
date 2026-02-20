@@ -296,6 +296,42 @@
                 font-size: 2rem;
             }
         }
+
+        /* Footer Global */
+        .footer-global {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(90deg, #000000 0%, #1a1a1a 100%);
+            color: #9ca3af;
+            text-align: center;
+            padding: 0.75rem 1rem;
+            font-size: 0.7rem;
+            line-height: 1.4;
+            z-index: 1000;
+            border-top: 1px solid #404040;
+        }
+
+        .footer-global p {
+            margin: 0.15rem 0;
+        }
+
+        .footer-global strong {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .footer-global a {
+            color: #60a5fa;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-global a:hover {
+            color: #93c5fd;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -365,6 +401,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Footer Global -->
+    <footer class="footer-global">
+        <p><strong>Sistema OCI PXG MÉXICO</strong> | Creado por <strong>IT Tequila</strong> | Soporte: <a href="mailto:jcanett@pxg.com">jcanett@pxg.com</a></p>
+    </footer>
 
     <script>
         // Configuración de Supabase
