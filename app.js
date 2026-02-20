@@ -3738,14 +3738,14 @@ async function cargarGraficaMaterialesPedidos() {
         // Consultar todas las órdenes de compra con su número de material
         const { data: ordenes, error } = await supabase
             .from('ordenes_compra')
-            .select('numero_material');
+            .select('material_numero');
 
         if (error) throw error;
 
         // Contar cuántas veces aparece cada material
         const conteoMateriales = {};
         ordenes.forEach(orden => {
-            const material = orden.numero_material || 'Sin material';
+            const material = orden.material_numero || 'Sin material';
             conteoMateriales[material] = (conteoMateriales[material] || 0) + 1;
         });
 
