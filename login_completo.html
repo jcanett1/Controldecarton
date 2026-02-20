@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Sistema de Almacén de Cartón</title>
+    <title>Login - Gestión y Control de Órdenes de Compra de Cartón</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -16,203 +16,179 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            background: #f5f5f5;
         }
 
         .login-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            width: 100%;
-            max-width: 900px;
-            min-height: 600px;
             display: flex;
-            animation: slideUp 0.6s ease-out;
+            width: 100%;
+            min-height: 100vh;
         }
 
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
+        /* Lado izquierdo con imagen de fondo */
         .login-left {
             flex: 1;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 60px 40px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
+            background-image: url('login-background.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
             position: relative;
-            overflow: hidden;
         }
 
         .login-left::before {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="0.5" fill="white" opacity="0.1"/><circle cx="90" cy="40" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-            animation: float 20s ease-in-out infinite;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
         }
 
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            33% { transform: translate(30px, -30px) rotate(120deg); }
-            66% { transform: translate(-20px, 20px) rotate(240deg); }
-        }
-
-        .logo {
-            font-size: 3rem;
-            margin-bottom: 20px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .welcome-text {
-            position: relative;
-            z-index: 1;
-        }
-
-        .welcome-text h1 {
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-            font-weight: 700;
-        }
-
-        .welcome-text p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            line-height: 1.6;
-        }
-
+        /* Lado derecho con formulario */
         .login-right {
-            flex: 1;
-            padding: 60px 40px;
+            width: 480px;
+            background: white;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            padding: 60px 50px;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
         }
 
-        .form-header {
-            text-align: center;
-            margin-bottom: 40px;
+        /* Logo y título del sistema */
+        .system-header {
+            text-align: right;
+            margin-bottom: 60px;
         }
 
-        .form-header h2 {
-            color: #333;
-            font-size: 2rem;
-            margin-bottom: 10px;
+        .system-logo {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-bottom: 8px;
         }
 
-        .form-header p {
+        .system-logo i {
+            font-size: 2.5rem;
+            color: #0078d4;
+        }
+
+        .system-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0078d4;
+            line-height: 1.3;
+            margin-bottom: 5px;
+        }
+
+        .system-subtitle {
+            font-size: 0.95rem;
             color: #666;
-            font-size: 1rem;
+            font-weight: 400;
+        }
+
+        /* Sección de credenciales */
+        .credentials-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .credentials-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 25px;
         }
 
         .form-group {
-            margin-bottom: 25px;
-            position: relative;
+            margin-bottom: 20px;
         }
 
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            color: #333;
+            color: #666;
+            font-size: 0.9rem;
             font-weight: 500;
-            font-size: 0.95rem;
         }
 
         .form-group input {
             width: 100%;
-            padding: 15px 20px;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 1rem;
+            padding: 12px 15px;
+            border: 1px solid #d1d1d1;
+            border-radius: 4px;
+            font-size: 0.95rem;
             transition: all 0.3s ease;
-            background: white;
+            background: #fafafa;
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #0078d4;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
         }
 
-        .form-group.has-icon {
-            position: relative;
-        }
-
-        .form-group.has-icon i {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
+        .form-group input::placeholder {
             color: #999;
-            cursor: pointer;
-            transition: color 0.3s ease;
         }
 
-        .form-group.has-icon i:hover {
-            color: #667eea;
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 30px;
         }
 
-        .btn {
-            width: 100%;
-            padding: 15px 20px;
+        .btn-signin {
+            padding: 12px 40px;
+            background: #0078d4;
+            color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 1rem;
+            border-radius: 4px;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        .btn-signin:hover {
+            background: #006cbd;
+            box-shadow: 0 2px 8px rgba(0, 120, 212, 0.3);
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        .btn-signin:active {
+            transform: translateY(1px);
         }
 
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
+        .btn-signin:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-            transform: none !important;
         }
 
+        .forgot-link {
+            color: #0078d4;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .forgot-link:hover {
+            color: #006cbd;
+            text-decoration: underline;
+        }
+
+        /* Loading spinner */
         .loading {
             display: none;
             align-items: center;
-            justify-content: center;
             gap: 10px;
             margin-top: 20px;
+            color: #666;
         }
 
         .loading.show {
@@ -220,12 +196,12 @@
         }
 
         .spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #667eea;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #e0e0e0;
+            border-top: 2px solid #0078d4;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: spin 0.8s linear infinite;
         }
 
         @keyframes spin {
@@ -233,11 +209,12 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Alertas */
         .alert {
-            padding: 15px 20px;
-            border-radius: 10px;
+            padding: 12px 15px;
+            border-radius: 4px;
             margin-bottom: 20px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             display: none;
             animation: slideDown 0.3s ease-out;
         }
@@ -254,12 +231,14 @@
         }
 
         .alert.show {
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .alert-success {
-            background: #d4edda;
-            color: #155724;
+            background: #dff6dd;
+            color: #1e7e34;
             border: 1px solid #c3e6cb;
         }
 
@@ -269,123 +248,136 @@
             border: 1px solid #f5c6cb;
         }
 
+        /* Botones de prueba */
         .test-data {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
+            background: #fff9e6;
+            border: 1px solid #ffe5a3;
+            border-radius: 4px;
             padding: 12px;
             margin-bottom: 20px;
             text-align: center;
         }
 
+        .test-data strong {
+            display: block;
+            margin-bottom: 10px;
+            color: #856404;
+            font-size: 0.9rem;
+        }
+
         .test-buttons {
             display: flex;
             gap: 10px;
-            margin-top: 10px;
         }
 
         .btn-test {
             flex: 1;
             padding: 8px 12px;
-            border: 1px solid #667eea;
+            border: 1px solid #0078d4;
             background: white;
-            color: #667eea;
-            border-radius: 6px;
+            color: #0078d4;
+            border-radius: 4px;
             font-size: 0.85rem;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
         .btn-test:hover {
-            background: #667eea;
+            background: #0078d4;
             color: white;
         }
 
-        @media (max-width: 768px) {
-            .login-container {
-                flex-direction: column;
-                max-width: 400px;
-                min-height: auto;
-            }
-
+        /* Responsive */
+        @media (max-width: 1024px) {
             .login-left {
-                padding: 40px 30px;
-                min-height: 200px;
+                display: none;
             }
 
-            .welcome-text h1 {
-                font-size: 2rem;
+            .login-right {
+                width: 100%;
+                max-width: 480px;
+                margin: 0 auto;
             }
+        }
 
-            .logo {
-                font-size: 2rem;
-            }
-
+        @media (max-width: 480px) {
             .login-right {
                 padding: 40px 30px;
             }
 
-            .form-header h2 {
-                font-size: 1.5rem;
+            .system-title {
+                font-size: 1.2rem;
+            }
+
+            .system-logo i {
+                font-size: 2rem;
             }
         }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <div class="login-left">
-            <div class="logo">
-                <i class="fas fa-boxes"></i>
-            </div>
-            <div class="welcome-text">
-                <h1>Bienvenido</h1>
-                <p>Sistema de gestión y control de inventario de cartón. Accede a tu cuenta para administrar productos, movimientos y reportes.</p>
-            </div>
-        </div>
+        <!-- Lado izquierdo con imagen -->
+        <div class="login-left"></div>
 
+        <!-- Lado derecho con formulario -->
         <div class="login-right">
-            <div class="form-header">
-                <h2>Acceso al Sistema</h2>
-                <p>Inicia sesión con tus credenciales</p>
-            </div>
-
-            <div class="test-data">
-                <strong>Credenciales de Prueba:</strong>
-                <div class="test-buttons">
-                    <button class="btn-test" onclick="fillTestData('julio')">Julio</button>
-                    <button class="btn-test" onclick="fillTestData('admin')">Admin</button>
+            <!-- Logo y título del sistema -->
+            <div class="system-header">
+                <div class="system-logo">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <div class="system-title">
+                    Gestión y Control de<br>Órdenes de Compra de Cartón
+                </div>
+                <div class="system-subtitle">
+                    The Cloud ERP - PXG México
                 </div>
             </div>
 
-            <div id="alert-container"></div>
+            <!-- Sección de credenciales -->
+            <div class="credentials-section">
+                <h2 class="credentials-title">Enter credentials</h2>
 
-            <form id="login-form">
-                <div class="form-group">
-                    <label for="login-username">
-                        <i class="fas fa-user"></i> Usuario
-                    </label>
-                    <input type="text" id="login-username" name="username" required 
-                           placeholder="Tu usuario">
+                <!-- Botones de prueba -->
+                <div class="test-data">
+                    <strong>Credenciales de Prueba:</strong>
+                    <div class="test-buttons">
+                        <button class="btn-test" onclick="fillTestData('julio')">Julio</button>
+                        <button class="btn-test" onclick="fillTestData('admin')">Admin</button>
+                    </div>
                 </div>
 
-                <div class="form-group has-icon">
-                    <label for="login-password">
-                        <i class="fas fa-lock"></i> Contraseña
-                    </label>
-                    <input type="password" id="login-password" name="password" required 
-                           placeholder="Tu contraseña">
-                    <i class="fas fa-eye" onclick="togglePassword('login-password', this)"></i>
-                </div>
+                <!-- Alertas -->
+                <div id="alert-container"></div>
 
-                <button type="submit" class="btn btn-primary" id="login-btn">
-                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-                </button>
+                <!-- Formulario -->
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-username">Username</label>
+                        <input type="text" id="login-username" name="username" required 
+                               placeholder="Enter your username">
+                    </div>
 
-                <div class="loading" id="login-loading">
-                    <div class="spinner"></div>
-                    <span>Iniciando sesión...</span>
-                </div>
-            </form>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" name="password" required 
+                               placeholder="Enter your password">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-signin" id="login-btn">
+                            Sign In
+                        </button>
+                        <a href="#" class="forgot-link">Forgot your credentials?</a>
+                    </div>
+
+                    <div class="loading" id="login-loading">
+                        <div class="spinner"></div>
+                        <span>Signing in...</span>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -414,16 +406,6 @@
                 document.getElementById('login-username').value = 'admin';
                 document.getElementById('login-password').value = 'admin123';
             }
-        }
-
-        // Toggle password visibility
-        function togglePassword(inputId, icon) {
-            const input = document.getElementById(inputId);
-            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
-            input.setAttribute('type', type);
-            
-            icon.classList.toggle('fa-eye');
-            icon.classList.toggle('fa-eye-slash');
         }
 
         // Mostrar alertas
