@@ -884,21 +884,62 @@ async function loadProduccion() {
 
 // ===== FUNCIONES DE ACTUALIZACIÓN DE UI =====
 
-function updateDashboardStats() {
-    const totalProductos = productos.length;
-    const totalStock = inventario.reduce((sum, item) => sum + item.cantidad_actual, 0);
-    const stockBajo = inventario.filter(item => item.cantidad_actual <= item.cantidad_minima).length;
-    const totalProduccion = produccion.reduce((sum, item) => sum + item.cantidad_produccion, 0);
+async function updateDashboardStats() {
+    try {
+        // 1. Total Productos: Contar todos los materiales en productos_carton
+        const { count: totalProductos, error: errorProductos } = await supabase
+            .from('productos_carton')
+            .select('*', { count: 'exact', head: true });
 
-    const totalProductosEl = document.getElementById('total-productos');
-    const totalStockEl = document.getElementById('total-stock');
-    const stockBajoEl = document.getElementById('stock-bajo');
-    const totalProduccionEl = document.getElementById('total-produccion');
+        if (errorProductos) throw errorProductos;
 
-    if (totalProductosEl) totalProductosEl.textContent = totalProductos;
-    if (totalStockEl) totalStockEl.textContent = totalStock.toLocaleString();
-    if (stockBajoEl) stockBajoEl.textContent = stockBajo;
-    if (totalProduccionEl) totalProduccionEl.textContent = totalProduccion.toLocaleString();
+        // 2. Stock Total: Suma de balance_inicial de balances_veritiv
+        const { data: balances, error: errorBalances } = await supabase
+            .from('balances_veritiv')
+            .select('balance_inicial');
+
+        if (errorBalances) throw errorBalances;
+
+        const totalStock = balances.reduce((sum, item) => sum + (parseFloat(item.balance_inicial) || 0), 0);
+
+        // 3. Stock Bajo: Contar materiales con balance < 1000 (umbral bajo)
+        const { data: balancesBajos, error: errorBajos } = await supabase
+            .from('balances_veritiv')
+            .select('balance')
+            .lt('balance', 1000);
+
+        if (errorBajos) throw errorBajos;
+
+        const stockBajo = balancesBajos.length;
+
+        // 4. Movimientos Hoy: Contar órdenes creadas hoy
+        const hoy = new Date().toISOString().split('T')[0];
+        const { count: movimientosHoy, error: errorMovimientos } = await supabase
+            .from('ordenes_compra')
+            .select('*', { count: 'exact', head: true })
+            .gte('fecha_creacion', hoy + 'T00:00:00')
+            .lte('fecha_creacion', hoy + 'T23:59:59');
+
+        if (errorMovimientos) throw errorMovimientos;
+
+        // Actualizar elementos del DOM
+        const totalProductosEl = document.getElementById('total-productos');
+        const totalStockEl = document.getElementById('total-stock');
+        const stockBajoEl = document.getElementById('productos-stock-bajo');
+        const movimientosHoyEl = document.getElementById('movimientos-hoy');
+
+        if (totalProductosEl) totalProductosEl.textContent = totalProductos || 0;
+        if (totalStockEl) totalStockEl.textContent = Math.round(totalStock).toLocaleString();
+        if (stockBajoEl) stockBajoEl.textContent = stockBajo || 0;
+        if (movimientosHoyEl) movimientosHoyEl.textContent = movimientosHoy || 0;
+
+        // Cargar gráfica de materiales más pedidos
+        await cargarGraficaMaterialesPedidos();
+
+    } catch (error) {
+        console.error('Error actualizando estadísticas del dashboard:', error);
+        showToast('Error cargando estadísticas', 'error');
+    }
 }
 
 function updateProduccionStats() {
@@ -3684,3 +3725,161 @@ async function filtrarBalancesUsados() {
 }
 
 // ===== FIN DE FUNCIONES PARA BALANCES USADOS =====
+
+
+// ===== GRÁFICA DE MATERIALES MÁS PEDIDOS =====
+
+let chartMaterialesPedidos = null;
+
+async function cargarGraficaMaterialesPedidos() {
+    try {
+        console.log('📊 Cargando gráfica de materiales más pedidos...');
+
+        // Consultar todas las órdenes de compra con su número de material
+        const { data: ordenes, error } = await supabase
+            .from('ordenes_compra')
+            .select('numero_material');
+
+        if (error) throw error;
+
+        // Contar cuántas veces aparece cada material
+        const conteoMateriales = {};
+        ordenes.forEach(orden => {
+            const material = orden.numero_material || 'Sin material';
+            conteoMateriales[material] = (conteoMateriales[material] || 0) + 1;
+        });
+
+        // Convertir a array y ordenar por cantidad (descendente)
+        const materialesArray = Object.entries(conteoMateriales)
+            .map(([material, cantidad]) => ({ material, cantidad }))
+            .sort((a, b) => b.cantidad - a.cantidad)
+            .slice(0, 10); // Top 10
+
+        // Preparar datos para la gráfica
+        const labels = materialesArray.map(item => item.material);
+        const datos = materialesArray.map(item => item.cantidad);
+
+        // Obtener el canvas
+        const canvas = document.getElementById('chart-materiales-pedidos');
+        if (!canvas) {
+            console.error('❌ Canvas de gráfica no encontrado');
+            return;
+        }
+
+        const ctx = canvas.getContext('2d');
+
+        // Destruir gráfica anterior si existe
+        if (chartMaterialesPedidos) {
+            chartMaterialesPedidos.destroy();
+        }
+
+        // Crear nueva gráfica
+        chartMaterialesPedidos = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Cantidad de Órdenes',
+                    data: datos,
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',   // Azul
+                        'rgba(16, 185, 129, 0.8)',   // Verde
+                        'rgba(245, 158, 11, 0.8)',   // Amarillo
+                        'rgba(239, 68, 68, 0.8)',    // Rojo
+                        'rgba(139, 92, 246, 0.8)',   // Morado
+                        'rgba(236, 72, 153, 0.8)',   // Rosa
+                        'rgba(20, 184, 166, 0.8)',   // Teal
+                        'rgba(251, 146, 60, 0.8)',   // Naranja
+                        'rgba(99, 102, 241, 0.8)',   // Indigo
+                        'rgba(34, 197, 94, 0.8)'     // Verde claro
+                    ],
+                    borderColor: [
+                        'rgba(59, 130, 246, 1)',
+                        'rgba(16, 185, 129, 1)',
+                        'rgba(245, 158, 11, 1)',
+                        'rgba(239, 68, 68, 1)',
+                        'rgba(139, 92, 246, 1)',
+                        'rgba(236, 72, 153, 1)',
+                        'rgba(20, 184, 166, 1)',
+                        'rgba(251, 146, 60, 1)',
+                        'rgba(99, 102, 241, 1)',
+                        'rgba(34, 197, 94, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Top 10 Materiales Más Pedidos',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        padding: {
+                            top: 10,
+                            bottom: 20
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        titleFont: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 13
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                return 'Órdenes: ' + context.parsed.y;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            maxRotation: 45,
+                            minRotation: 45
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        console.log('✅ Gráfica de materiales más pedidos cargada');
+
+    } catch (error) {
+        console.error('❌ Error cargando gráfica de materiales:', error);
+    }
+}
+
+// ===== FIN DE GRÁFICA DE MATERIALES MÁS PEDIDOS =====

@@ -8,6 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -1223,18 +1224,7 @@
                     <i class="fas fa-chart-pie"></i>
                     <span>Dashboard</span>
                 </li>
-                <li class="menu-item" data-section="productos">
-                    <i class="fas fa-box"></i>
-                    <span>Productos</span>
-                </li>
-                <li class="menu-item" data-section="inventario">
-                    <i class="fas fa-warehouse"></i>
-                    <span>Inventario</span>
-                </li>
-                <li class="menu-item" data-section="movimientos">
-                    <i class="fas fa-exchange-alt"></i>
-                    <span>Movimientos</span>
-                </li>
+
                <li class="menu-item" data-section="oci-crear">
     <i class="fas fa-plus-circle"></i>
     <span>Crear OCI</span>
@@ -1251,14 +1241,7 @@
                     <i class="fas fa-balance-scale"></i>
                     <span>Balance</span>
                 </li>
-                <li class="menu-item" data-section="produccion">
-                    <i class="fas fa-industry"></i>
-                    <span>Producción</span>
-                </li>
-                <li class="menu-item" data-section="reportes">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Reportes</span>
-                </li>
+
             </ul>
         </nav>
 
@@ -1320,55 +1303,14 @@
                             </div>
                         </div>
                     </div>
-                </section>
 
-                <!-- Productos Section -->
-                <section id="productos-section" class="content-section">
-                    <div class="card">
+                    <!-- Gráfica de Materiales Más Pedidos -->
+                    <div class="card" style="margin-top: 2rem;">
                         <div class="card-header">
-                            <h3>Gestión de Productos</h3>
+                            <h3><i class="fas fa-chart-bar"></i> Materiales Más Pedidos</h3>
                         </div>
                         <div class="card-content">
-                            <div id="productos-list">
-                                <div class="loading">
-                                    <div class="spinner"></div>
-                                    <p>Cargando productos...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Inventario Section -->
-                <section id="inventario-section" class="content-section">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Control de Inventario</h3>
-                        </div>
-                        <div class="card-content">
-                            <div id="inventario-list">
-                                <div class="loading">
-                                    <div class="spinner"></div>
-                                    <p>Cargando inventario...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Movimientos Section -->
-                <section id="movimientos-section" class="content-section">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Historial de Movimientos</h3>
-                        </div>
-                        <div class="card-content">
-                            <div id="movimientos-list">
-                                <div class="loading">
-                                    <div class="spinner"></div>
-                                    <p>Cargando movimientos...</p>
-                                </div>
-                            </div>
+                            <canvas id="chart-materiales-pedidos" style="max-height: 400px;"></canvas>
                         </div>
                     </div>
                 </section>
@@ -1588,29 +1530,10 @@
                     </div>
                 </section>
 
-                <!-- Producción Section -->
-                <section id="produccion-section" class="content-section">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Control de Producción</h3>
-                        </div>
-                        <div class="card-content">
-                            <p>Función en desarrollo. Próximamente disponible.</p>
-                        </div>
-                    </div>
-                </section>
 
-                <!-- Reportes Section -->
-                <section id="reportes-section" class="content-section">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Reportes y Estadísticas</h3>
-                        </div>
-                        <div class="card-content">
-                            <p>Función en desarrollo. Próximamente disponible.</p>
-                        </div>
-                    </div>
-                </section>
+
+
+
             </div>
         </main>
     </div>
