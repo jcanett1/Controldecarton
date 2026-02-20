@@ -247,6 +247,19 @@
             background: #f8d7da;
             color: #721c24;
         }
+        
+        /* ✅ NUEVO: Estilo para filas aprobadas o recibidas */
+        .fila-aprobada {
+            background-color: #d4edda !important;  /* Verde claro */
+        }
+        
+        .fila-aprobada td {
+            background-color: transparent !important;
+        }
+        
+        .fila-aprobada:hover {
+            background-color: #c3e6cb !important;  /* Verde más oscuro al hover */
+        }
 
         .cargando {
             text-align: center;
@@ -1016,7 +1029,11 @@
                 const zorNumero = orden.zor || '';
                 const zorClass = orden.zor ? 'zor-saved' : '';
                 
-                return '<tr data-id="' + orden.id + '">' +
+                // ✅ NUEVO: Determinar si mostrar botones según el estado
+                const esAprobadaORecibida = orden.estado === 'APROBADA' || orden.estado === 'RECIBIDA';
+                const filaClass = esAprobadaORecibida ? ' class="fila-aprobada"' : '';
+                
+                return '<tr data-id="' + orden.id + '"' + filaClass + '>' +
                     '<td><strong>' + orden.numero_oci + '</strong></td>' +
                     '<td>' + fecha + '</td>' +
                     '<td>' + usuario + '</td>' +
@@ -1044,8 +1061,11 @@
                     '<td>' +
                         '<div class="acciones">' +
                             '<button class="btn btn-sm btn-info" onclick="verDetalles(' + orden.id + ')" title="Ver detalles"><i class="fas fa-eye"></i> Ver</button>' +
-                            '<button class="btn btn-sm btn-success" onclick="aprobarOrden(' + orden.id + ')" title="Aprobar"><i class="fas fa-check"></i> Aprobar</button>' +
-                            '<button class="btn btn-sm btn-danger" onclick="rechazarOrden(' + orden.id + ')" title="Rechazar"><i class="fas fa-times"></i> Rechazar</button>' +
+                            // ✅ NUEVO: Solo mostrar botones Aprobar y Rechazar si NO está aprobada/recibida
+                            (esAprobadaORecibida ? '' : 
+                                '<button class="btn btn-sm btn-success" onclick="aprobarOrden(' + orden.id + ')" title="Aprobar"><i class="fas fa-check"></i> Aprobar</button>' +
+                                '<button class="btn btn-sm btn-danger" onclick="rechazarOrden(' + orden.id + ')" title="Rechazar"><i class="fas fa-times"></i> Rechazar</button>'
+                            ) +
                         '</div>' +
                     '</td>' +
                     '</tr>';
