@@ -811,6 +811,7 @@
     padding: 0.75rem 1rem;
     text-align: left;
     border-bottom: 1px solid #f1f5f9;
+    color: #000000;  /* Texto negro para mejor visibilidad */
 }
 
 .inventory-table .data-table th {
@@ -828,6 +829,16 @@
 
 .inventory-table .data-table tbody tr:nth-child(even) {
     background: #fcfcfd;
+}
+
+/* Asegurar que el texto en las celdas sea negro y visible */
+.inventory-table .data-table td strong {
+    color: #000000;
+    font-weight: 600;
+}
+
+.inventory-table .data-table td {
+    color: #1f2937;  /* Gris muy oscuro, casi negro */
 }
 
 /* Badges para cantidades */
