@@ -1,6 +1,6 @@
 # 📧 Edge Function: notificar-nueva-oci
 
-Supabase Edge Function que envía notificaciones por correo electrónico cuando se crea una nueva orden de compra.
+Supabase Edge Function que envía notificaciones por correo electrónico usando **Resend API** cuando se crea una nueva orden de compra.
 
 ---
 
@@ -17,7 +17,10 @@ supabase login
 cd /ruta/a/Controldecarton
 supabase link --project-ref bdrxcilsuxbkpmolfbgu
 
-# 4. Desplegar función
+# 4. Configurar API Key de Resend
+supabase secrets set RESEND_API_KEY=re_tu_api_key_aqui
+
+# 5. Desplegar función
 supabase functions deploy notificar-nueva-oci
 ```
 
@@ -32,27 +35,51 @@ supabase functions deploy notificar-nueva-oci
 ### **Remitente:**
 - controlcarton@pxg.com
 
-### **Servidor SMTP:**
-- Host: 10.232.237.25 (smtp.yamww.internal)
-- Puerto: 25
-- Autenticación: Desactivada (servidor interno)
+### **Servicio de Correo:**
+- **Resend API** (https://resend.com)
+- 3,000 correos gratis al mes
+- Sin tarjeta de crédito requerida
 
 ---
 
-## 🔗 Webhook
+## 🔑 Obtener API Key de Resend
 
-Después de desplegar, configura el webhook en Supabase Dashboard:
+### **Paso 1: Crear Cuenta**
 
-1. **Database** → **Webhooks** → **Create webhook**
-2. **Name:** `notificar_nueva_oci`
-3. **Table:** `ordenes_compra`
-4. **Events:** ✅ INSERT
-5. **Method:** POST
-6. **URL:** `https://bdrxcilsuxbkpmolfbgu.supabase.co/functions/v1/notificar-nueva-oci`
+1. Ve a: **https://resend.com**
+2. Regístrate con tu correo
+3. Verifica tu email
+
+### **Paso 2: Crear API Key**
+
+1. En el dashboard, ve a: **Settings** → **API Keys**
+2. Haz clic en **"Create API Key"**
+3. Nombre: `OCI PXG Notifications`
+4. Permiso: `Sending access`
+5. Copia la API Key (empieza con `re_...`)
+
+### **Paso 3: Configurar en Supabase**
+
+```bash
+supabase secrets set RESEND_API_KEY=re_tu_api_key_aqui
+```
 
 ---
 
-## 🧪 Prueba
+## 🔗 Configurar Webhook en Supabase
+
+1. **Supabase Dashboard** → **Database** → **Webhooks**
+2. **Create webhook:**
+   - **Name:** `notificar_nueva_oci`
+   - **Table:** `ordenes_compra`
+   - **Events:** ✅ INSERT
+   - **Method:** POST
+   - **URL:** `https://bdrxcilsuxbkpmolfbgu.supabase.co/functions/v1/notificar-nueva-oci`
+3. **Guardar**
+
+---
+
+## 🧪 Probar
 
 ```bash
 # Ver logs en tiempo real
@@ -64,9 +91,17 @@ supabase functions logs notificar-nueva-oci --tail
 
 ---
 
-## 📖 Documentación Completa
+## 📊 Monitorear
 
-Ver: `/GUIA_EDGE_FUNCTION_WEBHOOK.md`
+### **Resend Dashboard:**
+- Ve a: https://resend.com/emails
+- Ver todos los correos enviados
+- Estado: Delivered, Bounced, etc.
+
+### **Supabase Logs:**
+```bash
+supabase functions logs notificar-nueva-oci
+```
 
 ---
 
@@ -85,8 +120,18 @@ supabase functions logs notificar-nueva-oci --tail
 
 ---
 
+## 📖 Documentación Completa
+
+Ver: `/GUIA_RESEND_API.md`
+
+---
+
 ## 📞 Soporte
 
 **Sistema OCI PXG MÉXICO**  
 **Creado por:** IT Tequila  
 **Soporte:** jcanett@pxg.com
+
+**Resend:**  
+- Docs: https://resend.com/docs
+- Dashboard: https://resend.com/emails
