@@ -9,11 +9,17 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 interface OCI {
   id: number;
   numero_oci: string;
-  id_producto: number;
-  cantidad_total: number;
-  id_usuario: number;
+  usuario_solicitante_id: number;
+  material_numero: string;
+  piezas_por_pallet: number;
+  cantidad_pallets: number;
+  cantidad_total_piezas: number;
   fecha_creacion: string;
   estado: string;
+  observaciones?: string;
+  oc_mtk?: string;
+  qty_a_enviar?: number;
+  zor?: string;
 }
 
 interface WebhookPayload {
@@ -91,10 +97,10 @@ serve(async (req) => {
                 </tr>
                 <tr>
                   <td style="border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #1f2937; background-color: #f9fafb;">
-                    📦 ID Producto
+                    📦 Material
                   </td>
                   <td style="border-bottom: 1px solid #e5e7eb; color: #374151;">
-                    ${oci.id_producto}
+                    ${oci.material_numero}
                   </td>
                 </tr>
                 <tr style="background-color: #f9fafb;">
@@ -102,35 +108,73 @@ serve(async (req) => {
                     📊 Cantidad Total
                   </td>
                   <td style="border-bottom: 1px solid #e5e7eb; color: #374151;">
-                    <strong>${oci.cantidad_total.toLocaleString()}</strong> piezas
+                    <strong>${(oci.cantidad_total_piezas || 0).toLocaleString()}</strong> piezas
                   </td>
                 </tr>
                 <tr>
                   <td style="border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #1f2937; background-color: #f9fafb;">
-                    👤 Usuario Solicitante
+                    📦 Pallets
                   </td>
                   <td style="border-bottom: 1px solid #e5e7eb; color: #374151;">
-                    ID: ${oci.id_usuario}
+                    ${oci.cantidad_pallets || 0} pallets (${oci.piezas_por_pallet || 0} piezas/pallet)
                   </td>
                 </tr>
                 <tr style="background-color: #f9fafb;">
                   <td style="border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #1f2937;">
+                    👤 Usuario Solicitante
+                  </td>
+                  <td style="border-bottom: 1px solid #e5e7eb; color: #374151;">
+                    ID: ${oci.usuario_solicitante_id}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #1f2937; background-color: #f9fafb;">
                     📅 Fecha de Creación
                   </td>
                   <td style="border-bottom: 1px solid #e5e7eb; color: #374151;">
                     ${new Date(oci.fecha_creacion).toLocaleString('es-MX')}
                   </td>
                 </tr>
-                <tr>
-                  <td style="font-weight: bold; color: #1f2937; background-color: #f9fafb;">
+                <tr style="background-color: #f9fafb;">
+                  <td style="border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #1f2937;">
                     🔄 Estado
                   </td>
-                  <td>
+                  <td style="border-bottom: 1px solid #e5e7eb;">
                     <span style="display: inline-block; padding: 4px 12px; background-color: #fef3c7; color: #92400e; border-radius: 12px; font-size: 14px; font-weight: bold;">
                       ${oci.estado}
                     </span>
                   </td>
                 </tr>
+                ${oci.oc_mtk ? `
+                <tr>
+                  <td style="border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #1f2937; background-color: #f9fafb;">
+                    📄 OC MTK
+                  </td>
+                  <td style="border-bottom: 1px solid #e5e7eb; color: #374151;">
+                    ${oci.oc_mtk}
+                  </td>
+                </tr>
+                ` : ''}
+                ${oci.zor ? `
+                <tr style="background-color: #f9fafb;">
+                  <td style="border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #1f2937;">
+                    📋 ZOR
+                  </td>
+                  <td style="border-bottom: 1px solid #e5e7eb; color: #374151;">
+                    ${oci.zor}
+                  </td>
+                </tr>
+                ` : ''}
+                ${oci.observaciones ? `
+                <tr>
+                  <td style="font-weight: bold; color: #1f2937; background-color: #f9fafb; vertical-align: top;">
+                    📝 Observaciones
+                  </td>
+                  <td style="color: #374151;">
+                    ${oci.observaciones}
+                  </td>
+                </tr>
+                ` : ''}
               </table>
 
               <p style="margin: 20px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
