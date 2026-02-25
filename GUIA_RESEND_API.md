@@ -8,20 +8,18 @@ Sistema de notificaciones automáticas por correo electrónico para el Sistema O
 
 **Resend** es un servicio moderno de envío de correos electrónicos diseñado específicamente para desarrolladores. Es perfecto para Supabase Edge Functions porque:
 
-✅ **API simple y moderna**  
-✅ **3,000 correos gratis al mes**  
-✅ **Sin tarjeta de crédito requerida**  
-✅ **Excelente para Deno/Edge Functions**  
-✅ **Entrega rápida y confiable**  
-✅ **Dashboard con métricas en tiempo real**  
+✅ **API simple y moderna**✅ **3,000 correos gratis al mes**✅ **Sin tarjeta de crédito requerida**✅ **Excelente para Deno/Edge Functions**✅ **Entrega rápida y confiable**✅ **Dashboard con métricas en tiempo real**
 
 ---
 
 ## 📋 Requisitos Previos
 
 - ✅ Cuenta de Supabase (ya la tienes)
+
 - ✅ Proyecto de Supabase configurado
+
 - ✅ Supabase CLI instalado
+
 - ✅ Cuenta de Resend (la crearemos ahora)
 
 ---
@@ -30,17 +28,21 @@ Sistema de notificaciones automáticas por correo electrónico para el Sistema O
 
 ### **1.1. Registrarse**
 
-1. Ve a: **https://resend.com**
-2. Haz clic en **"Sign Up"** o **"Get Started"**
-3. Regístrate con:
-   - **Correo:** jcanett@pxg.com (o el que prefieras)
-   - **Contraseña:** (crea una segura)
-4. Verifica tu correo electrónico
+1. Ve a: [**https://resend.com**](https://resend.com)
+
+1. Haz clic en **"Sign Up"** o **"Get Started"**
+
+1. Regístrate con:
+  - **Correo:** [jcanett@pxg.com](mailto:jcanett@pxg.com) (o el que prefieras )
+  - **Contraseña:** (crea una segura)
+
+1. Verifica tu correo electrónico
 
 ### **1.2. Completar Perfil**
 
 1. Ingresa el nombre de tu empresa: **PXG México**
-2. Selecciona el caso de uso: **Transactional Emails** (correos transaccionales)
+
+1. Selecciona el caso de uso: **Transactional Emails** (correos transaccionales)
 
 ---
 
@@ -49,15 +51,20 @@ Sistema de notificaciones automáticas por correo electrónico para el Sistema O
 ### **2.1. Crear API Key**
 
 1. Una vez dentro del dashboard de Resend
-2. Ve a: **Settings** → **API Keys**
-3. Haz clic en **"Create API Key"**
-4. Configura:
-   - **Name:** `OCI PXG Notifications`
-   - **Permission:** `Sending access` (permiso de envío)
-5. Haz clic en **"Create"**
-6. **⚠️ IMPORTANTE:** Copia la API Key inmediatamente
-   - Se verá así: `re_xxxxxxxxxxxxxxxxxxxxxxxxxx`
-   - **Solo se muestra una vez**, guárdala en un lugar seguro
+
+1. Ve a: **Settings** → **API Keys**
+
+1. Haz clic en **"Create API Key"**
+
+1. Configura:
+  - **Name:** `OCI PXG Notifications`
+  - **Permission:** `Sending access` (permiso de envío)
+
+1. Haz clic en **"Create"**
+
+1. **⚠️ IMPORTANTE:** Copia la API Key inmediatamente
+  - Se verá así: `re_xxxxxxxxxxxxxxxxxxxxxxxxxx`
+  - **Solo se muestra una vez**, guárdala en un lugar seguro
 
 ---
 
@@ -68,22 +75,26 @@ Para enviar desde `controlcarton@pxg.com`, necesitas verificar el dominio `pxg.c
 ### **3.1. Agregar Dominio**
 
 1. En Resend Dashboard, ve a: **Domains**
-2. Haz clic en **"Add Domain"**
-3. Ingresa: `pxg.com`
-4. Haz clic en **"Add"**
+
+1. Haz clic en **"Add Domain"**
+
+1. Ingresa: `pxg.com`
+
+1. Haz clic en **"Add"**
 
 ### **3.2. Configurar DNS**
 
 Resend te dará registros DNS que debes agregar en tu proveedor de DNS:
 
 | Tipo | Nombre | Valor |
-|------|--------|-------|
+| --- | --- | --- |
 | **TXT** | `_resend.pxg.com` | `resend-verification=xxx...` |
 | **MX** | `pxg.com` | `feedback-smtp.resend.com` |
 | **TXT** | `pxg.com` | `v=spf1 include:_spf.resend.com ~all` |
 | **CNAME** | `resend._domainkey.pxg.com` | `resend._domainkey.resend.com` |
 
 **Nota:** Si no puedes verificar el dominio ahora, puedes usar temporalmente:
+
 - `controlcarton@resend.dev` (dominio de prueba de Resend)
 
 ---
@@ -93,18 +104,21 @@ Resend te dará registros DNS que debes agregar en tu proveedor de DNS:
 Si aún no lo tienes instalado:
 
 ### **En Mac/Linux:**
-```bash
+
+```shell
 brew install supabase/tap/supabase
 ```
 
 ### **En Windows (con Scoop):**
+
 ```bash
 scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
 scoop install supabase
 ```
 
 ### **Verificar instalación:**
-```bash
+
+```shell
 supabase --version
 ```
 
@@ -128,6 +142,7 @@ supabase link --project-ref bdrxcilsuxbkpmolfbgu
 ```
 
 **Salida esperada:**
+
 ```
 Linked to project bdrxcilsuxbkpmolfbgu
 ```
@@ -145,6 +160,7 @@ supabase secrets set RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxx
 **Reemplaza** `re_xxxxxxxxxxxxxxxxxxxxxxxxxx` con tu API Key real de Resend.
 
 **Salida esperada:**
+
 ```
 ✅ Secret RESEND_API_KEY set successfully
 ```
@@ -158,6 +174,7 @@ supabase functions deploy notificar-nueva-oci
 ```
 
 **Salida esperada:**
+
 ```
 Deploying function notificar-nueva-oci...
 Function URL: https://bdrxcilsuxbkpmolfbgu.supabase.co/functions/v1/notificar-nueva-oci
@@ -172,26 +189,29 @@ Function URL: https://bdrxcilsuxbkpmolfbgu.supabase.co/functions/v1/notificar-nu
 
 ### **9.1. Abrir Supabase Dashboard**
 
-1. Ve a: **https://supabase.com/dashboard**
-2. Selecciona tu proyecto: **bdrxcilsuxbkpmolfbgu**
+1. Ve a: [**https://supabase.com/dashboard**](https://supabase.com/dashboard)
+
+1. Selecciona tu proyecto: **bdrxcilsuxbkpmolfbgu**
 
 ### **9.2. Crear Webhook**
 
 1. En el menú lateral, ve a: **Database** → **Webhooks**
-2. Haz clic en **"Create webhook"** o **"Enable webhooks"**
-3. Configura:
+
+1. Haz clic en **"Create webhook"** o **"Enable webhooks"**
+
+1. Configura:
 
 | Campo | Valor |
-|-------|-------|
+| --- | --- |
 | **Name** | `notificar_nueva_oci` |
 | **Table** | `ordenes_compra` |
-| **Events** | ✅ **INSERT** (solo marcar INSERT) |
+| **Events** | ✅ **INSERT** (solo marcar INSERT ) |
 | **Type** | `HTTP Request` |
 | **Method** | `POST` |
 | **URL** | `https://bdrxcilsuxbkpmolfbgu.supabase.co/functions/v1/notificar-nueva-oci` |
-| **HTTP Headers** | (dejar vacío) |
+| **HTTP Headers** | (dejar vacío ) |
 
-4. Haz clic en **"Create webhook"** o **"Save"**
+1. Haz clic en **"Create webhook"** o **"Save"**
 
 ---
 
@@ -200,6 +220,7 @@ Function URL: https://bdrxcilsuxbkpmolfbgu.supabase.co/functions/v1/notificar-nu
 ### **10.1. Ver Logs en Tiempo Real**
 
 En tu terminal:
+
 ```bash
 supabase functions logs notificar-nueva-oci --tail
 ```
@@ -209,13 +230,17 @@ Esto mostrará los logs en tiempo real.
 ### **10.2. Crear una OCI de Prueba**
 
 1. Ve a tu sistema OCI (index.html)
-2. Crea una nueva orden de compra
-3. Llena todos los campos
-4. Haz clic en **"Crear OCI"**
+
+1. Crea una nueva orden de compra
+
+1. Llena todos los campos
+
+1. Haz clic en **"Crear OCI"**
 
 ### **10.3. Verificar**
 
 **En la terminal:**
+
 ```
 📦 Webhook recibido: {...}
 📋 Nueva OCI: OCI-2026-02-001
@@ -226,12 +251,17 @@ Esto mostrará los logs en tiempo real.
 ```
 
 **En tu correo:**
-- Revisa **jcanett@pxg.com**
-- Revisa **smexia@pxg.com**
+
+- Revisa [**jcanett@pxg.com**](mailto:jcanett@pxg.com)
+
+- Revisa [**smexia@pxg.com**](mailto:smexia@pxg.com)
+
 - Si no está en la bandeja de entrada, revisa **SPAM**
 
 **En Resend Dashboard:**
+
 - Ve a: **Emails**
+
 - Deberías ver el correo enviado con estado **Delivered**
 
 ---
@@ -240,12 +270,13 @@ Esto mostrará los logs en tiempo real.
 
 ### **En Resend Dashboard:**
 
-1. Ve a: **https://resend.com/emails**
-2. Verás todos los correos enviados con:
-   - ✅ Estado (Delivered, Bounced, etc.)
-   - 📅 Fecha y hora
-   - 📧 Destinatarios
-   - 📊 Métricas (abiertos, clics, etc.)
+1. Ve a: [**https://resend.com/emails**](https://resend.com/emails)
+
+1. Verás todos los correos enviados con:
+  - ✅ Estado (Delivered, Bounced, etc. )
+  - 📅 Fecha y hora
+  - 📧 Destinatarios
+  - 📊 Métricas (abiertos, clics, etc.)
 
 ### **En Supabase:**
 
@@ -264,16 +295,19 @@ supabase functions logs notificar-nueva-oci
 Si necesitas hacer cambios:
 
 ### **1. Editar el código:**
+
 ```bash
 nano supabase/functions/notificar-nueva-oci/index.ts
 ```
 
 ### **2. Desplegar cambios:**
+
 ```bash
 supabase functions deploy notificar-nueva-oci
 ```
 
 ### **3. Verificar:**
+
 ```bash
 supabase functions logs notificar-nueva-oci --tail
 ```
@@ -285,6 +319,7 @@ supabase functions logs notificar-nueva-oci --tail
 ### **❌ Error: "RESEND_API_KEY is not set"**
 
 **Solución:**
+
 ```bash
 supabase secrets set RESEND_API_KEY=tu_api_key_aqui
 ```
@@ -296,12 +331,12 @@ supabase secrets set RESEND_API_KEY=tu_api_key_aqui
 **Opciones:**
 
 1. **Verificar dominio pxg.com** (recomendado)
-   - Agregar registros DNS en tu proveedor
-   - Esperar 24-48 horas para propagación
+  - Agregar registros DNS en tu proveedor
+  - Esperar 24-48 horas para propagación
 
-2. **Usar dominio de prueba temporalmente:**
-   - Cambiar `FROM_EMAIL` a: `controlcarton@resend.dev`
-   - Editar `index.ts` y redesplegar
+1. **Usar dominio de prueba temporalmente:**
+  - Cambiar `FROM_EMAIL` a: `controlcarton@resend.dev`
+  - Editar `index.ts` y redesplegar
 
 ---
 
@@ -310,20 +345,21 @@ supabase secrets set RESEND_API_KEY=tu_api_key_aqui
 **Verificar:**
 
 1. **Logs de la Edge Function:**
+
    ```bash
    supabase functions logs notificar-nueva-oci --tail
    ```
 
-2. **Dashboard de Resend:**
-   - Ve a: https://resend.com/emails
-   - Verifica el estado del correo
+1. **Dashboard de Resend:**
+  - Ve a: [https://resend.com/emails](https://resend.com/emails)
+  - Verifica el estado del correo
 
-3. **Carpeta de SPAM:**
-   - Revisa la carpeta de correo no deseado
+1. **Carpeta de SPAM:**
+  - Revisa la carpeta de correo no deseado
 
-4. **Webhook configurado:**
-   - Supabase Dashboard → Database → Webhooks
-   - Verifica que esté activo
+1. **Webhook configurado:**
+  - Supabase Dashboard → Database → Webhooks
+  - Verifica que esté activo
 
 ---
 
@@ -332,6 +368,7 @@ supabase secrets set RESEND_API_KEY=tu_api_key_aqui
 **Causa:** API Key incorrecta
 
 **Solución:**
+
 ```bash
 # Verificar secret actual
 supabase secrets list
@@ -342,10 +379,10 @@ supabase secrets set RESEND_API_KEY=re_nueva_api_key
 
 ---
 
-## 📈 Límites de Resend (Plan Gratuito)
+## 📈 Límites de Resend (Plan Gratuito )
 
 | Límite | Cantidad |
-|--------|----------|
+| --- | --- |
 | **Correos por mes** | 3,000 |
 | **Correos por día** | 100 |
 | **Destinatarios por correo** | 50 |
@@ -360,8 +397,9 @@ supabase secrets set RESEND_API_KEY=re_nueva_api_key
 
 Tu sistema de notificaciones está configurado y funcionando. Cada vez que se cree una nueva OCI, se enviará automáticamente un correo a:
 
-- ✅ jcanett@pxg.com
-- ✅ smexia@pxg.com
+- ✅ [jcanett@pxg.com](mailto:jcanett@pxg.com)
+
+- ✅ [smexia@pxg.com](mailto:smexia@pxg.com)
 
 Con toda la información de la orden.
 
@@ -369,27 +407,33 @@ Con toda la información de la orden.
 
 ## 📞 Soporte
 
-**Sistema OCI PXG MÉXICO**  
-**Creado por:** IT Tequila  
-**Soporte:** jcanett@pxg.com  
+**Sistema OCI PXG MÉXICO****Creado por:** IT Tequila**Soporte:** [jcanett@pxg.com](mailto:jcanett@pxg.com)
 
-**Resend:**  
-- Documentación: https://resend.com/docs
-- Soporte: https://resend.com/support
+**Resend:**
 
-**Supabase:**  
-- Documentación: https://supabase.com/docs
-- Soporte: https://supabase.com/support
+- Documentación: [https://resend.com/docs](https://resend.com/docs)
+
+- Soporte: [https://resend.com/support](https://resend.com/support)
+
+**Supabase:**
+
+- Documentación: [https://supabase.com/docs](https://supabase.com/docs)
+
+- Soporte: [https://supabase.com/support](https://supabase.com/support)
 
 ---
 
 ## 🔗 Enlaces Útiles
 
-- **Resend Dashboard:** https://resend.com/emails
-- **Supabase Dashboard:** https://supabase.com/dashboard
-- **Resend API Docs:** https://resend.com/docs/api-reference/emails/send-email
-- **Supabase Edge Functions:** https://supabase.com/docs/guides/functions
+- **Resend Dashboard:** [https://resend.com/emails](https://resend.com/emails)
+
+- **Supabase Dashboard:** [https://supabase.com/dashboard](https://supabase.com/dashboard)
+
+- **Resend API Docs:** [https://resend.com/docs/api-reference/emails/send-email](https://resend.com/docs/api-reference/emails/send-email)
+
+- **Supabase Edge Functions:** [https://supabase.com/docs/guides/functions](https://supabase.com/docs/guides/functions)
 
 ---
 
 **¡Disfruta de tus notificaciones automáticas!** 🚀📧✨
+

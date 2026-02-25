@@ -1,178 +1,162 @@
-# 📧 Edge Function: notificar-nueva-oci
+# Edge Function: notificar-nueva-oci
 
-Supabase Edge Function que envía notificaciones por correo electrónico usando **Gmail SMTP** cuando se crea una nueva orden de compra.
+## 📧 Descripción
 
----
+Edge Function que envía notificaciones por email cuando se crea una nueva Orden de Compra Interna (OCI) en el sistema.
 
-## 🚀 Despliegue Rápido
-
-```bash
-# 1. Instalar Supabase CLI (si no lo tienes)
-brew install supabase/tap/supabase
-
-# 2. Iniciar sesión
-supabase login
-
-# 3. Vincular proyecto
-cd /ruta/a/Controldecarton
-supabase link --project-ref bdrxcilsuxbkpmolfbgu
-
-# 4. Configurar credenciales de Gmail
-supabase secrets set GMAIL_USER=controlcarton@gmail.com
-supabase secrets set GMAIL_APP_PASSWORD=tu_contraseña_de_aplicacion
-
-# 5. Desplegar función
-supabase functions deploy notificar-nueva-oci
-```
+**Tecnología:** Resend API  
+**Destinatarios:** jcanett@pxg.com, smexia@pxg.com  
+**Trigger:** Database Webhook en INSERT de tabla `ordenes_compra`
 
 ---
 
-## ⚙️ Configuración
+## 🚀 Despliegue (SIN CLI)
 
-### **Destinatarios:**
-- jcanett@pxg.com
-- smexia@pxg.com
+### **1. Crear Cuenta en Resend**
 
-### **Remitente:**
-- controlcarton@gmail.com
+1. Ve a: https://resend.com
+2. Regístrate con GitHub, Google o Email
+3. Verifica tu cuenta
 
-### **Servicio de Correo:**
-- **Gmail SMTP** (smtp.gmail.com:587)
-- Requiere contraseña de aplicación de Google
-- 500 correos gratis al día
+### **2. Obtener API Key**
 
----
+1. Dashboard de Resend → **API Keys**
+2. **Create API Key**
+3. Name: `OCI PXG Supabase`
+4. Permission: `Sending access`
+5. **Copiar la API key** (solo se muestra una vez)
 
-## 🔑 Obtener Contraseña de Aplicación de Gmail
+### **3. Desplegar Edge Function**
 
-### **Paso 1: Activar Verificación en 2 Pasos**
+1. Ve a: https://supabase.com/dashboard
+2. Selecciona tu proyecto
+3. **Edge Functions** → **Create a new function**
+4. Name: `notificar-nueva-oci`
+5. Copia el código de `index.ts` en el editor
+6. **Deploy**
 
-1. Ve a: **https://myaccount.google.com/security**
-2. Busca: **Verificación en 2 pasos**
-3. Haz clic en **"Empezar"** y sigue los pasos
+### **4. Configurar Secret**
 
-### **Paso 2: Crear Contraseña de Aplicación**
+1. **Edge Functions** → `notificar-nueva-oci` → **Settings**
+2. **Function Secrets** → **Add new secret**
+3. Name: `RESEND_API_KEY`
+4. Value: `tu_api_key_de_resend`
+5. **Save**
+6. **Redeploy** la función
 
-1. Ve a: **https://myaccount.google.com/apppasswords**
-2. Selecciona app: **"Correo"**
-3. Selecciona dispositivo: **"Otro (nombre personalizado)"**
-4. Escribe: **"OCI PXG Supabase"**
-5. Haz clic en **"Generar"**
-6. **⚠️ COPIA LA CONTRASEÑA** (16 caracteres, sin espacios)
+### **5. Configurar Webhook**
 
-**Ejemplo:** `abcdefghijklmnop`
+1. **Database** → **Webhooks** → **Create a new hook**
+2. Configuración:
 
-### **Paso 3: Configurar en Supabase**
+| Campo | Valor |
+|-------|-------|
+| Name | `notificar_nueva_oci` |
+| Table | `ordenes_compra` |
+| Events | ✅ INSERT |
+| Method | POST |
+| URL | `https://bdrxcilsuxbkpmolfbgu.supabase.co/functions/v1/notificar-nueva-oci` |
 
-```bash
-supabase secrets set GMAIL_APP_PASSWORD=abcdefghijklmnop
-```
-
----
-
-## 🔗 Configurar Webhook en Supabase
-
-1. **Supabase Dashboard** → **Database** → **Webhooks**
-2. **Create webhook:**
-   - **Name:** `notificar_nueva_oci`
-   - **Table:** `ordenes_compra`
-   - **Events:** ✅ INSERT
-   - **Method:** POST
-   - **URL:** `https://bdrxcilsuxbkpmolfbgu.supabase.co/functions/v1/notificar-nueva-oci`
-3. **Guardar**
+3. **Create webhook**
 
 ---
 
 ## 🧪 Probar
 
-```bash
-# Ver logs en tiempo real
-supabase functions logs notificar-nueva-oci --tail
+### **Ver Logs**
 
-# Crear una OCI de prueba en el sistema
-# Revisa tu correo en jcanett@pxg.com y smexia@pxg.com
+1. Dashboard → **Edge Functions** → `notificar-nueva-oci` → **Logs**
+2. Crear una OCI en el sistema
+3. Verificar logs en tiempo real
+
+### **Logs Esperados**
+
 ```
+📦 Webhook recibido
+📋 Payload: { ... }
+📋 Nueva OCI: OCI-2026-02-001
+📤 Enviando correo via Resend API...
+✅ Correo enviado exitosamente: { id: "abc123..." }
+```
+
+### **Verificar Correos**
+
+- Revisar bandeja de entrada de jcanett@pxg.com y smexia@pxg.com
+- Revisar Dashboard de Resend: https://resend.com/emails
 
 ---
 
-## 📊 Límites de Gmail
+## 📊 Límites de Resend
 
-| Límite | Cantidad |
-|--------|----------|
-| **Correos por día** | 500 (cuenta gratuita) |
-| **Destinatarios por correo** | 100 |
-| **Tamaño máximo** | 25 MB |
-
-**Para tu caso:** 2 destinatarios por OCI = **250 OCIs por día**
+| Plan | Correos/Día | Correos/Mes | Costo |
+|------|-------------|-------------|-------|
+| Free | 100 | 3,000 | $0 |
+| Pro | Ilimitado | 50,000 | $20/mes |
 
 ---
 
 ## 🛠️ Solución de Problemas
 
-### **❌ Error: "GMAIL_APP_PASSWORD is not set"**
+### **Error: "RESEND_API_KEY is not set"**
 
 **Solución:**
-```bash
-supabase secrets set GMAIL_APP_PASSWORD=tu_contraseña
-```
+1. Verifica que el secret esté configurado en Supabase
+2. Redeploy la función después de agregar el secret
 
----
-
-### **❌ Error 535: "Username and Password not accepted"**
-
-**Causas:**
-1. Contraseña incorrecta (verifica que sea sin espacios)
-2. Verificación en 2 pasos no activada
-3. Contraseña de aplicación no creada
+### **Error 401: "Unauthorized"**
 
 **Solución:**
-1. Ve a: https://myaccount.google.com/apppasswords
-2. Crea nueva contraseña de aplicación
-3. Configura: `supabase secrets set GMAIL_APP_PASSWORD=nueva_contraseña`
+1. Verifica que la API key sea correcta
+2. Crea una nueva API key en Resend si es necesario
+3. Actualiza el secret en Supabase
 
----
-
-### **❌ No llegan los correos**
+### **No llegan correos**
 
 **Verificar:**
-1. Logs: `supabase functions logs notificar-nueva-oci --tail`
-2. Carpeta de SPAM en Gmail
-3. Webhook activo en Supabase Dashboard
-4. Correos destino correctos
+1. Logs de Edge Function (errores)
+2. Dashboard de Resend (estado de envío)
+3. Carpeta de SPAM
+4. Webhook activo en Supabase
+5. Límite de correos no excedido
 
 ---
 
-## 🔧 Actualizar
+## 📁 Archivos
 
-```bash
-# Editar código
-nano supabase/functions/notificar-nueva-oci/index.ts
+- `index.ts` - Código de la Edge Function
+- `README.md` - Este archivo
+- `/GUIA_RESEND_SIN_CLI.md` - Guía completa paso a paso
 
-# Desplegar cambios
-supabase functions deploy notificar-nueva-oci
+---
 
-# Verificar
-supabase functions logs notificar-nueva-oci --tail
+## 📧 Configuración de Correo
+
+**Remitente:**
+```typescript
+from: "Control de Cartón <onboarding@resend.dev>"
+```
+
+**Destinatarios:**
+```typescript
+to: ["jcanett@pxg.com", "smexia@pxg.com"]
+```
+
+**Asunto:**
+```typescript
+subject: `🔔 Nueva OCI Creada: ${oci.numero_oci}`
 ```
 
 ---
 
-## 📖 Documentación Completa
+## 🔗 Enlaces Útiles
 
-Ver: `/GUIA_GMAIL_SMTP.md`
+- **Resend Dashboard:** https://resend.com
+- **Resend Docs:** https://resend.com/docs
+- **Supabase Dashboard:** https://supabase.com/dashboard
+- **Supabase Edge Functions:** https://supabase.com/docs/guides/functions
 
 ---
-
-## 📞 Soporte
 
 **Sistema OCI PXG MÉXICO**  
 **Creado por:** IT Tequila  
-**Soporte:** jcanett@pxg.com  
-
-**Gmail:**  
-- Ayuda: https://support.google.com/mail
-- Contraseñas de aplicación: https://myaccount.google.com/apppasswords
-
-**Supabase:**  
-- Docs: https://supabase.com/docs
-- Dashboard: https://supabase.com/dashboard
+**Soporte:** jcanett@pxg.com

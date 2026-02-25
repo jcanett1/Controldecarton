@@ -1,0 +1,10 @@
+2026-02-25 12:36:04,778 - __main__ - INFO - 🚀 Iniciando servidor en puerto 5000...
+2026-02-25 12:36:04,779 - __main__ - INFO - 📧 Correos destino: jcanett@pxg.com, smexia@pxg.com
+ * Serving Flask app 'webhook_server'
+ * Debug mode: off
+2026-02-25 12:36:04,791 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://169.254.0.21:5000
+2026-02-25 12:36:04,791 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-02-25 12:36:14,177 - werkzeug - INFO - 127.0.0.1 - - [25/Feb/2026 12:36:14] "GET /health HTTP/1.1" 200 -

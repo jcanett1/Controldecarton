@@ -24,12 +24,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configuración de correo
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
-SMTP_USERNAME = os.environ.get('SMTP_USERNAME', 'tu_correo@gmail.com')
-SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', 'tu_password_app')
-FROM_EMAIL = SMTP_USERNAME
+# Configuración de correo - Servidor SMTP interno PXG
+SMTP_SERVER = os.environ.get('SMTP_SERVER', '10.232.237.25')  # smtp.yamww.internal
+SMTP_PORT = int(os.environ.get('SMTP_PORT', '25'))
+SMTP_AUTH_ENABLED = os.environ.get('SMTP_AUTH_ENABLED', 'false').lower() == 'true'
+SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')  # No requerido si auth está desactivado
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')  # No requerido si auth está desactivado
+FROM_EMAIL = os.environ.get('FROM_EMAIL', 'controlcarton@pxg.com')
 TO_EMAILS = ['jcanett@pxg.com', 'smexia@pxg.com']
 
 def enviar_correo_nueva_oci(orden_data):
@@ -229,8 +230,14 @@ def enviar_correo_nueva_oci(orden_data):
         # Enviar correo
         logger.info(f"Enviando correo para OCI {numero_oci}...")
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            # Solo usar STARTTLS y autenticación si está habilitado
+            if SMTP_AUTH_ENABLED:
+                server.starttls()
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                logger.info("Autenticación SMTP habilitada")
+            else:
+                logger.info("Autenticación SMTP desactivada (servidor interno)")
+            
             server.send_message(msg)
         
         logger.info(f"✅ Correo enviado exitosamente para OCI {numero_oci}")
