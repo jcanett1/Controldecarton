@@ -1,6 +1,6 @@
 # 📧 Edge Function: notificar-nueva-oci
 
-Supabase Edge Function que envía notificaciones por correo electrónico usando **Resend API** cuando se crea una nueva orden de compra.
+Supabase Edge Function que envía notificaciones por correo electrónico usando **Gmail SMTP** cuando se crea una nueva orden de compra.
 
 ---
 
@@ -17,8 +17,9 @@ supabase login
 cd /ruta/a/Controldecarton
 supabase link --project-ref bdrxcilsuxbkpmolfbgu
 
-# 4. Configurar API Key de Resend
-supabase secrets set RESEND_API_KEY=re_tu_api_key_aqui
+# 4. Configurar credenciales de Gmail
+supabase secrets set GMAIL_USER=controlcarton@gmail.com
+supabase secrets set GMAIL_APP_PASSWORD=tu_contraseña_de_aplicacion
 
 # 5. Desplegar función
 supabase functions deploy notificar-nueva-oci
@@ -33,35 +34,38 @@ supabase functions deploy notificar-nueva-oci
 - smexia@pxg.com
 
 ### **Remitente:**
-- controlcarton@pxg.com
+- controlcarton@gmail.com
 
 ### **Servicio de Correo:**
-- **Resend API** (https://resend.com)
-- 3,000 correos gratis al mes
-- Sin tarjeta de crédito requerida
+- **Gmail SMTP** (smtp.gmail.com:587)
+- Requiere contraseña de aplicación de Google
+- 500 correos gratis al día
 
 ---
 
-## 🔑 Obtener API Key de Resend
+## 🔑 Obtener Contraseña de Aplicación de Gmail
 
-### **Paso 1: Crear Cuenta**
+### **Paso 1: Activar Verificación en 2 Pasos**
 
-1. Ve a: **https://resend.com**
-2. Regístrate con tu correo
-3. Verifica tu email
+1. Ve a: **https://myaccount.google.com/security**
+2. Busca: **Verificación en 2 pasos**
+3. Haz clic en **"Empezar"** y sigue los pasos
 
-### **Paso 2: Crear API Key**
+### **Paso 2: Crear Contraseña de Aplicación**
 
-1. En el dashboard, ve a: **Settings** → **API Keys**
-2. Haz clic en **"Create API Key"**
-3. Nombre: `OCI PXG Notifications`
-4. Permiso: `Sending access`
-5. Copia la API Key (empieza con `re_...`)
+1. Ve a: **https://myaccount.google.com/apppasswords**
+2. Selecciona app: **"Correo"**
+3. Selecciona dispositivo: **"Otro (nombre personalizado)"**
+4. Escribe: **"OCI PXG Supabase"**
+5. Haz clic en **"Generar"**
+6. **⚠️ COPIA LA CONTRASEÑA** (16 caracteres, sin espacios)
+
+**Ejemplo:** `abcdefghijklmnop`
 
 ### **Paso 3: Configurar en Supabase**
 
 ```bash
-supabase secrets set RESEND_API_KEY=re_tu_api_key_aqui
+supabase secrets set GMAIL_APP_PASSWORD=abcdefghijklmnop
 ```
 
 ---
@@ -91,17 +95,50 @@ supabase functions logs notificar-nueva-oci --tail
 
 ---
 
-## 📊 Monitorear
+## 📊 Límites de Gmail
 
-### **Resend Dashboard:**
-- Ve a: https://resend.com/emails
-- Ver todos los correos enviados
-- Estado: Delivered, Bounced, etc.
+| Límite | Cantidad |
+|--------|----------|
+| **Correos por día** | 500 (cuenta gratuita) |
+| **Destinatarios por correo** | 100 |
+| **Tamaño máximo** | 25 MB |
 
-### **Supabase Logs:**
+**Para tu caso:** 2 destinatarios por OCI = **250 OCIs por día**
+
+---
+
+## 🛠️ Solución de Problemas
+
+### **❌ Error: "GMAIL_APP_PASSWORD is not set"**
+
+**Solución:**
 ```bash
-supabase functions logs notificar-nueva-oci
+supabase secrets set GMAIL_APP_PASSWORD=tu_contraseña
 ```
+
+---
+
+### **❌ Error 535: "Username and Password not accepted"**
+
+**Causas:**
+1. Contraseña incorrecta (verifica que sea sin espacios)
+2. Verificación en 2 pasos no activada
+3. Contraseña de aplicación no creada
+
+**Solución:**
+1. Ve a: https://myaccount.google.com/apppasswords
+2. Crea nueva contraseña de aplicación
+3. Configura: `supabase secrets set GMAIL_APP_PASSWORD=nueva_contraseña`
+
+---
+
+### **❌ No llegan los correos**
+
+**Verificar:**
+1. Logs: `supabase functions logs notificar-nueva-oci --tail`
+2. Carpeta de SPAM en Gmail
+3. Webhook activo en Supabase Dashboard
+4. Correos destino correctos
 
 ---
 
@@ -122,7 +159,7 @@ supabase functions logs notificar-nueva-oci --tail
 
 ## 📖 Documentación Completa
 
-Ver: `/GUIA_RESEND_API.md`
+Ver: `/GUIA_GMAIL_SMTP.md`
 
 ---
 
@@ -130,8 +167,12 @@ Ver: `/GUIA_RESEND_API.md`
 
 **Sistema OCI PXG MÉXICO**  
 **Creado por:** IT Tequila  
-**Soporte:** jcanett@pxg.com
+**Soporte:** jcanett@pxg.com  
 
-**Resend:**  
-- Docs: https://resend.com/docs
-- Dashboard: https://resend.com/emails
+**Gmail:**  
+- Ayuda: https://support.google.com/mail
+- Contraseñas de aplicación: https://myaccount.google.com/apppasswords
+
+**Supabase:**  
+- Docs: https://supabase.com/docs
+- Dashboard: https://supabase.com/dashboard
