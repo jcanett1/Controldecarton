@@ -777,6 +777,7 @@
                                     <th>Número OCI</th>
                                     <th>Fecha</th>
                                     <th>Material</th>
+                                    <th>Descripción</th>
                                     <th>Pallets</th>
                                     <th>Total Piezas</th>
                                     <th>Usuario</th>
@@ -826,6 +827,7 @@
 
     // ===== DATOS Y ESTADO GLOBAL =====
     let materiales = []; // Se cargará dinámicamente desde Supabase
+    let mapaDescripcionesMateriales = {}; // Mapa numero_parte -> descripcion
 
     // Función para cargar materiales desde Supabase
     async function cargarMaterialesDesdeSupabase() {
@@ -843,6 +845,12 @@
                 piezas: item.cajas_por_pallet,
                 descripcion: item.descripcion
             }));
+
+            // Construir mapa de descripciones para uso en tabla e histórico
+            mapaDescripcionesMateriales = {};
+            data.forEach(item => {
+                mapaDescripcionesMateriales[item.numero_parte] = item.descripcion;
+            });
 
             console.log('Materiales cargados desde Supabase:', materiales.length);
             cargarMaterialesSelect(); // Recargar el select con los nuevos datos
@@ -1306,7 +1314,7 @@
     // ===== LÓGICA DE HISTÓRICO =====
     async function cargarOrdenes() {
         const tbody = document.getElementById('ordenesTableBody');
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i><p>Cargando órdenes...</p></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i><p>Cargando órdenes...</p></td></tr>';
 
         try {
             let query = supabaseClient
@@ -1326,7 +1334,7 @@
 
         } catch (error) {
             console.error('Error cargando órdenes:', error);
-            tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar las órdenes.</p></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar las órdenes.</p></td></tr>';
         }
     }
 
@@ -1365,7 +1373,7 @@
         const ordenesParaTabla = Object.values(ordenesAgrupadas);
 
         if (ordenesParaTabla.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-inbox"></i><p>No hay órdenes con este estado.</p></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><i class="fas fa-inbox"></i><p>No hay órdenes con este estado.</p></td></tr>';
             return;
         }
 
@@ -1377,10 +1385,19 @@
                 ? orden.materiales.length + ' materiales' 
                 : '#' + orden.material_numero;
 
+            // Obtener descripción del material desde el mapa
+            let descripcionDisplay;
+            if (orden.materiales.length > 1) {
+                descripcionDisplay = '<em style="color: #666; font-size: 12px;">Varios materiales</em>';
+            } else {
+                descripcionDisplay = mapaDescripcionesMateriales[orden.material_numero] || '<em style="color: #999;">Sin descripción</em>';
+            }
+
             html += '<tr>' +
                 '<td><strong>' + orden.numero_oci + '</strong></td>' +
                 '<td>' + fecha + '</td>' +
                 '<td>' + materialDisplay + '</td>' +
+                '<td style="max-width: 200px; white-space: normal; font-size: 13px;">' + descripcionDisplay + '</td>' +
                 '<td>' + orden.total_pallets + '</td>' +
                 '<td>' + orden.total_piezas_final.toLocaleString() + '</td>' +
                 '<td>' + usuario + '</td>' +
@@ -1437,10 +1454,13 @@
                 }
                 
                 const ocMtkDisplay = item.oc_mtk ? '<span style="background: #e8f0fe; color: #1967d2; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">OC-MTK: ' + item.oc_mtk + '</span>' : '';
+                const descripcionMaterial = mapaDescripcionesMateriales[item.material_numero] || '';
+                const descripcionDisplay = descripcionMaterial ? '<span style="display: block; color: #555; font-size: 12px; margin-top: 3px;"><i class="fas fa-tag" style="color: #888;"></i> ' + descripcionMaterial + '</span>' : '';
                 
                 materialesHtml += '<div class="material-item">' +
                     '<div class="material-numero">' +
                     '<i class="fas fa-box"></i> #' + item.material_numero +
+                    descripcionDisplay +
                     (ocMtkDisplay ? '<br>' + ocMtkDisplay : '') +
                     '</div>' +
                     '<div class="material-cantidad">' +

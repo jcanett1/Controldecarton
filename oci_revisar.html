@@ -851,6 +851,7 @@
                             <th>Fecha</th>
                             <th>Usuario</th>
                             <th>Material</th>
+                            <th>Descripción</th>
                             <th>Pallets</th>
                             <th>Total Piezas</th>
                             <th>OC-MTK</th>
@@ -862,7 +863,7 @@
                     </thead>
                     <tbody id="cuerpo-tabla-ordenes">
                         <tr>
-                            <td colspan="11" class="cargando">
+                            <td colspan="12" class="cargando">
                                 <div class="spinner-oci"></div>
                                 <p>Cargando órdenes...</p>
                             </td>
@@ -912,10 +913,29 @@
 
     let usuarioActual = null;
     let ordenesOriginal = [];
+    let mapaDescripcionesMateriales = {}; // Mapa numero_parte -> descripcion
+
+    // ===== CARGAR MAPA DE DESCRIPCIONES =====
+    async function cargarMapaDescripciones() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('productos_carton')
+                .select('numero_parte, descripcion')
+                .eq('activo', true);
+            if (error) throw error;
+            mapaDescripcionesMateriales = {};
+            (data || []).forEach(item => {
+                mapaDescripcionesMateriales[item.numero_parte] = item.descripcion;
+            });
+        } catch (error) {
+            console.error('Error cargando descripciones de materiales:', error);
+        }
+    }
 
     document.addEventListener('DOMContentLoaded', async () => {
         console.log('Inicializando revisor de OCI...');
         await cargarUsuario();
+        await cargarMapaDescripciones();
         await cargarOrdenes();
     });
 
@@ -949,7 +969,7 @@
 
                 if (error) {
                     console.error('Error cargando órdenes:', error);
-                    tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error cargando órdenes</p></td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error cargando órdenes</p></td></tr>';
                     return;
                 }
 
@@ -957,7 +977,7 @@
                 console.log('Órdenes cargadas:', ordenesOriginal.length);
                 
                 if (ordenesOriginal.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-inbox"></i><p>No hay órdenes de compra</p></td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" class="empty-state"><i class="fas fa-inbox"></i><p>No hay órdenes de compra</p></td></tr>';
                     return;
                 }
 
@@ -965,7 +985,7 @@
 
             } catch (error) {
                 console.error('Error:', error);
-                document.getElementById('cuerpo-tabla-ordenes').innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error inesperado</p></td></tr>';
+                document.getElementById('cuerpo-tabla-ordenes').innerHTML = '<tr><td colspan="12" class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error inesperado</p></td></tr>';
             }
         }
 
@@ -996,7 +1016,7 @@
             });
 
             if (ordenesFiltradas.length === 0) {
-                document.getElementById('cuerpo-tabla-ordenes').innerHTML = '<tr><td colspan="11" class="empty-state"><i class="fas fa-search"></i><p>No se encontraron órdenes</p></td></tr>';
+                document.getElementById('cuerpo-tabla-ordenes').innerHTML = '<tr><td colspan="12" class="empty-state"><i class="fas fa-search"></i><p>No se encontraron órdenes</p></td></tr>';
                 return;
             }
 
@@ -1033,11 +1053,15 @@
                 const esAprobadaORecibida = orden.estado === 'APROBADA' || orden.estado === 'RECIBIDA';
                 const filaClass = esAprobadaORecibida ? ' class="fila-aprobada"' : '';
                 
+                // Obtener descripción del material desde el mapa
+                const descripcionMat = mapaDescripcionesMateriales[orden.material_numero] || '<em style="color:#999;">Sin descripción</em>';
+
                 return '<tr data-id="' + orden.id + '"' + filaClass + '>' +
                     '<td><strong>' + orden.numero_oci + '</strong></td>' +
                     '<td>' + fecha + '</td>' +
                     '<td>' + usuario + '</td>' +
                     '<td>#' + orden.material_numero + '</td>' +
+                    '<td style="max-width: 180px; white-space: normal; font-size: 12px;">' + descripcionMat + '</td>' +
                     '<td>' + orden.cantidad_pallets + '</td>' +
                     '<td>' + totalPiezas.toLocaleString() + '</td>' +
                     '<td>' + ocMtkDisplay + '</td>' +
@@ -1115,7 +1139,9 @@
                     '<div class="detail-section-title"><i class="fas fa-box"></i> Material</div>' +
                     '<div class="material-list">' +
                     '<div class="material-item">' +
-                    '<div class="material-numero"><i class="fas fa-box"></i> #' + orden.material_numero + '</div>' +
+                    '<div class="material-numero"><i class="fas fa-box"></i> #' + orden.material_numero +
+                    (mapaDescripcionesMateriales[orden.material_numero] ? '<span style="display: block; color: #555; font-size: 12px; margin-top: 3px;"><i class="fas fa-tag" style="color: #888;"></i> ' + mapaDescripcionesMateriales[orden.material_numero] + '</span>' : '') +
+                    '</div>' +
                     '<div class="material-cantidad">' +
                     '<div class="pallets">' + orden.cantidad_pallets + ' pallets</div>' +
                     '<div class="piezas">' + orden.piezas_por_pallet + ' pzas/pallet</div>' +
