@@ -92,6 +92,41 @@
             text-align: center;
         }
 
+        /* Estilos para items de menú bloqueados por rol */
+        .menu-item.bloqueado {
+            opacity: 0.4;
+            cursor: not-allowed;
+            position: relative;
+            pointer-events: none;
+        }
+
+        .menu-item.bloqueado::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.25);
+            border-radius: 0;
+        }
+
+        .menu-item.bloqueado .menu-lock-icon {
+            display: inline-flex !important;
+        }
+
+        .menu-lock-icon {
+            display: none;
+            margin-left: auto;
+            font-size: 0.65rem;
+            color: #ef4444;
+            background: rgba(239,68,68,0.15);
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 4px;
+            padding: 2px 5px;
+            gap: 3px;
+            align-items: center;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
         /* Main Content */
         .main-content {
             flex: 1;
@@ -1681,30 +1716,46 @@
                 </div>
             </div>
             <ul class="sidebar-menu">
-                <li class="menu-item active" data-section="dashboard">
+                <!-- Dashboard: todos los roles -->
+                <li class="menu-item active" data-section="dashboard" data-roles="ADMIN,REVISOR,USUARIO,RECEPCION">
                     <i class="fas fa-chart-pie"></i>
                     <span>Dashboard</span>
+                    <span class="menu-lock-icon"><i class="fas fa-lock"></i> Sin acceso</span>
                 </li>
 
-               <li class="menu-item" data-section="oci-crear">
-    <i class="fas fa-plus-circle"></i>
-    <span>Crear OCI</span>
-</li>
-                <li class="menu-item" onclick="abrirRevisarOCI()">
-    <i class="fas fa-check-circle"></i>
-    <span>Revisar OCI (Veritiv)</span>
-</li>
-                <li class="menu-item" onclick="abrirOCIRecibido()">
+                <!-- Crear OCI: ADMIN y USUARIO -->
+                <li class="menu-item" data-section="oci-crear" data-roles="ADMIN,USUARIO">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Crear OCI</span>
+                    <span class="menu-lock-icon"><i class="fas fa-lock"></i> Sin acceso</span>
+                </li>
+
+                <!-- Revisar OCI: ADMIN y REVISOR -->
+                <li class="menu-item" onclick="abrirRevisarOCI()" data-roles="ADMIN,REVISOR">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Revisar OCI (Veritiv)</span>
+                    <span class="menu-lock-icon"><i class="fas fa-lock"></i> Sin acceso</span>
+                </li>
+
+                <!-- Recibido: ADMIN y RECEPCION -->
+                <li class="menu-item" onclick="abrirOCIRecibido()" data-roles="ADMIN,RECEPCION">
                     <i class="fas fa-truck-loading"></i>
                     <span>Recibido</span>
+                    <span class="menu-lock-icon"><i class="fas fa-lock"></i> Sin acceso</span>
                 </li>
-                <li class="menu-item" data-section="balance">
+
+                <!-- Balance: ADMIN -->
+                <li class="menu-item" data-section="balance" data-roles="ADMIN">
                     <i class="fas fa-balance-scale"></i>
                     <span>Balance</span>
+                    <span class="menu-lock-icon"><i class="fas fa-lock"></i> Sin acceso</span>
                 </li>
-                <li class="menu-item" onclick="abrirFoliosPago()" style="border-left: 4px solid transparent;">
+
+                <!-- Folios para Pagos: ADMIN -->
+                <li class="menu-item" onclick="abrirFoliosPago()" data-roles="ADMIN" style="border-left: 4px solid transparent;">
                     <i class="fas fa-file-invoice-dollar" style="color: #fbbf24;"></i>
                     <span>Folios para Pagos</span>
+                    <span class="menu-lock-icon"><i class="fas fa-lock"></i> Sin acceso</span>
                 </li>
 
             </ul>

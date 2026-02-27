@@ -112,11 +112,8 @@ function setupUserInterface() {
     // Actualizar información del usuario en el header
     updateUserInfo();
     
-    // Configurar permisos según el rol
-    const rolUI = ((currentUser.rol || currentUser.role || '')).toString().trim().toUpperCase();
-    if (rolUI !== 'ADMIN') {
-        hideAdminFeatures();
-    }
+    // Configurar permisos según el rol (aplica para todos los roles)
+    aplicarControlAccesoMenu();
 }
 
 function getRoleDisplayName(rol) {
@@ -180,11 +177,78 @@ function updateUserInfo() {
 }
 
 function hideAdminFeatures() {
-    // Ocultar funcionalidades de administrador para usuarios no admin
-    const adminMenuItems = document.querySelectorAll('[data-section="reportes"]');
-    adminMenuItems.forEach(item => {
-        item.style.display = 'none';
+    // Esta función ahora delega al control de acceso por rol
+    aplicarControlAccesoMenu();
+}
+
+function aplicarControlAccesoMenu() {
+    const rol = String((currentUser && (currentUser.rol || currentUser.role)) || '').trim().toUpperCase();
+    console.log('🔐 Aplicando control de acceso para rol:', rol);
+
+    document.querySelectorAll('.menu-item[data-roles]').forEach(item => {
+        const rolesPermitidos = (item.getAttribute('data-roles') || '').split(',').map(r => r.trim().toUpperCase());
+        const tieneAcceso = rolesPermitidos.includes(rol);
+
+        if (tieneAcceso) {
+            item.classList.remove('bloqueado');
+            // Restaurar eventos de click si estaban desactivados
+            item.style.pointerEvents = '';
+        } else {
+            item.classList.add('bloqueado');
+            item.style.pointerEvents = 'none';
+        }
     });
+
+    // Si el usuario no es ADMIN, redirigir a su sección permitida al cargar
+    redirigirASeccionPermitida(rol);
+}
+
+function redirigirASeccionPermitida(rol) {
+    // Definir la sección de inicio por rol
+    const seccionInicio = {
+        'REVISOR':   null,   // abre revisar_oci.html (externo)
+        'RECEPCION': null,   // abre OCI_RECIBIDO.html (externo)
+        'USUARIO':   null,   // abre oci-crear (externo)
+        'ADMIN':     'dashboard'
+    };
+
+    if (rol === 'ADMIN') return; // El admin no necesita redirección
+
+    // Quitar el active del dashboard si el usuario no tiene acceso a él
+    const dashboardItem = document.querySelector('[data-section="dashboard"]');
+    if (dashboardItem && dashboardItem.classList.contains('bloqueado')) {
+        dashboardItem.classList.remove('active');
+    }
+
+    // Auto-abrir la página correspondiente si el rol tiene una sola página asignada
+    if (rol === 'REVISOR') {
+        // Marcar Revisar OCI como activo
+        document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+        const item = document.querySelector('[data-roles*="REVISOR"]:not([data-roles*="ADMIN,REVISOR,USUARIO"])');
+        // Buscar el item de Revisar OCI específicamente
+        document.querySelectorAll('.menu-item[data-roles]').forEach(i => {
+            const roles = i.getAttribute('data-roles').split(',').map(r => r.trim());
+            if (roles.includes('REVISOR') && !roles.includes('USUARIO') && !roles.includes('RECEPCION')) {
+                i.classList.add('active');
+            }
+        });
+    } else if (rol === 'RECEPCION') {
+        document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+        document.querySelectorAll('.menu-item[data-roles]').forEach(i => {
+            const roles = i.getAttribute('data-roles').split(',').map(r => r.trim());
+            if (roles.includes('RECEPCION') && !roles.includes('REVISOR') && !roles.includes('USUARIO')) {
+                i.classList.add('active');
+            }
+        });
+    } else if (rol === 'USUARIO') {
+        document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+        document.querySelectorAll('.menu-item[data-roles]').forEach(i => {
+            const roles = i.getAttribute('data-roles').split(',').map(r => r.trim());
+            if (roles.includes('USUARIO') && !roles.includes('REVISOR') && !roles.includes('RECEPCION')) {
+                i.classList.add('active');
+            }
+        });
+    }
 }
 
 
@@ -203,12 +267,19 @@ function setupEventListeners() {
   document.querySelectorAll('.menu-item').forEach(item => {
     item.addEventListener('click', function(e) {
         e.preventDefault();
+        e.stopPropagation();
+
+        // Bloquear click si el item está marcado como sin acceso
+        if (this.classList.contains('bloqueado')) {
+            return;
+        }
+
         const section = this.dataset.section;
         
-        // ✨ NUEVO: Verificar si es OCI - abrir como archivo standalone
+        // Verificar si es OCI - abrir como archivo standalone
         if (section === 'oci-crear') {
-    abrirOCIStandalone(section);
-}else if (section) {
+            abrirOCIStandalone(section);
+        } else if (section) {
             showSection(section);
         }
     });
