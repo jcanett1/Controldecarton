@@ -58,6 +58,11 @@ async function checkAuthentication() {
             redirectToLogin();
             return;
         }
+
+        // Actualizar currentUser con datos frescos de la base de datos
+        currentUser = data;
+        localStorage.setItem('current_user', JSON.stringify(currentUser));
+        console.log('✅ currentUser actualizado con datos frescos:', currentUser.rol);
         
         // Inicializar la aplicación
         await initializeApp();
@@ -105,7 +110,8 @@ function setupUserInterface() {
     updateUserInfo();
     
     // Configurar permisos según el rol
-    if (currentUser.rol !== 'ADMIN') {
+    const rolUI = ((currentUser.rol || currentUser.role || '')).toString().trim().toUpperCase();
+    if (rolUI !== 'ADMIN') {
         hideAdminFeatures();
     }
 }
@@ -160,7 +166,8 @@ function updateUserInfo() {
     // Mostrar botón de gestión de usuarios solo para ADMIN
     const btnGestionar = document.getElementById('btn-gestionar-usuarios');
     const dividerAdmin = document.getElementById('divider-admin');
-    if (currentUser.rol === 'ADMIN') {
+    const rolNormalizado = ((currentUser.rol || currentUser.role || '')).toString().trim().toUpperCase();
+    if (rolNormalizado === 'ADMIN') {
         if (btnGestionar) btnGestionar.style.display = 'flex';
         if (dividerAdmin) dividerAdmin.style.display = 'block';
     } else {

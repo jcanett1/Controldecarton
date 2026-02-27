@@ -2302,9 +2302,12 @@
         async function guardarNuevoUsuario(event) {
             if (event && event.preventDefault) event.preventDefault();
 
-            // Verificar que el usuario actual es ADMIN
-            if (!window.currentUser || window.currentUser.rol !== 'ADMIN') {
-                mostrarAlertaUsuario('error', 'No tienes permisos para agregar usuarios.');
+            // Verificar que el usuario actual es ADMIN (comparación robusta)
+            const rolActual = (window.currentUser && (window.currentUser.rol || window.currentUser.role || ''));
+            const esAdmin = rolActual.toString().trim().toUpperCase() === 'ADMIN';
+            console.log('🔍 Verificando rol para crear usuario:', rolActual, '| esAdmin:', esAdmin);
+            if (!window.currentUser || !esAdmin) {
+                mostrarAlertaUsuario('error', 'No tienes permisos para agregar usuarios. Rol detectado: ' + (rolActual || 'desconocido'));
                 return;
             }
 
