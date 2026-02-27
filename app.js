@@ -121,31 +121,51 @@ function getRoleDisplayName(rol) {
 }
 
 function updateUserInfo() {
-    // Buscar o crear el contenedor de información del usuario
-    let userInfoContainer = document.querySelector('.user-info');
-    
-    if (!userInfoContainer) {
-        const headerRight = document.querySelector('.header-right');
-        if (headerRight) {
-            userInfoContainer = document.createElement('div');
-            userInfoContainer.className = 'user-info';
-            headerRight.insertBefore(userInfoContainer, headerRight.firstChild);
+    if (!currentUser) return;
+
+    // Actualizar el trigger del dropdown (nombre y rol visibles en el header)
+    const nameTrigger = document.getElementById('dropdown-user-name-trigger');
+    const roleTrigger = document.getElementById('dropdown-user-role-trigger');
+    if (nameTrigger) nameTrigger.textContent = currentUser.nombre_completo || currentUser.username || 'Usuario';
+    if (roleTrigger) roleTrigger.textContent = getRoleDisplayName(currentUser.rol);
+
+    // Actualizar el encabezado del dropdown
+    const fullName = document.getElementById('dropdown-full-name');
+    const roleBadge = document.getElementById('dropdown-role-badge');
+    if (fullName) fullName.textContent = currentUser.nombre_completo || currentUser.username || '-';
+    if (roleBadge) {
+        roleBadge.textContent = getRoleDisplayName(currentUser.rol);
+        roleBadge.className = 'dropdown-user-role-badge role-' + (currentUser.rol || 'USUARIO');
+    }
+
+    // Actualizar información detallada
+    const usernameEl = document.getElementById('dropdown-username');
+    const emailEl = document.getElementById('dropdown-email');
+    const lastAccessEl = document.getElementById('dropdown-last-access');
+
+    if (usernameEl) usernameEl.textContent = '@' + (currentUser.username || '-');
+    if (emailEl) emailEl.textContent = currentUser.email || 'Sin correo registrado';
+    if (lastAccessEl) {
+        if (currentUser.ultimo_acceso) {
+            const fecha = new Date(currentUser.ultimo_acceso);
+            lastAccessEl.textContent = 'Acceso: ' + fecha.toLocaleString('es-MX', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        } else {
+            lastAccessEl.textContent = 'Primer acceso';
         }
     }
-    
-    if (userInfoContainer && currentUser) {
-        userInfoContainer.innerHTML = `
-            <div class="user-profile">
-                <i class="fas fa-user-circle"></i>
-                <div class="user-details">
-                    <span class="user-name">${currentUser.nombre_completo || currentUser.usuario}</span>
-                    <span class="user-role">${getRoleDisplayName(currentUser.rol)}</span>
-                </div>
-                <button class="logout-btn" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
-            </div>
-        `;
+
+    // Mostrar botón de gestión de usuarios solo para ADMIN
+    const btnGestionar = document.getElementById('btn-gestionar-usuarios');
+    const dividerAdmin = document.getElementById('divider-admin');
+    if (currentUser.rol === 'ADMIN') {
+        if (btnGestionar) btnGestionar.style.display = 'flex';
+        if (dividerAdmin) dividerAdmin.style.display = 'block';
+    } else {
+        if (btnGestionar) btnGestionar.style.display = 'none';
+        if (dividerAdmin) dividerAdmin.style.display = 'none';
     }
 }
 

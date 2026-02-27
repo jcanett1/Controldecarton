@@ -1257,6 +1257,413 @@
 }
 
 /* ===== FIN DE ESTILOS CRÍTICOS ===== */
+
+        /* ===== DROPDOWN DE USUARIO ===== */
+        .user-profile-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .user-profile {
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+
+        .user-profile:hover {
+            border-color: #fbbf24;
+            background: linear-gradient(135deg, #2d2d2d 0%, #404040 100%);
+        }
+
+        .user-profile .dropdown-arrow {
+            font-size: 0.7rem;
+            color: #9ca3af;
+            margin-left: 4px;
+            transition: transform 0.2s ease;
+        }
+
+        .user-profile.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .user-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 300px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border: 1px solid #404040;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            overflow: hidden;
+            animation: dropdownFadeIn 0.2s ease;
+        }
+
+        .user-dropdown-menu.open {
+            display: block;
+        }
+
+        @keyframes dropdownFadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dropdown-user-header {
+            padding: 1.25rem 1.25rem 1rem;
+            border-bottom: 1px solid #404040;
+            background: linear-gradient(90deg, #000000 0%, #1a1a1a 100%);
+        }
+
+        .dropdown-user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: #000;
+            margin-bottom: 0.75rem;
+        }
+
+        .dropdown-user-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.2rem;
+        }
+
+        .dropdown-user-role-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .role-ADMIN { background: linear-gradient(135deg, #fbbf24, #d97706); color: #000; }
+        .role-REVISOR { background: linear-gradient(135deg, #3b82f6, #1e40af); color: #fff; }
+        .role-USUARIO { background: linear-gradient(135deg, #10b981, #047857); color: #fff; }
+        .role-RECEPCION { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #fff; }
+
+        .dropdown-user-info {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #404040;
+        }
+
+        .dropdown-info-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0.5rem 0;
+            color: #d1d5db;
+            font-size: 0.85rem;
+        }
+
+        .dropdown-info-row i {
+            width: 16px;
+            color: #fbbf24;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .dropdown-info-row span {
+            word-break: break-all;
+        }
+
+        .dropdown-actions {
+            padding: 0.75rem 1.25rem;
+        }
+
+        .dropdown-action-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 0.65rem 0.75rem;
+            background: none;
+            border: none;
+            border-radius: 8px;
+            color: #d1d5db;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .dropdown-action-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+
+        .dropdown-action-btn i {
+            width: 18px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .dropdown-action-btn.btn-admin {
+            color: #fbbf24;
+        }
+
+        .dropdown-action-btn.btn-admin:hover {
+            background: rgba(251, 191, 36, 0.12);
+            color: #fbbf24;
+        }
+
+        .dropdown-action-btn.btn-logout {
+            color: #f87171;
+        }
+
+        .dropdown-action-btn.btn-logout:hover {
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: #404040;
+            margin: 0.25rem 0;
+        }
+
+        /* ===== MODAL GESTIÓN DE USUARIOS ===== */
+        .modal-usuarios-overlay {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            animation: modalFadeIn 0.2s ease;
+        }
+
+        .modal-usuarios-overlay.open {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-usuarios-content {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border: 1px solid #404040;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            animation: modalSlideIn 0.25s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-usuarios-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #404040;
+            background: linear-gradient(90deg, #000000 0%, #1a1a1a 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .modal-usuarios-header h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-usuarios-header h2 i {
+            color: #fbbf24;
+        }
+
+        .modal-usuarios-close {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+
+        .modal-usuarios-close:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .modal-usuarios-body {
+            padding: 1.5rem;
+        }
+
+        .form-group-usuario {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group-usuario label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group-usuario input,
+        .form-group-usuario select {
+            width: 100%;
+            padding: 0.7rem 0.9rem;
+            background: #111111;
+            border: 1px solid #404040;
+            border-radius: 8px;
+            color: #e5e7eb;
+            font-size: 0.9rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-group-usuario input:focus,
+        .form-group-usuario select:focus {
+            outline: none;
+            border-color: #fbbf24;
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
+        }
+
+        .form-group-usuario input::placeholder {
+            color: #6b7280;
+        }
+
+        .form-group-usuario select option {
+            background: #1a1a1a;
+            color: #e5e7eb;
+        }
+
+        .form-row-usuario {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .password-input-wrapper {
+            position: relative;
+        }
+
+        .password-input-wrapper input {
+            padding-right: 2.5rem;
+        }
+
+        .toggle-password-btn {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 2px;
+            transition: color 0.2s;
+        }
+
+        .toggle-password-btn:hover {
+            color: #fbbf24;
+        }
+
+        .modal-usuarios-footer {
+            padding: 1rem 1.5rem 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        .btn-cancelar-usuario {
+            padding: 0.65rem 1.25rem;
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            border-radius: 8px;
+            color: #9ca3af;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-cancelar-usuario:hover {
+            background: #404040;
+            color: #e5e7eb;
+        }
+
+        .btn-guardar-usuario {
+            padding: 0.65rem 1.5rem;
+            background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+            border: none;
+            border-radius: 8px;
+            color: #000000;
+            font-size: 0.875rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-guardar-usuario:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(251, 191, 36, 0.4);
+        }
+
+        .btn-guardar-usuario:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert-usuario {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
     </style>
 </head>
 
@@ -1316,6 +1723,60 @@
                         <i class="fas fa-sync-alt"></i>
                         Actualizar
                     </button>
+
+                    <!-- Dropdown de Usuario -->
+                    <div class="user-profile-wrapper" id="user-profile-wrapper">
+                        <div class="user-profile" id="user-profile-trigger" onclick="toggleUserDropdown()">
+                            <i class="fas fa-user-circle"></i>
+                            <div class="user-details">
+                                <span class="user-name" id="dropdown-user-name-trigger">Cargando...</span>
+                                <span class="user-role" id="dropdown-user-role-trigger"></span>
+                            </div>
+                            <i class="fas fa-chevron-down dropdown-arrow" id="dropdown-arrow"></i>
+                        </div>
+
+                        <!-- Menú desplegable -->
+                        <div class="user-dropdown-menu" id="user-dropdown-menu">
+                            <!-- Encabezado con avatar -->
+                            <div class="dropdown-user-header">
+                                <div class="dropdown-user-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="dropdown-user-name" id="dropdown-full-name">-</div>
+                                <span class="dropdown-user-role-badge" id="dropdown-role-badge">-</span>
+                            </div>
+
+                            <!-- Información del usuario -->
+                            <div class="dropdown-user-info">
+                                <div class="dropdown-info-row">
+                                    <i class="fas fa-at"></i>
+                                    <span id="dropdown-username">-</span>
+                                </div>
+                                <div class="dropdown-info-row">
+                                    <i class="fas fa-envelope"></i>
+                                    <span id="dropdown-email">-</span>
+                                </div>
+                                <div class="dropdown-info-row">
+                                    <i class="fas fa-clock"></i>
+                                    <span id="dropdown-last-access">-</span>
+                                </div>
+                            </div>
+
+                            <!-- Acciones -->
+                            <div class="dropdown-actions">
+                                <!-- Solo visible para ADMIN -->
+                                <button class="dropdown-action-btn btn-admin" id="btn-gestionar-usuarios" onclick="abrirModalUsuarios()" style="display:none;">
+                                    <i class="fas fa-users-cog"></i>
+                                    Gestionar Usuarios
+                                </button>
+                                <div class="dropdown-divider" id="divider-admin" style="display:none;"></div>
+                                <button class="dropdown-action-btn btn-logout" onclick="logout()">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    Cerrar Sesión
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -1654,6 +2115,73 @@
         </footer>
     </div>
 
+    <!-- Modal Gestión de Usuarios -->
+    <div class="modal-usuarios-overlay" id="modal-usuarios-overlay" onclick="cerrarModalUsuariosOverlay(event)">
+        <div class="modal-usuarios-content">
+            <div class="modal-usuarios-header">
+                <h2><i class="fas fa-users-cog"></i> Agregar Nuevo Usuario</h2>
+                <button class="modal-usuarios-close" onclick="cerrarModalUsuarios()">&times;</button>
+            </div>
+            <div class="modal-usuarios-body">
+                <!-- Alerta de resultado -->
+                <div id="alert-usuario" style="display:none;"></div>
+
+                <form id="form-nuevo-usuario" onsubmit="guardarNuevoUsuario(event)">
+                    <!-- Nombre completo -->
+                    <div class="form-group-usuario">
+                        <label for="nu-nombre">Nombre Completo *</label>
+                        <input type="text" id="nu-nombre" placeholder="Ej: Juan Pérez García" required maxlength="100">
+                    </div>
+
+                    <!-- Username y Email -->
+                    <div class="form-row-usuario">
+                        <div class="form-group-usuario">
+                            <label for="nu-username">Usuario *</label>
+                            <input type="text" id="nu-username" placeholder="Ej: jperez" required maxlength="50"
+                                oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9._-]/g, '')">
+                        </div>
+                        <div class="form-group-usuario">
+                            <label for="nu-rol">Rol *</label>
+                            <select id="nu-rol" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="ADMIN">Administrador</option>
+                                <option value="REVISOR">Revisor</option>
+                                <option value="USUARIO">Usuario</option>
+                                <option value="RECEPCION">Recepción</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-group-usuario">
+                        <label for="nu-email">Correo Electrónico *</label>
+                        <input type="email" id="nu-email" placeholder="Ej: jperez@empresa.com" required maxlength="100">
+                    </div>
+
+                    <!-- Contraseña -->
+                    <div class="form-group-usuario">
+                        <label for="nu-password">Contraseña *</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="nu-password" placeholder="Mínimo 6 caracteres" required minlength="6">
+                            <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility()" title="Mostrar/ocultar contraseña">
+                                <i class="fas fa-eye" id="toggle-pass-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-usuarios-footer">
+                <button class="btn-cancelar-usuario" onclick="cerrarModalUsuarios()">
+                    Cancelar
+                </button>
+                <button class="btn-guardar-usuario" onclick="guardarNuevoUsuario(event)" id="btn-guardar-usuario">
+                    <i class="fas fa-user-plus"></i>
+                    Crear Usuario
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
     <script>
         // Función para abrir la página de Recepción de OCI
@@ -1672,6 +2200,177 @@
         function abrirFoliosPago() {
             localStorage.setItem('usuario_actual', JSON.stringify(currentUser));
             window.location.href = 'folios_pago.html';
+        }
+
+        // ===== DROPDOWN DE USUARIO =====
+
+        function toggleUserDropdown() {
+            const menu = document.getElementById('user-dropdown-menu');
+            const trigger = document.getElementById('user-profile-trigger');
+            const isOpen = menu.classList.contains('open');
+
+            if (isOpen) {
+                menu.classList.remove('open');
+                trigger.classList.remove('open');
+            } else {
+                menu.classList.add('open');
+                trigger.classList.add('open');
+            }
+        }
+
+        // Cerrar dropdown al hacer clic fuera
+        document.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('user-profile-wrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                const menu = document.getElementById('user-dropdown-menu');
+                const trigger = document.getElementById('user-profile-trigger');
+                if (menu) menu.classList.remove('open');
+                if (trigger) trigger.classList.remove('open');
+            }
+        });
+
+        // Nota: updateUserInfo en app.js ya maneja el dropdown directamente
+
+        // ===== MODAL GESTIÓN DE USUARIOS =====
+
+        function abrirModalUsuarios() {
+            // Cerrar dropdown primero
+            const menu = document.getElementById('user-dropdown-menu');
+            const trigger = document.getElementById('user-profile-trigger');
+            if (menu) menu.classList.remove('open');
+            if (trigger) trigger.classList.remove('open');
+
+            // Limpiar formulario
+            limpiarFormUsuario();
+
+            // Abrir modal
+            const overlay = document.getElementById('modal-usuarios-overlay');
+            if (overlay) overlay.classList.add('open');
+        }
+
+        function cerrarModalUsuarios() {
+            const overlay = document.getElementById('modal-usuarios-overlay');
+            if (overlay) overlay.classList.remove('open');
+            limpiarFormUsuario();
+        }
+
+        function cerrarModalUsuariosOverlay(event) {
+            if (event.target === document.getElementById('modal-usuarios-overlay')) {
+                cerrarModalUsuarios();
+            }
+        }
+
+        function limpiarFormUsuario() {
+            const form = document.getElementById('form-nuevo-usuario');
+            if (form) form.reset();
+            const alert = document.getElementById('alert-usuario');
+            if (alert) { alert.style.display = 'none'; alert.innerHTML = ''; }
+            const btn = document.getElementById('btn-guardar-usuario');
+            if (btn) btn.disabled = false;
+        }
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById('nu-password');
+            const icon = document.getElementById('toggle-pass-icon');
+            if (!input) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+            } else {
+                input.type = 'password';
+                if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+            }
+        }
+
+        function mostrarAlertaUsuario(tipo, mensaje) {
+            const alert = document.getElementById('alert-usuario');
+            if (!alert) return;
+            alert.className = 'alert-usuario alert-' + tipo;
+            alert.innerHTML = '<i class="fas fa-' + (tipo === 'success' ? 'check-circle' : 'exclamation-circle') + '"></i> ' + mensaje;
+            alert.style.display = 'flex';
+        }
+
+        // Función para hashear la contraseña (SHA-256 simple para compatibilidad con el sistema)
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function guardarNuevoUsuario(event) {
+            if (event && event.preventDefault) event.preventDefault();
+
+            // Verificar que el usuario actual es ADMIN
+            if (!window.currentUser || window.currentUser.rol !== 'ADMIN') {
+                mostrarAlertaUsuario('error', 'No tienes permisos para agregar usuarios.');
+                return;
+            }
+
+            // Obtener valores del formulario
+            const nombre = document.getElementById('nu-nombre').value.trim();
+            const username = document.getElementById('nu-username').value.trim();
+            const rol = document.getElementById('nu-rol').value;
+            const email = document.getElementById('nu-email').value.trim();
+            const password = document.getElementById('nu-password').value;
+
+            // Validaciones básicas
+            if (!nombre || !username || !rol || !email || !password) {
+                mostrarAlertaUsuario('error', 'Por favor completa todos los campos requeridos.');
+                return;
+            }
+
+            if (password.length < 6) {
+                mostrarAlertaUsuario('error', 'La contraseña debe tener al menos 6 caracteres.');
+                return;
+            }
+
+            // Deshabilitar botón
+            const btn = document.getElementById('btn-guardar-usuario');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...'; }
+
+            try {
+                // Hashear la contraseña
+                const passwordHash = await hashPassword(password);
+
+                // Insertar en Supabase
+                const { data, error } = await supabase
+                    .from('usuarios_carton')
+                    .insert([{
+                        nombre_completo: nombre,
+                        username: username,
+                        rol: rol,
+                        email: email,
+                        password_hash: passwordHash,
+                        activo: true
+                    }])
+                    .select();
+
+                if (error) {
+                    console.error('Error al crear usuario:', error);
+                    let mensajeError = 'Error al crear el usuario.';
+                    if (error.message && error.message.includes('username')) {
+                        mensajeError = 'El nombre de usuario ya existe. Elige otro.';
+                    } else if (error.message && error.message.includes('email')) {
+                        mensajeError = 'El correo electrónico ya está registrado.';
+                    } else if (error.message) {
+                        mensajeError = 'Error: ' + error.message;
+                    }
+                    mostrarAlertaUsuario('error', mensajeError);
+                } else {
+                    mostrarAlertaUsuario('success', '¡Usuario "' + username + '" creado exitosamente!');
+                    // Limpiar formulario después de 2 segundos y cerrar
+                    setTimeout(function() {
+                        cerrarModalUsuarios();
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Error inesperado:', err);
+                mostrarAlertaUsuario('error', 'Error inesperado al crear el usuario. Intenta de nuevo.');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Crear Usuario'; }
+            }
         }
     </script>
 </body>
