@@ -21,6 +21,7 @@ let inventario = [];
 let movimientos = [];
 let produccion = [];
 let currentUser = null;
+window.currentUser = null; // Expuesto en window para acceso desde scripts inline
 // Variables globales ya declaradas arriba
 
 // Initialize app
@@ -61,6 +62,7 @@ async function checkAuthentication() {
 
         // Actualizar currentUser con datos frescos de la base de datos
         currentUser = data;
+        window.currentUser = data; // Sincronizar con window para acceso global
         localStorage.setItem('current_user', JSON.stringify(currentUser));
         console.log('✅ currentUser actualizado con datos frescos:', currentUser.rol);
         
@@ -83,6 +85,7 @@ function redirectToLogin() {
 function clearAuthData() {
     localStorage.removeItem('current_user');
     currentUser = null;
+    window.currentUser = null;
 }
 
 function logout() {

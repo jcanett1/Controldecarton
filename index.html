@@ -2117,23 +2117,42 @@
 
     <!-- Modal Gestión de Usuarios -->
     <div class="modal-usuarios-overlay" id="modal-usuarios-overlay" onclick="cerrarModalUsuariosOverlay(event)">
-        <div class="modal-usuarios-content">
+        <div class="modal-usuarios-content" style="max-width:680px;">
             <div class="modal-usuarios-header">
-                <h2><i class="fas fa-users-cog"></i> Agregar Nuevo Usuario</h2>
+                <h2><i class="fas fa-users-cog"></i> Gestión de Usuarios</h2>
                 <button class="modal-usuarios-close" onclick="cerrarModalUsuarios()">&times;</button>
             </div>
             <div class="modal-usuarios-body">
+
                 <!-- Alerta de resultado -->
                 <div id="alert-usuario" style="display:none;"></div>
 
-                <form id="form-nuevo-usuario" onsubmit="guardarNuevoUsuario(event)">
-                    <!-- Nombre completo -->
+                <!-- LISTA DE USUARIOS EXISTENTES -->
+                <div style="margin-bottom:1.5rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+                        <h3 style="font-size:0.9rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin:0;">Usuarios del Sistema</h3>
+                        <span id="total-usuarios-badge" style="font-size:0.75rem;color:#6b7280;"></span>
+                    </div>
+                    <div id="lista-usuarios-sistema" style="max-height:260px;overflow-y:auto;border:1px solid #404040;border-radius:8px;">
+                        <div style="text-align:center;padding:1.5rem;color:#6b7280;">
+                            <i class="fas fa-spinner fa-spin"></i> Cargando usuarios...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DIVISOR -->
+                <div style="height:1px;background:#404040;margin:1.25rem 0;"></div>
+
+                <!-- FORMULARIO NUEVO / EDITAR USUARIO -->
+                <div>
+                    <h3 id="form-usuario-titulo" style="font-size:0.9rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:1rem;">Agregar Nuevo Usuario</h3>
+                    <input type="hidden" id="nu-id">
+
                     <div class="form-group-usuario">
                         <label for="nu-nombre">Nombre Completo *</label>
                         <input type="text" id="nu-nombre" placeholder="Ej: Juan Pérez García" required maxlength="100">
                     </div>
 
-                    <!-- Username y Email -->
                     <div class="form-row-usuario">
                         <div class="form-group-usuario">
                             <label for="nu-username">Usuario *</label>
@@ -2152,31 +2171,31 @@
                         </div>
                     </div>
 
-                    <!-- Email -->
                     <div class="form-group-usuario">
                         <label for="nu-email">Correo Electrónico *</label>
                         <input type="email" id="nu-email" placeholder="Ej: jperez@empresa.com" required maxlength="100">
                     </div>
 
-                    <!-- Contraseña -->
                     <div class="form-group-usuario">
-                        <label for="nu-password">Contraseña *</label>
+                        <label for="nu-password" id="label-password">Contraseña *</label>
                         <div class="password-input-wrapper">
-                            <input type="password" id="nu-password" placeholder="Mínimo 6 caracteres" required minlength="6">
+                            <input type="password" id="nu-password" placeholder="Mínimo 6 caracteres" minlength="6">
                             <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility()" title="Mostrar/ocultar contraseña">
                                 <i class="fas fa-eye" id="toggle-pass-icon"></i>
                             </button>
                         </div>
+                        <small id="hint-password" style="color:#6b7280;font-size:0.75rem;"></small>
                     </div>
-                </form>
+                </div>
             </div>
+
             <div class="modal-usuarios-footer">
-                <button class="btn-cancelar-usuario" onclick="cerrarModalUsuarios()">
+                <button class="btn-cancelar-usuario" onclick="cancelarEdicionUsuario()" id="btn-cancelar-form">
                     Cancelar
                 </button>
                 <button class="btn-guardar-usuario" onclick="guardarNuevoUsuario(event)" id="btn-guardar-usuario">
                     <i class="fas fa-user-plus"></i>
-                    Crear Usuario
+                    <span id="btn-guardar-texto">Crear Usuario</span>
                 </button>
             </div>
         </div>
@@ -2184,41 +2203,27 @@
 
     <script src="app.js"></script>
     <script>
-        // Función para abrir la página de Recepción de OCI
+        // ===== FUNCIONES DE NAVEGACIÓN =====
         function abrirOCIRecibido() {
             window.location.href = 'OCI_RECIBIDO.html';
         }
-
-        // Función para abrir la página de Revisar OCI (si no existe en app.js)
         if (typeof abrirRevisarOCI === 'undefined') {
-            function abrirRevisarOCI() {
-                window.location.href = 'revisar_oci.html';
-            }
+            function abrirRevisarOCI() { window.location.href = 'revisar_oci.html'; }
         }
-
-        // Función para abrir la página de Folios para Pagos
         function abrirFoliosPago() {
-            localStorage.setItem('usuario_actual', JSON.stringify(currentUser));
+            localStorage.setItem('usuario_actual', JSON.stringify(window.currentUser || currentUser));
             window.location.href = 'folios_pago.html';
         }
 
         // ===== DROPDOWN DE USUARIO =====
-
         function toggleUserDropdown() {
             const menu = document.getElementById('user-dropdown-menu');
             const trigger = document.getElementById('user-profile-trigger');
+            if (!menu) return;
             const isOpen = menu.classList.contains('open');
-
-            if (isOpen) {
-                menu.classList.remove('open');
-                trigger.classList.remove('open');
-            } else {
-                menu.classList.add('open');
-                trigger.classList.add('open');
-            }
+            menu.classList.toggle('open', !isOpen);
+            trigger.classList.toggle('open', !isOpen);
         }
-
-        // Cerrar dropdown al hacer clic fuera
         document.addEventListener('click', function(e) {
             const wrapper = document.getElementById('user-profile-wrapper');
             if (wrapper && !wrapper.contains(e.target)) {
@@ -2229,23 +2234,62 @@
             }
         });
 
-        // Nota: updateUserInfo en app.js ya maneja el dropdown directamente
+        // ===== UTILIDADES =====
+        function getUsuarioActual() {
+            // Intentar obtener de window.currentUser (seteado por app.js)
+            // o bien del localStorage como fallback
+            if (window.currentUser && window.currentUser.id) return window.currentUser;
+            try {
+                const stored = localStorage.getItem('current_user');
+                if (stored) return JSON.parse(stored);
+            } catch(e) {}
+            return null;
+        }
+
+        function mostrarAlertaUsuario(tipo, mensaje) {
+            const el = document.getElementById('alert-usuario');
+            if (!el) return;
+            el.className = 'alert-usuario alert-' + tipo;
+            el.innerHTML = '<i class="fas fa-' + (tipo === 'success' ? 'check-circle' : 'exclamation-circle') + '"></i> ' + mensaje;
+            el.style.display = 'flex';
+            if (tipo === 'success') setTimeout(() => { el.style.display = 'none'; }, 4000);
+        }
+
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function getRoleBadgeHTML(rol) {
+            const colores = {
+                'ADMIN': 'background:linear-gradient(135deg,#fbbf24,#d97706);color:#000;',
+                'REVISOR': 'background:linear-gradient(135deg,#3b82f6,#1e40af);color:#fff;',
+                'USUARIO': 'background:linear-gradient(135deg,#10b981,#047857);color:#fff;',
+                'RECEPCION': 'background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;'
+            };
+            const style = colores[rol] || 'background:#404040;color:#fff;';
+            const nombres = { 'ADMIN':'Administrador','REVISOR':'Revisor','USUARIO':'Usuario','RECEPCION':'Recepción' };
+            return '<span style="' + style + 'padding:2px 8px;border-radius:20px;font-size:0.65rem;font-weight:700;text-transform:uppercase;">' + (nombres[rol] || rol) + '</span>';
+        }
 
         // ===== MODAL GESTIÓN DE USUARIOS =====
+        let modoEdicion = false;
+        let usuarioEditandoId = null;
 
         function abrirModalUsuarios() {
-            // Cerrar dropdown primero
+            // Cerrar dropdown
             const menu = document.getElementById('user-dropdown-menu');
             const trigger = document.getElementById('user-profile-trigger');
             if (menu) menu.classList.remove('open');
             if (trigger) trigger.classList.remove('open');
 
-            // Limpiar formulario
             limpiarFormUsuario();
-
-            // Abrir modal
             const overlay = document.getElementById('modal-usuarios-overlay');
             if (overlay) overlay.classList.add('open');
+            cargarListaUsuarios();
         }
 
         function cerrarModalUsuarios() {
@@ -2261,12 +2305,34 @@
         }
 
         function limpiarFormUsuario() {
-            const form = document.getElementById('form-nuevo-usuario');
-            if (form) form.reset();
+            ['nu-nombre','nu-username','nu-email','nu-password'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            const rol = document.getElementById('nu-rol');
+            if (rol) rol.value = '';
+            const idEl = document.getElementById('nu-id');
+            if (idEl) idEl.value = '';
             const alert = document.getElementById('alert-usuario');
             if (alert) { alert.style.display = 'none'; alert.innerHTML = ''; }
             const btn = document.getElementById('btn-guardar-usuario');
+            const btnTexto = document.getElementById('btn-guardar-texto');
             if (btn) btn.disabled = false;
+            if (btnTexto) btnTexto.textContent = 'Crear Usuario';
+            const titulo = document.getElementById('form-usuario-titulo');
+            if (titulo) titulo.textContent = 'Agregar Nuevo Usuario';
+            const labelPass = document.getElementById('label-password');
+            if (labelPass) labelPass.textContent = 'Contraseña *';
+            const hintPass = document.getElementById('hint-password');
+            if (hintPass) hintPass.textContent = '';
+            const usernameInput = document.getElementById('nu-username');
+            if (usernameInput) usernameInput.disabled = false;
+            modoEdicion = false;
+            usuarioEditandoId = null;
+        }
+
+        function cancelarEdicionUsuario() {
+            limpiarFormUsuario();
         }
 
         function togglePasswordVisibility() {
@@ -2282,100 +2348,217 @@
             }
         }
 
-        function mostrarAlertaUsuario(tipo, mensaje) {
-            const alert = document.getElementById('alert-usuario');
-            if (!alert) return;
-            alert.className = 'alert-usuario alert-' + tipo;
-            alert.innerHTML = '<i class="fas fa-' + (tipo === 'success' ? 'check-circle' : 'exclamation-circle') + '"></i> ' + mensaje;
-            alert.style.display = 'flex';
+        // ===== CARGAR LISTA DE USUARIOS =====
+        async function cargarListaUsuarios() {
+            const contenedor = document.getElementById('lista-usuarios-sistema');
+            const badge = document.getElementById('total-usuarios-badge');
+            if (!contenedor) return;
+
+            contenedor.innerHTML = '<div style="text-align:center;padding:1.5rem;color:#6b7280;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+
+            try {
+                const { data: usuarios, error } = await supabase
+                    .from('usuarios_carton')
+                    .select('id, username, nombre_completo, email, rol, activo, ultimo_acceso')
+                    .order('nombre_completo', { ascending: true });
+
+                if (error) throw error;
+
+                if (badge) badge.textContent = usuarios.length + ' usuario(s)';
+
+                if (!usuarios || usuarios.length === 0) {
+                    contenedor.innerHTML = '<div style="text-align:center;padding:1.5rem;color:#6b7280;">No hay usuarios registrados.</div>';
+                    return;
+                }
+
+                const usuarioActual = getUsuarioActual();
+
+                contenedor.innerHTML = usuarios.map(u => {
+                    const esYo = usuarioActual && u.id === usuarioActual.id;
+                    const ultimoAcceso = u.ultimo_acceso
+                        ? new Date(u.ultimo_acceso).toLocaleString('es-MX', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+                        : 'Nunca';
+                    return `
+                    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid #333;${esYo ? 'background:rgba(251,191,36,0.05);' : ''}">
+                        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#374151,#4b5563);display:flex;align-items:center;justify-content:center;font-size:0.9rem;color:#9ca3af;flex-shrink:0;">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                <span style="font-weight:600;font-size:0.875rem;color:#e5e7eb;">${u.nombre_completo}</span>
+                                ${getRoleBadgeHTML(u.rol)}
+                                ${esYo ? '<span style="font-size:0.65rem;color:#fbbf24;">(tú)</span>' : ''}
+                                ${!u.activo ? '<span style="font-size:0.65rem;color:#ef4444;">● Inactivo</span>' : ''}
+                            </div>
+                            <div style="font-size:0.75rem;color:#6b7280;margin-top:2px;">@${u.username} &bull; ${u.email}</div>
+                            <div style="font-size:0.7rem;color:#4b5563;margin-top:1px;"><i class="fas fa-clock" style="font-size:0.6rem;"></i> ${ultimoAcceso}</div>
+                        </div>
+                        <div style="display:flex;gap:6px;flex-shrink:0;">
+                            <button onclick="editarUsuario(${u.id},'${u.nombre_completo.replace(/'/g,"\\'")}',' ${u.username}','${u.email}','${u.rol}')"
+                                style="padding:5px 10px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);border-radius:6px;color:#60a5fa;font-size:0.75rem;cursor:pointer;transition:all 0.2s;"
+                                title="Editar usuario">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            ${!esYo ? `<button onclick="eliminarUsuario(${u.id},'${u.nombre_completo.replace(/'/g,"\\'")}')"
+                                style="padding:5px 10px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#f87171;font-size:0.75rem;cursor:pointer;transition:all 0.2s;"
+                                title="Eliminar usuario">
+                                <i class="fas fa-trash"></i>
+                            </button>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+
+            } catch (err) {
+                console.error('Error cargando usuarios:', err);
+                contenedor.innerHTML = '<div style="text-align:center;padding:1.5rem;color:#f87171;"><i class="fas fa-exclamation-circle"></i> Error al cargar usuarios.</div>';
+            }
         }
 
-        // Función para hashear la contraseña (SHA-256 simple para compatibilidad con el sistema)
-        async function hashPassword(password) {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(password);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        // ===== EDITAR USUARIO =====
+        function editarUsuario(id, nombre, username, email, rol) {
+            modoEdicion = true;
+            usuarioEditandoId = id;
+
+            document.getElementById('nu-id').value = id;
+            document.getElementById('nu-nombre').value = nombre.trim();
+            document.getElementById('nu-username').value = username.trim();
+            document.getElementById('nu-email').value = email;
+            document.getElementById('nu-rol').value = rol;
+            document.getElementById('nu-password').value = '';
+
+            // Ajustar UI para modo edición
+            const titulo = document.getElementById('form-usuario-titulo');
+            if (titulo) titulo.textContent = 'Editar Usuario: ' + nombre.trim();
+            const labelPass = document.getElementById('label-password');
+            if (labelPass) labelPass.textContent = 'Nueva Contraseña (dejar vacío para no cambiar)';
+            const hintPass = document.getElementById('hint-password');
+            if (hintPass) hintPass.textContent = 'Si no deseas cambiar la contraseña, deja este campo vacío.';
+            const usernameInput = document.getElementById('nu-username');
+            if (usernameInput) usernameInput.disabled = true;
+            const btnTexto = document.getElementById('btn-guardar-texto');
+            if (btnTexto) btnTexto.textContent = 'Guardar Cambios';
+
+            // Scroll al formulario
+            document.getElementById('form-usuario-titulo').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        // ===== ELIMINAR USUARIO =====
+        async function eliminarUsuario(id, nombre) {
+            if (!confirm('¿Estás seguro de que deseas eliminar al usuario "' + nombre + '"?\nEsta acción no se puede deshacer.')) return;
+
+            try {
+                const { error } = await supabase
+                    .from('usuarios_carton')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                mostrarAlertaUsuario('success', 'Usuario "' + nombre + '" eliminado correctamente.');
+                cargarListaUsuarios();
+            } catch (err) {
+                console.error('Error eliminando usuario:', err);
+                mostrarAlertaUsuario('error', 'Error al eliminar el usuario: ' + (err.message || 'Error desconocido'));
+            }
+        }
+
+        // ===== GUARDAR USUARIO (CREAR O EDITAR) =====
         async function guardarNuevoUsuario(event) {
             if (event && event.preventDefault) event.preventDefault();
 
-            // Verificar que el usuario actual es ADMIN (comparación robusta y segura)
-            if (!window.currentUser) {
-                mostrarAlertaUsuario('error', 'No hay sesión activa. Por favor recarga la página.');
-                return;
-            }
-            const rolActual = String(window.currentUser.rol || window.currentUser.role || '').trim().toUpperCase();
-            console.log('🔍 Verificando rol para crear usuario:', rolActual);
-            if (rolActual !== 'ADMIN') {
-                mostrarAlertaUsuario('error', 'No tienes permisos para agregar usuarios. Rol detectado: ' + (rolActual || 'desconocido'));
+            // Obtener usuario actual de forma segura
+            const usuarioActual = getUsuarioActual();
+            if (!usuarioActual) {
+                mostrarAlertaUsuario('error', 'No hay sesión activa. Por favor recarga la página e inicia sesión nuevamente.');
                 return;
             }
 
-            // Obtener valores del formulario
+            const rolActual = String(usuarioActual.rol || usuarioActual.role || '').trim().toUpperCase();
+            console.log('🔍 Rol del usuario actual:', rolActual, '| ID:', usuarioActual.id);
+
+            if (rolActual !== 'ADMIN') {
+                mostrarAlertaUsuario('error', 'Solo los administradores pueden gestionar usuarios. Tu rol: ' + (rolActual || 'desconocido'));
+                return;
+            }
+
             const nombre = document.getElementById('nu-nombre').value.trim();
             const username = document.getElementById('nu-username').value.trim();
             const rol = document.getElementById('nu-rol').value;
             const email = document.getElementById('nu-email').value.trim();
             const password = document.getElementById('nu-password').value;
 
-            // Validaciones básicas
-            if (!nombre || !username || !rol || !email || !password) {
-                mostrarAlertaUsuario('error', 'Por favor completa todos los campos requeridos.');
+            if (!nombre || !rol || !email) {
+                mostrarAlertaUsuario('error', 'Por favor completa nombre, correo y rol.');
                 return;
             }
 
-            if (password.length < 6) {
+            if (!modoEdicion && !username) {
+                mostrarAlertaUsuario('error', 'El nombre de usuario es requerido.');
+                return;
+            }
+
+            if (!modoEdicion && (!password || password.length < 6)) {
                 mostrarAlertaUsuario('error', 'La contraseña debe tener al menos 6 caracteres.');
                 return;
             }
 
-            // Deshabilitar botón
+            if (modoEdicion && password && password.length > 0 && password.length < 6) {
+                mostrarAlertaUsuario('error', 'La nueva contraseña debe tener al menos 6 caracteres.');
+                return;
+            }
+
             const btn = document.getElementById('btn-guardar-usuario');
-            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...'; }
+            const btnTexto = document.getElementById('btn-guardar-texto');
+            if (btn) btn.disabled = true;
+            if (btnTexto) btnTexto.textContent = 'Guardando...';
 
             try {
-                // Hashear la contraseña
-                const passwordHash = await hashPassword(password);
-
-                // Insertar en Supabase
-                const { data, error } = await supabase
-                    .from('usuarios_carton')
-                    .insert([{
-                        nombre_completo: nombre,
-                        username: username,
-                        rol: rol,
-                        email: email,
-                        password_hash: passwordHash,
-                        activo: true
-                    }])
-                    .select();
-
-                if (error) {
-                    console.error('Error al crear usuario:', error);
-                    let mensajeError = 'Error al crear el usuario.';
-                    if (error.message && error.message.includes('username')) {
-                        mensajeError = 'El nombre de usuario ya existe. Elige otro.';
-                    } else if (error.message && error.message.includes('email')) {
-                        mensajeError = 'El correo electrónico ya está registrado.';
-                    } else if (error.message) {
-                        mensajeError = 'Error: ' + error.message;
+                if (modoEdicion) {
+                    // === MODO EDICIÓN ===
+                    const updateData = { nombre_completo: nombre, email: email, rol: rol };
+                    if (password && password.length >= 6) {
+                        updateData.password_hash = await hashPassword(password);
                     }
-                    mostrarAlertaUsuario('error', mensajeError);
+
+                    const { error } = await supabase
+                        .from('usuarios_carton')
+                        .update(updateData)
+                        .eq('id', usuarioEditandoId);
+
+                    if (error) throw error;
+
+                    mostrarAlertaUsuario('success', '¡Usuario actualizado correctamente!');
+                    limpiarFormUsuario();
+                    cargarListaUsuarios();
+
                 } else {
+                    // === MODO CREACIÓN ===
+                    const passwordHash = await hashPassword(password);
+
+                    const { error } = await supabase
+                        .from('usuarios_carton')
+                        .insert([{ nombre_completo: nombre, username: username, rol: rol, email: email, password_hash: passwordHash, activo: true }]);
+
+                    if (error) {
+                        let msg = 'Error al crear el usuario.';
+                        if (error.message && error.message.includes('username')) msg = 'El nombre de usuario ya existe.';
+                        else if (error.message && error.message.includes('email')) msg = 'El correo electrónico ya está registrado.';
+                        else if (error.message) msg = 'Error: ' + error.message;
+                        mostrarAlertaUsuario('error', msg);
+                        return;
+                    }
+
                     mostrarAlertaUsuario('success', '¡Usuario "' + username + '" creado exitosamente!');
-                    // Limpiar formulario después de 2 segundos y cerrar
-                    setTimeout(function() {
-                        cerrarModalUsuarios();
-                    }, 2000);
+                    limpiarFormUsuario();
+                    cargarListaUsuarios();
                 }
+
             } catch (err) {
-                console.error('Error inesperado:', err);
-                mostrarAlertaUsuario('error', 'Error inesperado al crear el usuario. Intenta de nuevo.');
+                console.error('Error guardando usuario:', err);
+                mostrarAlertaUsuario('error', 'Error: ' + (err.message || 'Error inesperado'));
             } finally {
-                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Crear Usuario'; }
+                if (btn) btn.disabled = false;
+                if (btnTexto) btnTexto.textContent = modoEdicion ? 'Guardar Cambios' : 'Crear Usuario';
             }
         }
     </script>
