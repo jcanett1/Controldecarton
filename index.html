@@ -1295,6 +1295,10 @@
                     <i class="fas fa-balance-scale"></i>
                     <span>Balance</span>
                 </li>
+                <li class="menu-item" onclick="abrirFoliosPago()" style="border-left: 4px solid transparent;">
+                    <i class="fas fa-file-invoice-dollar" style="color: #fbbf24;"></i>
+                    <span>Folios para Pagos</span>
+                </li>
 
             </ul>
         </nav>
@@ -1662,6 +1666,12 @@
             function abrirRevisarOCI() {
                 window.location.href = 'revisar_oci.html';
             }
+        }
+
+        // Función para abrir la página de Folios para Pagos
+        function abrirFoliosPago() {
+            localStorage.setItem('usuario_actual', JSON.stringify(currentUser));
+            window.location.href = 'folios_pago.html';
         }
     </script>
 </body>

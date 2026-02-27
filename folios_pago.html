@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Folios para Pagos - Sistema de Cartón PXG</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f8;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%);
+            color: white;
+            padding: 24px 30px;
+            box-shadow: 0 4px 20px rgba(26, 35, 126, 0.4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-icon {
+            width: 52px;
+            height: 52px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .header-left h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            letter-spacing: 0.3px;
+        }
+
+        .header-left p {
+            font-size: 13px;
+            opacity: 0.85;
+            font-weight: 400;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-badge {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-volver {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.35);
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-volver:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+
+        /* ===== CONTAINER ===== */
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 28px 24px;
+        }
+
+        /* ===== STATS ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-left: 4px solid transparent;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+
+        .stat-card:nth-child(1) { border-left-color: #f59e0b; }
+        .stat-card:nth-child(2) { border-left-color: #10b981; }
+        .stat-card:nth-child(3) { border-left-color: #3b82f6; }
+        .stat-card:nth-child(4) { border-left-color: #8b5cf6; }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .stat-card:nth-child(1) .stat-icon { background: #fef3c7; color: #d97706; }
+        .stat-card:nth-child(2) .stat-icon { background: #d1fae5; color: #059669; }
+        .stat-card:nth-child(3) .stat-icon { background: #dbeafe; color: #2563eb; }
+        .stat-card:nth-child(4) .stat-icon { background: #ede9fe; color: #7c3aed; }
+
+        .stat-info h3 {
+            font-size: 26px;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .stat-info p {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        /* ===== PANEL PRINCIPAL ===== */
+        .panel {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            overflow: hidden;
+            margin-bottom: 28px;
+        }
+
+        .panel-header {
+            background: linear-gradient(90deg, #1a237e 0%, #3949ab 100%);
+            padding: 18px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h2 {
+            color: white;
+            font-size: 17px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* ===== FILTROS ===== */
+        .filtros-bar {
+            padding: 18px 24px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filtros-bar input,
+        .filtros-bar select {
+            padding: 9px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            background: white;
+            color: #334155;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .filtros-bar input:focus,
+        .filtros-bar select:focus {
+            outline: none;
+            border-color: #3949ab;
+            box-shadow: 0 0 0 3px rgba(57, 73, 171, 0.12);
+        }
+
+        .filtros-bar input[type="text"] {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        /* ===== BOTONES ===== */
+        .btn {
+            padding: 9px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.25s;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3949ab 0%, #1a237e 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(57, 73, 171, 0.4);
+        }
+
+        .btn-secondary {
+            background: #64748b;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+            transform: translateY(-1px);
+        }
+
+        .btn-notificar {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            font-weight: 700;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+
+        .btn-notificar:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.45);
+        }
+
+        .btn-notificar:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-guardar-folio {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 6px 12px;
+            font-size: 11px;
+            border-radius: 6px;
+        }
+
+        .btn-guardar-folio:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-sm {
+            padding: 6px 11px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        .btn-info {
+            background: #0ea5e9;
+            color: white;
+        }
+
+        .btn-info:hover { background: #0284c7; }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover { background: #dc2626; }
+
+        /* ===== TABLA PRINCIPAL ===== */
+        .tabla-wrapper {
+            overflow-x: auto;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            background: #f1f5f9;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        th {
+            padding: 13px 14px;
+            text-align: left;
+            font-weight: 700;
+            color: #374151;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        tbody tr.tiene-folio {
+            background: #f0fdf4;
+        }
+
+        tbody tr.tiene-folio:hover {
+            background: #dcfce7;
+        }
+
+        /* ===== CAMPO FOLIO ===== */
+        .folio-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .folio-input {
+            width: 110px;
+            padding: 6px 10px;
+            border: 2px solid #c7d2fe;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: inherit;
+            font-weight: 600;
+            text-align: center;
+            color: #1e293b;
+            background: white;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .folio-input:focus {
+            outline: none;
+            border-color: #3949ab;
+            box-shadow: 0 0 0 3px rgba(57, 73, 171, 0.15);
+        }
+
+        .folio-input.folio-guardado {
+            background: #ede9fe;
+            border-color: #7c3aed;
+            color: #4c1d95;
+        }
+
+        .folio-display {
+            background: #ede9fe;
+            color: #4c1d95;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-block;
+            border: 1px solid #c4b5fd;
+        }
+
+        /* ===== BADGES Y ESTADOS ===== */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-pendiente {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .badge-con-folio {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .badge-notificado {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .oc-mtk-badge {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .invoice-badge {
+            background: #fff7ed;
+            color: #9a3412;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+            border: 1px solid #fed7aa;
+        }
+
+        .text-muted {
+            color: #94a3b8;
+            font-style: italic;
+            font-size: 11px;
+        }
+
+        .numero-oci {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 13px;
+        }
+
+        /* ===== SPINNER / LOADING ===== */
+        .loading-row td {
+            text-align: center;
+            padding: 50px 20px !important;
+            color: #94a3b8;
+        }
+
+        .spinner {
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #3949ab;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            animation: spin 0.9s linear infinite;
+            margin: 0 auto 14px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #94a3b8;
+        }
+
+        .empty-state i {
+            font-size: 44px;
+            margin-bottom: 14px;
+            opacity: 0.4;
+            display: block;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        /* ===== HISTORIAL ===== */
+        .historial-panel {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            overflow: hidden;
+        }
+
+        .historial-header {
+            background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
+            padding: 18px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .historial-header h2 {
+            color: white;
+            font-size: 17px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .historial-count {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .historial-list {
+            padding: 16px 24px;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+
+        .historial-list::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .historial-list::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .historial-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .historial-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 14px 0;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.2s;
+        }
+
+        .historial-item:last-child {
+            border-bottom: none;
+        }
+
+        .historial-item:hover {
+            background: #f8fafc;
+            margin: 0 -8px;
+            padding: 14px 8px;
+            border-radius: 8px;
+        }
+
+        .historial-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .historial-icon.folio-asignado {
+            background: #ede9fe;
+            color: #7c3aed;
+        }
+
+        .historial-icon.notificado {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .historial-body {
+            flex: 1;
+        }
+
+        .historial-body .titulo {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 3px;
+        }
+
+        .historial-body .detalle {
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .historial-body .detalle strong {
+            color: #334155;
+        }
+
+        .historial-meta {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .historial-meta .fecha {
+            font-size: 11px;
+            color: #94a3b8;
+            white-space: nowrap;
+        }
+
+        .historial-meta .folio-num {
+            font-size: 13px;
+            font-weight: 700;
+            color: #7c3aed;
+            background: #ede9fe;
+            padding: 2px 8px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+
+        .historial-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: #94a3b8;
+        }
+
+        .historial-empty i {
+            font-size: 36px;
+            opacity: 0.35;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        /* ===== TOAST NOTIFICACIONES ===== */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 10px;
+            padding: 14px 18px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            max-width: 420px;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid #10b981;
+        }
+
+        .toast.error { border-left-color: #ef4444; }
+        .toast.warning { border-left-color: #f59e0b; }
+        .toast.info { border-left-color: #3b82f6; }
+
+        .toast-icon { font-size: 18px; flex-shrink: 0; }
+        .toast.success .toast-icon { color: #10b981; }
+        .toast.error .toast-icon { color: #ef4444; }
+        .toast.warning .toast-icon { color: #f59e0b; }
+        .toast.info .toast-icon { color: #3b82f6; }
+
+        .toast-text { flex: 1; font-size: 13px; font-weight: 500; color: #1e293b; }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 560px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            animation: modalIn 0.3s ease;
+            overflow: hidden;
+        }
+
+        @keyframes modalIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-close {
+            background: rgba(255,255,255,0.25);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .modal-close:hover { background: rgba(255,255,255,0.4); }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .modal-info-item label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .modal-info-item span {
+            font-size: 13px;
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 14px;
+                text-align: center;
+            }
+
+            .header-right {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .modal-info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== INDICADOR DE GUARDADO ===== */
+        .saving-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            color: #10b981;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .saving-indicator.visible {
+            opacity: 1;
+        }
+
+        /* ===== COLUMNA ACCIONES ===== */
+        .acciones-cell {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* ===== PAGINACIÓN ===== */
+        .paginacion-bar {
+            padding: 14px 24px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .paginacion-info strong {
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+    <div class="header-left">
+        <div class="header-icon">
+            <i class="fas fa-file-invoice-dollar"></i>
+        </div>
+        <div>
+            <h1>Folios para Pagos</h1>
+            <p>OCI con factura y folio pendiente asignar</p>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="user-badge">
+            <i class="fas fa-user-circle"></i>
+            <span id="usuario-actual">Cargando...</span>
+        </div>
+        <button class="btn-volver" onclick="volverAlSistema()">
+            <i class="fas fa-arrow-left"></i>
+            Volver
+        </button>
+    </div>
+</div>
+
+<!-- ===== CONTENIDO PRINCIPAL ===== -->
+<div class="container">
+
+    <!-- ESTADÍSTICAS -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="stat-pendientes">—</h3>
+                <p>Folios Pendientes</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="stat-asignados">—</h3>
+                <p>Folios Asignados</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-bell"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="stat-notificados">—</h3>
+                <p>Notificados</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="stat-total-oci">—</h3>
+                <p>Total OCI con Invoice</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL TABLA PRINCIPAL -->
+    <div class="panel">
+        <div class="panel-header">
+            <h2>
+                <i class="fas fa-table"></i>
+                OCI con Factura — Asignación de Folio
+            </h2>
+            <div class="panel-header-actions">
+                <button class="btn btn-secondary btn-sm" onclick="recargarOrdenes()">
+                    <i class="fas fa-sync-alt"></i>
+                    Recargar
+                </button>
+            </div>
+        </div>
+
+        <!-- FILTROS -->
+        <div class="filtros-bar">
+            <input type="text" id="filtro-busqueda" placeholder="Buscar por OCI, material, invoice..." />
+            <select id="filtro-folio-estado">
+                <option value="">Todos</option>
+                <option value="sin_folio">Sin Folio</option>
+                <option value="con_folio">Con Folio</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="filtrarOrdenes()">
+                <i class="fas fa-search"></i>
+                Filtrar
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="limpiarFiltros()">
+                <i class="fas fa-times"></i>
+                Limpiar
+            </button>
+        </div>
+
+        <!-- TABLA -->
+        <div class="tabla-wrapper">
+            <table id="tabla-principal">
+                <thead>
+                    <tr>
+                        <th>Número OCI</th>
+                        <th>Fecha Creación</th>
+                        <th>Material</th>
+                        <th>Descripción</th>
+                        <th>OC-MTK</th>
+                        <th>Qty Recibida</th>
+                        <th>Invoice</th>
+                        <th style="min-width:200px;">Folio</th>
+                        <th>Estado</th>
+                        <th style="min-width:160px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-body">
+                    <tr class="loading-row">
+                        <td colspan="10">
+                            <div class="spinner"></div>
+                            <p>Cargando órdenes...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PAGINACIÓN INFO -->
+        <div class="paginacion-bar">
+            <div class="paginacion-info">
+                Mostrando <strong id="count-mostrados">0</strong> de <strong id="count-total">0</strong> registros
+            </div>
+            <div style="font-size: 11px; color: #94a3b8;">
+                <i class="fas fa-info-circle"></i>
+                Los campos de Folio se guardan automáticamente al presionar Enter o al salir del campo
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL HISTORIAL -->
+    <div class="historial-panel">
+        <div class="historial-header">
+            <h2>
+                <i class="fas fa-history"></i>
+                Historial de Folios Asignados
+            </h2>
+            <span class="historial-count" id="historial-count">0 registros</span>
+        </div>
+        <div class="historial-list" id="historial-list">
+            <div class="historial-empty">
+                <i class="fas fa-inbox"></i>
+                <p>No hay registros en el historial aún</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===== MODAL NOTIFICACIÓN ===== -->
+<div class="modal-overlay" id="modal-notificar">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3><i class="fas fa-bell"></i> Confirmar Notificación</h3>
+            <button class="modal-close" onclick="cerrarModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size: 14px; color: #475569; margin-bottom: 18px;">
+                ¿Deseas registrar la notificación para la siguiente OCI con folio asignado?
+            </p>
+            <div class="modal-info-grid" id="modal-info-content">
+                <!-- Contenido dinámico -->
+            </div>
+            <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; margin-top: 4px;">
+                <p style="font-size: 12px; color: #92400e; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Esta acción registrará la notificación en el historial y marcará el folio como notificado.
+                </p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="cerrarModal()">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button class="btn btn-notificar" id="btn-confirmar-notificar" onclick="confirmarNotificacion()">
+                <i class="fas fa-bell"></i> Confirmar Notificación
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ===== SUPABASE JS ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+// ============================================================
+// CONFIGURACIÓN SUPABASE
+// ============================================================
+const SUPABASE_URL = 'https://bdrxcilsuxbkpmolfbgu.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkcnhjaWxzdXhia3Btb2xmYmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNTQ0NTcsImV4cCI6MjA2OTgzMDQ1N30.iSO9EoOMEoi_VARxPqMd2yMUvQvTmKJntxJvwAl-TVs';
+
+if (!window.supabaseClient) {
+    window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+const sb = window.supabaseClient;
+
+// ============================================================
+// VARIABLES GLOBALES
+// ============================================================
+let usuarioActual = null;
+let todasLasOrdenes = [];
+let historialFolios = [];
+let ordenParaNotificar = null;
+let mapaFoliosGuardados = {}; // { numero_oci: registro_folio }
+
+// ============================================================
+// INICIALIZACIÓN
+// ============================================================
+document.addEventListener('DOMContentLoaded', async function () {
+    cargarUsuario();
+    await Promise.all([
+        cargarOrdenes(),
+        cargarHistorial()
+    ]);
+});
+
+// ============================================================
+// CARGAR USUARIO
+// ============================================================
+function cargarUsuario() {
+    try {
+        const stored = localStorage.getItem('current_user');
+        if (!stored) {
+            showToast('No se encontró sesión activa. Redirigiendo...', 'warning');
+            setTimeout(() => { window.location.href = 'login_completo.html'; }, 2000);
+            return;
+        }
+        usuarioActual = JSON.parse(stored);
+        document.getElementById('usuario-actual').textContent =
+            usuarioActual.nombre_completo || usuarioActual.username || 'Usuario';
+    } catch (e) {
+        console.error('Error cargando usuario:', e);
+    }
+}
+
+// ============================================================
+// VOLVER AL SISTEMA
+// ============================================================
+function volverAlSistema() {
+    window.location.href = 'index.html';
+}
+
+// ============================================================
+// CARGAR ÓRDENES DE COMPRA (con invoice)
+// ============================================================
+async function cargarOrdenes() {
+    const tbody = document.getElementById('tabla-body');
+    tbody.innerHTML = `
+        <tr class="loading-row">
+            <td colspan="10">
+                <div class="spinner"></div>
+                <p>Cargando órdenes...</p>
+            </td>
+        </tr>`;
+
+    try {
+        // Traer órdenes que tienen invoice asignado (pendientes de folio)
+        // También traer las que ya tienen folio en folios_pago_carton
+        const { data: ordenes, error } = await sb
+            .from('ordenes_compra')
+            .select('id, numero_oci, fecha_creacion, material_numero, descripcion_material, oc_mtk, qty_recibida, invoice')
+            .not('invoice', 'is', null)
+            .neq('invoice', '')
+            .order('fecha_creacion', { ascending: false });
+
+        if (error) throw error;
+
+        // Cargar folios ya guardados para cruzar
+        const { data: foliosGuardados, error: errorFolios } = await sb
+            .from('folios_pago_carton')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (!errorFolios && foliosGuardados) {
+            // Crear mapa: numero_oci -> último registro de folio
+            mapaFoliosGuardados = {};
+            foliosGuardados.forEach(f => {
+                if (!mapaFoliosGuardados[f.numero_oci]) {
+                    mapaFoliosGuardados[f.numero_oci] = f;
+                }
+            });
+        }
+
+        todasLasOrdenes = ordenes || [];
+        renderizarTabla(todasLasOrdenes);
+        actualizarEstadisticas(todasLasOrdenes);
+
+    } catch (err) {
+        console.error('Error cargando órdenes:', err);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10">
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle" style="color:#ef4444;"></i>
+                        <p>Error al cargar las órdenes: ${err.message}</p>
+                    </div>
+                </td>
+            </tr>`;
+        showToast('Error al cargar las órdenes de compra', 'error');
+    }
+}
+
+// ============================================================
+// RENDERIZAR TABLA
+// ============================================================
+function renderizarTabla(ordenes) {
+    const tbody = document.getElementById('tabla-body');
+    document.getElementById('count-mostrados').textContent = ordenes.length;
+    document.getElementById('count-total').textContent = todasLasOrdenes.length;
+
+    if (!ordenes || ordenes.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No se encontraron órdenes con invoice asignado</p>
+                    </div>
+                </td>
+            </tr>`;
+        return;
+    }
+
+    tbody.innerHTML = ordenes.map(function (orden) {
+        const fecha = orden.fecha_creacion
+            ? new Date(orden.fecha_creacion).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
+            : '—';
+
+        const ocMtk = orden.oc_mtk
+            ? `<span class="oc-mtk-badge">${orden.oc_mtk}</span>`
+            : '<span class="text-muted">—</span>';
+
+        const invoice = orden.invoice
+            ? `<span class="invoice-badge"><i class="fas fa-file-invoice" style="margin-right:4px;"></i>${orden.invoice}</span>`
+            : '<span class="text-muted">—</span>';
+
+        const qtyRecibida = orden.qty_recibida !== null && orden.qty_recibida !== undefined
+            ? `<strong>${orden.qty_recibida}</strong>`
+            : '<span class="text-muted">—</span>';
+
+        const descripcion = orden.descripcion_material
+            ? `<span style="font-size:12px; color:#475569;">${orden.descripcion_material}</span>`
+            : '<span class="text-muted">Sin descripción</span>';
+
+        // Verificar si ya tiene folio guardado
+        const folioGuardado = mapaFoliosGuardados[orden.numero_oci];
+        const folioValor = folioGuardado ? folioGuardado.acciones || '' : '';
+        const folioClass = folioValor ? 'folio-input folio-guardado' : 'folio-input';
+        const tieneFilaClass = folioValor ? 'tiene-folio' : '';
+
+        // Estado badge
+        let estadoBadge = '';
+        if (folioGuardado && folioGuardado.acciones) {
+            estadoBadge = `<span class="badge badge-con-folio"><i class="fas fa-check" style="margin-right:4px;"></i>Con Folio</span>`;
+        } else {
+            estadoBadge = `<span class="badge badge-pendiente"><i class="fas fa-clock" style="margin-right:4px;"></i>Pendiente</span>`;
+        }
+
+        // Botón notificar
+        const btnNotificar = folioValor
+            ? `<button class="btn btn-notificar btn-sm" onclick="abrirModalNotificar('${orden.numero_oci}')">
+                   <i class="fas fa-bell"></i> Notificar
+               </button>`
+            : `<button class="btn btn-notificar btn-sm" disabled title="Primero asigna un folio">
+                   <i class="fas fa-bell"></i> Notificar
+               </button>`;
+
+        return `
+            <tr data-oci="${orden.numero_oci}" class="${tieneFilaClass}">
+                <td><span class="numero-oci">${orden.numero_oci}</span></td>
+                <td>${fecha}</td>
+                <td><strong>${orden.material_numero || '—'}</strong></td>
+                <td style="max-width:180px; white-space:normal;">${descripcion}</td>
+                <td>${ocMtk}</td>
+                <td>${qtyRecibida}</td>
+                <td>${invoice}</td>
+                <td>
+                    <div class="folio-container">
+                        <input
+                            type="text"
+                            class="${folioClass}"
+                            id="folio-input-${orden.numero_oci}"
+                            value="${folioValor}"
+                            placeholder="Ej: F-2026-001"
+                            onkeydown="if(event.key==='Enter'){guardarFolio('${orden.numero_oci}', this.value, this)}"
+                            onblur="guardarFolio('${orden.numero_oci}', this.value, this)"
+                            title="Ingresa el número de folio y presiona Enter o haz clic fuera para guardar"
+                        />
+                        <span class="saving-indicator" id="saving-${orden.numero_oci}">
+                            <i class="fas fa-check-circle"></i> Guardado
+                        </span>
+                    </div>
+                </td>
+                <td id="estado-cell-${orden.numero_oci}">${estadoBadge}</td>
+                <td>
+                    <div class="acciones-cell" id="acciones-cell-${orden.numero_oci}">
+                        ${btnNotificar}
+                    </div>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+// ============================================================
+// GUARDAR FOLIO
+// ============================================================
+async function guardarFolio(numeroOci, valor, inputEl) {
+    const folio = valor ? valor.trim() : '';
+
+    // Si el folio está vacío, no hacer nada
+    if (!folio) return;
+
+    // Verificar si el valor cambió
+    const folioActual = mapaFoliosGuardados[numeroOci];
+    if (folioActual && folioActual.acciones === folio) return;
+
+    try {
+        // Obtener datos de la orden
+        const orden = todasLasOrdenes.find(o => o.numero_oci === numeroOci);
+        if (!orden) return;
+
+        const fechaCreacion = orden.fecha_creacion
+            ? new Date(orden.fecha_creacion).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0];
+
+        const registro = {
+            numero_oci: numeroOci,
+            fecha: fechaCreacion,
+            material: orden.material_numero || null,
+            descripcion: orden.descripcion_material || null,
+            oc_mtk: orden.oc_mtk || null,
+            qty_recibido: orden.qty_recibida ? parseInt(orden.qty_recibida) : null,
+            invoice: orden.invoice || null,
+            acciones: folio
+        };
+
+        let resultado;
+
+        if (folioActual && folioActual.id) {
+            // Actualizar registro existente
+            const { data, error } = await sb
+                .from('folios_pago_carton')
+                .update({ acciones: folio })
+                .eq('id', folioActual.id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            resultado = data;
+        } else {
+            // Insertar nuevo registro
+            const { data, error } = await sb
+                .from('folios_pago_carton')
+                .insert(registro)
+                .select()
+                .single();
+
+            if (error) throw error;
+            resultado = data;
+        }
+
+        // Actualizar mapa local
+        mapaFoliosGuardados[numeroOci] = resultado;
+
+        // Actualizar UI del input
+        if (inputEl) {
+            inputEl.classList.add('folio-guardado');
+        }
+
+        // Mostrar indicador de guardado
+        const indicator = document.getElementById(`saving-${numeroOci}`);
+        if (indicator) {
+            indicator.classList.add('visible');
+            setTimeout(() => indicator.classList.remove('visible'), 2500);
+        }
+
+        // Actualizar estado y botón notificar en la fila
+        actualizarFilaEstado(numeroOci, folio);
+
+        // Actualizar historial
+        await cargarHistorial();
+        actualizarEstadisticas(todasLasOrdenes);
+
+        showToast(`Folio "${folio}" guardado para ${numeroOci}`, 'success');
+
+    } catch (err) {
+        console.error('Error guardando folio:', err);
+        showToast('Error al guardar el folio: ' + err.message, 'error');
+    }
+}
+
+// ============================================================
+// ACTUALIZAR ESTADO DE FILA
+// ============================================================
+function actualizarFilaEstado(numeroOci, folio) {
+    const estadoCell = document.getElementById(`estado-cell-${numeroOci}`);
+    const accionesCell = document.getElementById(`acciones-cell-${numeroOci}`);
+    const fila = document.querySelector(`tr[data-oci="${numeroOci}"]`);
+
+    if (estadoCell) {
+        estadoCell.innerHTML = `<span class="badge badge-con-folio"><i class="fas fa-check" style="margin-right:4px;"></i>Con Folio</span>`;
+    }
+
+    if (accionesCell) {
+        accionesCell.innerHTML = `
+            <button class="btn btn-notificar btn-sm" onclick="abrirModalNotificar('${numeroOci}')">
+                <i class="fas fa-bell"></i> Notificar
+            </button>`;
+    }
+
+    if (fila) {
+        fila.classList.add('tiene-folio');
+    }
+}
+
+// ============================================================
+// FILTRAR ÓRDENES
+// ============================================================
+function filtrarOrdenes() {
+    const busqueda = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
+    const estadoFiltro = document.getElementById('filtro-folio-estado').value;
+
+    let filtradas = [...todasLasOrdenes];
+
+    if (busqueda) {
+        filtradas = filtradas.filter(o =>
+            (o.numero_oci || '').toLowerCase().includes(busqueda) ||
+            (o.material_numero || '').toString().toLowerCase().includes(busqueda) ||
+            (o.invoice || '').toLowerCase().includes(busqueda) ||
+            (o.descripcion_material || '').toLowerCase().includes(busqueda) ||
+            (o.oc_mtk || '').toLowerCase().includes(busqueda)
+        );
+    }
+
+    if (estadoFiltro === 'sin_folio') {
+        filtradas = filtradas.filter(o => !mapaFoliosGuardados[o.numero_oci] || !mapaFoliosGuardados[o.numero_oci].acciones);
+    } else if (estadoFiltro === 'con_folio') {
+        filtradas = filtradas.filter(o => mapaFoliosGuardados[o.numero_oci] && mapaFoliosGuardados[o.numero_oci].acciones);
+    }
+
+    renderizarTabla(filtradas);
+}
+
+// ============================================================
+// LIMPIAR FILTROS
+// ============================================================
+function limpiarFiltros() {
+    document.getElementById('filtro-busqueda').value = '';
+    document.getElementById('filtro-folio-estado').value = '';
+    renderizarTabla(todasLasOrdenes);
+}
+
+// ============================================================
+// RECARGAR ÓRDENES
+// ============================================================
+async function recargarOrdenes() {
+    await cargarOrdenes();
+    await cargarHistorial();
+    showToast('Datos actualizados correctamente', 'info');
+}
+
+// ============================================================
+// ACTUALIZAR ESTADÍSTICAS
+// ============================================================
+function actualizarEstadisticas(ordenes) {
+    const total = ordenes.length;
+    const conFolio = ordenes.filter(o => mapaFoliosGuardados[o.numero_oci] && mapaFoliosGuardados[o.numero_oci].acciones).length;
+    const sinFolio = total - conFolio;
+
+    // Contar notificados desde historial
+    const notificados = historialFolios.filter(h => h._notificado).length;
+
+    document.getElementById('stat-pendientes').textContent = sinFolio;
+    document.getElementById('stat-asignados').textContent = conFolio;
+    document.getElementById('stat-notificados').textContent = notificados;
+    document.getElementById('stat-total-oci').textContent = total;
+}
+
+// ============================================================
+// ABRIR MODAL NOTIFICAR
+// ============================================================
+function abrirModalNotificar(numeroOci) {
+    const orden = todasLasOrdenes.find(o => o.numero_oci === numeroOci);
+    const folioData = mapaFoliosGuardados[numeroOci];
+
+    if (!orden || !folioData) {
+        showToast('No se encontró la información de la OCI', 'error');
+        return;
+    }
+
+    ordenParaNotificar = { orden, folioData };
+
+    const fecha = orden.fecha_creacion
+        ? new Date(orden.fecha_creacion).toLocaleDateString('es-MX')
+        : '—';
+
+    document.getElementById('modal-info-content').innerHTML = `
+        <div class="modal-info-item">
+            <label>Número OCI</label>
+            <span>${orden.numero_oci}</span>
+        </div>
+        <div class="modal-info-item">
+            <label>Fecha Creación</label>
+            <span>${fecha}</span>
+        </div>
+        <div class="modal-info-item">
+            <label>Material</label>
+            <span>${orden.material_numero || '—'}</span>
+        </div>
+        <div class="modal-info-item">
+            <label>OC-MTK</label>
+            <span>${orden.oc_mtk || '—'}</span>
+        </div>
+        <div class="modal-info-item">
+            <label>Invoice</label>
+            <span>${orden.invoice || '—'}</span>
+        </div>
+        <div class="modal-info-item">
+            <label>Folio Asignado</label>
+            <span style="color:#7c3aed; font-size:15px;">${folioData.acciones || '—'}</span>
+        </div>
+    `;
+
+    document.getElementById('modal-notificar').classList.add('active');
+}
+
+// ============================================================
+// CERRAR MODAL
+// ============================================================
+function cerrarModal() {
+    document.getElementById('modal-notificar').classList.remove('active');
+    ordenParaNotificar = null;
+}
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('modal-notificar').addEventListener('click', function (e) {
+    if (e.target === this) cerrarModal();
+});
+
+// ============================================================
+// CONFIRMAR NOTIFICACIÓN
+// ============================================================
+async function confirmarNotificacion() {
+    if (!ordenParaNotificar) return;
+
+    const btn = document.getElementById('btn-confirmar-notificar');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+    try {
+        const { orden, folioData } = ordenParaNotificar;
+        const usuario = usuarioActual ? (usuarioActual.nombre_completo || usuarioActual.username) : 'Sistema';
+
+        // Registrar la notificación en el historial de folios_pago_carton
+        // Actualizamos el campo acciones para incluir la nota de notificación
+        const notaNotificacion = `${folioData.acciones} [NOTIFICADO: ${new Date().toLocaleString('es-MX')} por ${usuario}]`;
+
+        const { error } = await sb
+            .from('folios_pago_carton')
+            .update({ acciones: notaNotificacion })
+            .eq('id', folioData.id);
+
+        if (error) throw error;
+
+        // Actualizar mapa local
+        mapaFoliosGuardados[orden.numero_oci] = {
+            ...folioData,
+            acciones: notaNotificacion,
+            _notificado: true
+        };
+
+        cerrarModal();
+        showToast(`Notificación registrada para ${orden.numero_oci} — Folio: ${folioData.acciones}`, 'success');
+
+        // Recargar historial y estadísticas
+        await cargarHistorial();
+        actualizarEstadisticas(todasLasOrdenes);
+
+    } catch (err) {
+        console.error('Error al notificar:', err);
+        showToast('Error al registrar la notificación: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-bell"></i> Confirmar Notificación';
+    }
+}
+
+// ============================================================
+// CARGAR HISTORIAL
+// ============================================================
+async function cargarHistorial() {
+    try {
+        const { data, error } = await sb
+            .from('folios_pago_carton')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        if (error) throw error;
+
+        historialFolios = data || [];
+        renderizarHistorial(historialFolios);
+
+        document.getElementById('historial-count').textContent =
+            `${historialFolios.length} registro${historialFolios.length !== 1 ? 's' : ''}`;
+
+    } catch (err) {
+        console.error('Error cargando historial:', err);
+    }
+}
+
+// ============================================================
+// RENDERIZAR HISTORIAL
+// ============================================================
+function renderizarHistorial(registros) {
+    const container = document.getElementById('historial-list');
+
+    if (!registros || registros.length === 0) {
+        container.innerHTML = `
+            <div class="historial-empty">
+                <i class="fas fa-inbox"></i>
+                <p>No hay registros en el historial aún</p>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = registros.map(function (reg) {
+        const fechaCreacion = reg.created_at
+            ? new Date(reg.created_at).toLocaleString('es-MX', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            })
+            : '—';
+
+        const esNotificado = reg.acciones && reg.acciones.includes('[NOTIFICADO:');
+        const folioLimpio = reg.acciones
+            ? reg.acciones.replace(/\s*\[NOTIFICADO:.*?\]/g, '').trim()
+            : '—';
+
+        const iconClass = esNotificado ? 'notificado' : 'folio-asignado';
+        const iconName = esNotificado ? 'fas fa-bell' : 'fas fa-tag';
+
+        return `
+            <div class="historial-item">
+                <div class="historial-icon ${iconClass}">
+                    <i class="${iconName}"></i>
+                </div>
+                <div class="historial-body">
+                    <div class="titulo">${reg.numero_oci}</div>
+                    <div class="detalle">
+                        <strong>Material:</strong> ${reg.material || '—'} &nbsp;|&nbsp;
+                        <strong>Invoice:</strong> ${reg.invoice || '—'} &nbsp;|&nbsp;
+                        <strong>OC-MTK:</strong> ${reg.oc_mtk || '—'}
+                        ${reg.descripcion ? `<br><strong>Descripción:</strong> ${reg.descripcion}` : ''}
+                        ${reg.qty_recibido ? `<br><strong>Qty Recibida:</strong> ${reg.qty_recibido}` : ''}
+                        ${esNotificado ? `<br><span style="color:#1d4ed8; font-size:11px;"><i class="fas fa-bell"></i> Notificado</span>` : ''}
+                    </div>
+                </div>
+                <div class="historial-meta">
+                    <div class="folio-num">${folioLimpio}</div>
+                    <div class="fecha">${fechaCreacion}</div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+// ============================================================
+// TOAST NOTIFICATIONS
+// ============================================================
+function showToast(mensaje, tipo = 'success') {
+    const container = document.getElementById('toast-container');
+    const icons = {
+        success: 'fas fa-check-circle',
+        error: 'fas fa-times-circle',
+        warning: 'fas fa-exclamation-triangle',
+        info: 'fas fa-info-circle'
+    };
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${tipo}`;
+    toast.innerHTML = `
+        <i class="toast-icon ${icons[tipo] || icons.info}"></i>
+        <span class="toast-text">${mensaje}</span>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+</script>
+</body>
+</html>
