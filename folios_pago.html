@@ -1093,17 +1093,39 @@ let todasLasOrdenes = [];
 let historialFolios = [];
 let ordenParaNotificar = null;
 let mapaFoliosGuardados = {}; // { numero_oci: registro_folio }
+let mapaDescripciones = {};   // { numero_parte: descripcion }
 
 // ============================================================
 // INICIALIZACIÓN
 // ============================================================
 document.addEventListener('DOMContentLoaded', async function () {
     cargarUsuario();
+    await cargarMapaDescripciones();
     await Promise.all([
         cargarOrdenes(),
         cargarHistorial()
     ]);
 });
+
+// ============================================================
+// CARGAR MAPA DE DESCRIPCIONES DESDE productos_carton
+// ============================================================
+async function cargarMapaDescripciones() {
+    try {
+        const { data, error } = await sb
+            .from('productos_carton')
+            .select('numero_parte, descripcion')
+            .eq('activo', true);
+        if (error) throw error;
+        mapaDescripciones = {};
+        (data || []).forEach(function (item) {
+            mapaDescripciones[item.numero_parte] = item.descripcion;
+        });
+        console.log('✅ Mapa de descripciones cargado:', Object.keys(mapaDescripciones).length, 'materiales');
+    } catch (err) {
+        console.error('Error cargando descripciones de materiales:', err);
+    }
+}
 
 // ============================================================
 // CARGAR USUARIO
@@ -1229,8 +1251,12 @@ function renderizarTabla(ordenes) {
             ? `<strong>${orden.qty_recibida}</strong>`
             : '<span class="text-muted">—</span>';
 
-        const descripcion = orden.descripcion_material
-            ? `<span style="font-size:12px; color:#475569;">${orden.descripcion_material}</span>`
+        // Buscar descripción en el mapa de productos_carton
+        const descTexto = mapaDescripciones[orden.material_numero]
+            || orden.descripcion_material
+            || null;
+        const descripcion = descTexto
+            ? `<span style="font-size:12px; color:#475569;">${descTexto}</span>`
             : '<span class="text-muted">Sin descripción</span>';
 
         // Verificar si ya tiene folio guardado
