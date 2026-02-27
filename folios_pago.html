@@ -988,7 +988,7 @@
                         <th>OC-MTK</th>
                         <th>Qty Recibida</th>
                         <th>Invoice</th>
-                        <th style="min-width:200px;">Folio</th>
+                        <th style="min-width:200px;">FOLIO MTK</th>
                         <th>Estado</th>
                         <th style="min-width:160px;">Acciones</th>
                     </tr>
@@ -1011,7 +1011,7 @@
             </div>
             <div style="font-size: 11px; color: #94a3b8;">
                 <i class="fas fa-info-circle"></i>
-                Los campos de Folio se guardan automáticamente al presionar Enter o al salir del campo
+                Los campos de FOLIO MTK se guardan automáticamente al presionar Enter o al salir del campo
             </div>
         </div>
     </div>
@@ -1262,7 +1262,12 @@ function renderizarTabla(ordenes) {
         // Verificar si ya tiene folio guardado
         const folioGuardado = mapaFoliosGuardados[orden.numero_oci];
         const folioValor = folioGuardado ? folioGuardado.acciones || '' : '';
+        // Determinar si el folio ya fue notificado (bloqueado)
+        const esNotificado = folioGuardado && folioGuardado.acciones && folioGuardado.acciones.includes('[NOTIFICADO:');
         const folioClass = folioValor ? 'folio-input folio-guardado' : 'folio-input';
+        const folioReadonly = esNotificado ? 'readonly' : '';
+        const folioStyle = esNotificado ? 'style="background:#e2e8f0; color:#64748b; cursor:not-allowed; border-color:#94a3b8;"' : '';
+        const folioTitle = esNotificado ? 'title="Campo bloqueado: folio ya notificado"' : 'title="Ingresa el número de folio y presiona Enter o haz clic fuera para guardar"';
         const tieneFilaClass = folioValor ? 'tiene-folio' : '';
 
         // Estado badge
@@ -1301,7 +1306,9 @@ function renderizarTabla(ordenes) {
                             placeholder="Ej: F-2026-001"
                             onkeydown="if(event.key==='Enter'){guardarFolio('${orden.numero_oci}', this.value, this)}"
                             onblur="guardarFolio('${orden.numero_oci}', this.value, this)"
-                            title="Ingresa el número de folio y presiona Enter o haz clic fuera para guardar"
+                            ${folioReadonly}
+                            ${folioStyle}
+                            ${folioTitle}
                         />
                         <span class="saving-indicator" id="saving-${orden.numero_oci}">
                             <i class="fas fa-check-circle"></i> Guardado
@@ -1533,7 +1540,7 @@ function abrirModalNotificar(numeroOci) {
             <span>${orden.invoice || '—'}</span>
         </div>
         <div class="modal-info-item">
-            <label>Folio Asignado</label>
+                    <label>FOLIO MTK</label>
             <span style="color:#7c3aed; font-size:15px;">${folioData.acciones || '—'}</span>
         </div>
     `;
@@ -1586,8 +1593,19 @@ async function confirmarNotificacion() {
             _notificado: true
         };
 
+        // Bloquear el campo FOLIO MTK de esa OCI inmediatamente
+        const inputFolio = document.getElementById(`folio-input-${orden.numero_oci}`);
+        if (inputFolio) {
+            inputFolio.setAttribute('readonly', true);
+            inputFolio.style.background = '#e2e8f0';
+            inputFolio.style.color = '#64748b';
+            inputFolio.style.cursor = 'not-allowed';
+            inputFolio.style.borderColor = '#94a3b8';
+            inputFolio.title = 'Campo bloqueado: folio ya notificado';
+        }
+
         cerrarModal();
-        showToast(`Notificación registrada para ${orden.numero_oci} — Folio: ${folioData.acciones}`, 'success');
+        showToast(`Notificación registrada para ${orden.numero_oci} — Folio MTK: ${folioData.acciones}`, 'success');
 
         // Recargar historial y estadísticas
         await cargarHistorial();
