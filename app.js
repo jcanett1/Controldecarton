@@ -3235,30 +3235,32 @@ async function guardarBalance(event) {
         const balanceId = document.getElementById('balance-id').value;
         
         let result;
-        // ✨ SIEMPRE crear nueva entrada (historial completo)
-        // Cuando se "edita" un balance, en realidad se crea un nuevo ajuste
-        const nuevoBalanceData = {
-            ...balanceData,
-            balance_inicial: balanceCantidad  // ✨ Guardar balance inicial
-        };
-        
-        result = await supabase
-            .from('balances_veritiv')
-            .insert([nuevoBalanceData])
-            .select();
-        
-        // Si es una edición, agregar nota en consola
+
         if (balanceId) {
-            console.log(`✅ Nueva entrada creada para material ${balanceData.material_carton} (ID original: ${balanceId})`);
+            // ✏️ EDITAR: actualizar el registro existente
+            result = await supabase
+                .from('balances_veritiv')
+                .update(balanceData)
+                .eq('id', balanceId)
+                .select();
+        } else {
+            // ➕ NUEVO: insertar un registro nuevo
+            const nuevoBalanceData = {
+                ...balanceData,
+                balance_inicial: balanceCantidad
+            };
+            result = await supabase
+                .from('balances_veritiv')
+                .insert([nuevoBalanceData])
+                .select();
         }
         
         if (result.error) {
             throw result.error;
         }
         
-        // Mensaje diferente según si es nuevo o ajuste
         const mensaje = balanceId 
-            ? '✅ Nuevo ajuste de balance creado exitosamente (historial preservado)' 
+            ? '✅ Balance actualizado exitosamente' 
             : '✅ Balance creado exitosamente';
         alert(mensaje);
         cerrarModalBalance();
