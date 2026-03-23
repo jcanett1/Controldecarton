@@ -3063,7 +3063,7 @@ function renderizarBalances(balancesData) {
     if (!balancesData || balancesData.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="empty-state">
+                <td colspan="8" class="empty-state">
                     <i class="fas fa-inbox"></i>
                     <h4>No hay balances registrados</h4>
                     <small>Haz clic en "Nuevo Balance" para agregar uno</small>
@@ -3109,6 +3109,9 @@ function renderizarBalances(balancesData) {
                 <span class="quantity-badge ${balanceClass}">
                     ${formatearNumero(balance.balance)}
                 </span>
+            </td>
+            <td>
+                ${balance.precio_unitario_dlls != null ? `<span style="font-weight:600;">$${parseFloat(balance.precio_unitario_dlls).toFixed(2)}</span>` : '<span style="color:#aaa;">—</span>'}
             </td>
             <td>${estadoBadge}</td>
             <td>${formatearFechaHora(balance.fecha_creacion)}</td>
@@ -3383,7 +3386,7 @@ function mostrarErrorBalances(mensaje) {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="error-message">
+                <td colspan="8" class="error-message">
                     <i class="fas fa-exclamation-triangle"></i>
                     <h4>Error</h4>
                     <p>${mensaje}</p>
