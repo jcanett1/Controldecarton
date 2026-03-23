@@ -3222,12 +3222,14 @@ async function guardarBalance(event) {
     try {
         const balanceCantidad = parseFloat(document.getElementById('balance-cantidad').value);
         
+        const precioUnitario = document.getElementById('balance-precio-unitario').value;
         const balanceData = {
             orden_compra: document.getElementById('balance-orden-compra').value,
             fecha_orden_compra: document.getElementById('balance-fecha-orden').value,
             producto_id: document.getElementById('balance-producto').value || null,
             material_carton: document.getElementById('balance-material').value,
-            balance: balanceCantidad
+            balance: balanceCantidad,
+            precio_unitario_dlls: precioUnitario !== '' ? parseFloat(precioUnitario) : null
         };
         
         const balanceId = document.getElementById('balance-id').value;
@@ -3294,6 +3296,7 @@ async function editarBalance(balanceId) {
         document.getElementById('balance-fecha-orden').value = data.fecha_orden_compra;
         document.getElementById('balance-material').value = data.material_carton;
         document.getElementById('balance-cantidad').value = data.balance;
+        document.getElementById('balance-precio-unitario').value = data.precio_unitario_dlls != null ? data.precio_unitario_dlls : '';
         
         // Cargar productos y seleccionar el actual
         await cargarProductosSelect();
