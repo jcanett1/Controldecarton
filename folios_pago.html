@@ -987,6 +987,7 @@
                         <th>Descripción</th>
                         <th>OC-MTK</th>
                         <th>Qty Recibida</th>
+                        <th>Total + IVA</th>
                         <th>Invoice</th>
                         <th style="min-width:200px;">FOLIO MTK</th>
                         <th>Estado</th>
@@ -995,7 +996,7 @@
                 </thead>
                 <tbody id="tabla-body">
                     <tr class="loading-row">
-                        <td colspan="10">
+                        <td colspan="11">
                             <div class="spinner"></div>
                             <p>Cargando órdenes...</p>
                         </td>
@@ -1094,6 +1095,7 @@ let historialFolios = [];
 let ordenParaNotificar = null;
 let mapaFoliosGuardados = {}; // { numero_oci: registro_folio }
 let mapaDescripciones = {};   // { numero_parte: descripcion }
+let mapaPrecios = {};         // { orden_compra: precio_unitario_dlls }
 
 // ============================================================
 // INICIALIZACIÓN
@@ -1101,6 +1103,7 @@ let mapaDescripciones = {};   // { numero_parte: descripcion }
 document.addEventListener('DOMContentLoaded', async function () {
     cargarUsuario();
     await cargarMapaDescripciones();
+    await cargarMapaPrecios();
     await Promise.all([
         cargarOrdenes(),
         cargarHistorial()
@@ -1124,6 +1127,29 @@ async function cargarMapaDescripciones() {
         console.log('✅ Mapa de descripciones cargado:', Object.keys(mapaDescripciones).length, 'materiales');
     } catch (err) {
         console.error('Error cargando descripciones de materiales:', err);
+    }
+}
+
+// ============================================================
+// CARGAR MAPA DE PRECIOS DESDE balances_veritiv
+// ============================================================
+async function cargarMapaPrecios() {
+    try {
+        const { data, error } = await sb
+            .from('balances_veritiv')
+            .select('orden_compra, precio_unitario_dlls')
+            .not('precio_unitario_dlls', 'is', null)
+            .eq('activo', true);
+        if (error) throw error;
+        mapaPrecios = {};
+        (data || []).forEach(function (item) {
+            if (item.orden_compra && item.precio_unitario_dlls != null) {
+                mapaPrecios[item.orden_compra] = parseFloat(item.precio_unitario_dlls);
+            }
+        });
+        console.log('✅ Mapa de precios cargado:', Object.keys(mapaPrecios).length, 'registros');
+    } catch (err) {
+        console.error('Error cargando precios unitarios:', err);
     }
 }
 
@@ -1160,7 +1186,7 @@ async function cargarOrdenes() {
     const tbody = document.getElementById('tabla-body');
     tbody.innerHTML = `
         <tr class="loading-row">
-            <td colspan="10">
+            <td colspan="11">
                 <div class="spinner"></div>
                 <p>Cargando órdenes...</p>
             </td>
@@ -1202,7 +1228,7 @@ async function cargarOrdenes() {
         console.error('Error cargando órdenes:', err);
         tbody.innerHTML = `
             <tr>
-                <td colspan="10">
+                <td colspan="11">
                     <div class="empty-state">
                         <i class="fas fa-exclamation-triangle" style="color:#ef4444;"></i>
                         <p>Error al cargar las órdenes: ${err.message}</p>
@@ -1224,7 +1250,7 @@ function renderizarTabla(ordenes) {
     if (!ordenes || ordenes.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10">
+                <td colspan="11">
                     <div class="empty-state">
                         <i class="fas fa-inbox"></i>
                         <p>No se encontraron órdenes con invoice asignado</p>
@@ -1250,6 +1276,17 @@ function renderizarTabla(ordenes) {
         const qtyRecibida = orden.qty_recibida !== null && orden.qty_recibida !== undefined
             ? `<strong>${orden.qty_recibida}</strong>`
             : '<span class="text-muted">—</span>';
+
+        // Cálculo Total + IVA: precio_unitario_dlls (de balances_veritiv por oc_mtk) * qty_recibida * 1.16
+        const precioUnitario = orden.oc_mtk ? (mapaPrecios[orden.oc_mtk] || null) : null;
+        const qtyNum = orden.qty_recibida !== null && orden.qty_recibida !== undefined ? parseFloat(orden.qty_recibida) : null;
+        let totalIvaHtml;
+        if (precioUnitario !== null && qtyNum !== null) {
+            const totalIva = precioUnitario * qtyNum * 1.16;
+            totalIvaHtml = `<span style="font-weight:600; color:#0f766e;">$${totalIva.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>`;
+        } else {
+            totalIvaHtml = '<span class="text-muted">—</span>';
+        }
 
         // Buscar descripción en el mapa de productos_carton
         const descTexto = mapaDescripciones[orden.material_numero]
@@ -1295,6 +1332,7 @@ function renderizarTabla(ordenes) {
                 <td style="max-width:180px; white-space:normal;">${descripcion}</td>
                 <td>${ocMtk}</td>
                 <td>${qtyRecibida}</td>
+                <td>${totalIvaHtml}</td>
                 <td>${invoice}</td>
                 <td>
                     <div class="folio-container">
