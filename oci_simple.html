@@ -1429,28 +1429,28 @@
             let totalPalletsGeneral = 0;
             let totalPiezasGeneral = 0;
 
-            // Construir lista de materiales y obtener datos de envío
+            // Construir lista de materiales y recopilar datos de envío por material
             let materialesHtml = '';
-            let datosEnvio = {
-                oc_mtk: null,
-                zor: null,
-                qty_a_enviar_piezas: null
-            };
+            let itemsEnvio = []; // Array con datos de envío de cada material
+            let zorGlobal = null;
             
             data.forEach(function(item) {
                 const totalPiezasItem = item.cantidad_total_piezas || (item.piezas_por_pallet * item.cantidad_pallets);
                 totalPalletsGeneral += item.cantidad_pallets;
                 totalPiezasGeneral += totalPiezasItem;
                 
-                // Capturar datos de envío del primer item que los tenga
-                if (item.oc_mtk && !datosEnvio.oc_mtk) {
-                    datosEnvio.oc_mtk = item.oc_mtk;
+                // Capturar ZOR global (del primer item que lo tenga)
+                if (item.zor && !zorGlobal) {
+                    zorGlobal = item.zor;
                 }
-                if (item.zor && !datosEnvio.zor) {
-                    datosEnvio.zor = item.zor;
-                }
-                if (item.qty_a_enviar_piezas && !datosEnvio.qty_a_enviar_piezas) {
-                    datosEnvio.qty_a_enviar_piezas = item.qty_a_enviar_piezas;
+
+                // Guardar datos de envío por material
+                if (item.oc_mtk || item.qty_a_enviar_piezas || totalPiezasItem) {
+                    itemsEnvio.push({
+                        material_numero: item.material_numero,
+                        oc_mtk: item.oc_mtk || null,
+                        total_real: item.qty_a_enviar_piezas || totalPiezasItem
+                    });
                 }
                 
                 const ocMtkDisplay = item.oc_mtk ? '<span style="background: #e8f0fe; color: #1967d2; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">OC-MTK: ' + item.oc_mtk + '</span>' : '';
@@ -1505,35 +1505,53 @@
                 '</div>' +
                 '</div>';
 
-            // ✨ Agregar sección DATOS DE ENVÍO si existen
-            if (datosEnvio.oc_mtk || datosEnvio.zor || datosEnvio.qty_a_enviar_piezas) {
+            // ✨ Agregar sección DATOS DE ENVÍO con un bloque por cada material
+            if (itemsEnvio.length > 0) {
                 modalContent += '<div class="detail-section">' +
-                    '<div class="detail-section-title"><i class="fas fa-shipping-fast"></i> DATOS DE ENVÍO</div>' +
-                    '<div class="detail-grid">';
-                
-                if (datosEnvio.oc_mtk) {
-                    modalContent += '<div class="detail-item">' +
-                        '<div class="detail-label">OC-MTK</div>' +
-                        '<div class="detail-value" style="color: #1967d2; font-weight: 600;">' + datosEnvio.oc_mtk + '</div>' +
-                        '</div>';
-                }
-                
-                if (datosEnvio.zor) {
-                    modalContent += '<div class="detail-item">' +
+                    '<div class="detail-section-title"><i class="fas fa-shipping-fast"></i> DATOS DE ENVÍO</div>';
+
+                // ZOR global (si existe)
+                if (zorGlobal) {
+                    modalContent += '<div class="detail-grid" style="margin-bottom:10px;">' +
+                        '<div class="detail-item">' +
                         '<div class="detail-label">ZOR</div>' +
-                        '<div class="detail-value" style="color: #0f9d58; font-weight: 600;">' + datosEnvio.zor + '</div>' +
-                        '</div>';
+                        '<div class="detail-value" style="color: #0f9d58; font-weight: 600;">' + zorGlobal + '</div>' +
+                        '</div></div>';
                 }
-                
-                if (datosEnvio.qty_a_enviar_piezas) {
+
+                // Un bloque por cada material
+                itemsEnvio.forEach(function(envio) {
+                    modalContent += '<div style="border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:10px; background:#f8fafc;">';
+
+                    // Material
+                    modalContent += '<div style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:8px; text-transform:uppercase; letter-spacing:.5px;">Material #' + envio.material_numero + '</div>';
+
+                    modalContent += '<div class="detail-grid">';
+
+                    // OC-MTK
+                    if (envio.oc_mtk) {
+                        modalContent += '<div class="detail-item">' +
+                            '<div class="detail-label">OC-MTK</div>' +
+                            '<div class="detail-value" style="color: #1967d2; font-weight: 600;">' + envio.oc_mtk + '</div>' +
+                            '</div>';
+                    } else {
+                        modalContent += '<div class="detail-item">' +
+                            '<div class="detail-label">OC-MTK</div>' +
+                            '<div class="detail-value" style="color:#94a3b8;">No asignada</div>' +
+                            '</div>';
+                    }
+
+                    // Total Real a Enviar
                     modalContent += '<div class="detail-item">' +
                         '<div class="detail-label">TOTAL REAL A ENVIAR</div>' +
-                        '<div class="detail-value" style="color: #d93025; font-weight: 700; font-size: 18px; text-decoration: underline;">' + 
-                        datosEnvio.qty_a_enviar_piezas.toLocaleString() + ' piezas</div>' +
+                        '<div class="detail-value" style="color: #d93025; font-weight: 700; font-size: 18px; text-decoration: underline;">' +
+                        envio.total_real.toLocaleString() + ' piezas</div>' +
                         '</div>';
-                }
-                
-                modalContent += '</div></div>';
+
+                    modalContent += '</div></div>';
+                });
+
+                modalContent += '</div>';
             }
             
             // Agregar observaciones si existen
