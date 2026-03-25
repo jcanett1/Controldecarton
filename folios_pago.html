@@ -1093,7 +1093,7 @@ let usuarioActual = null;
 let todasLasOrdenes = [];
 let historialFolios = [];
 let ordenParaNotificar = null;
-let mapaFoliosGuardados = {}; // { numero_oci: registro_folio }
+let mapaFoliosGuardados = {}; // { 'numero_oci|material|invoice': registro_folio }
 let mapaDescripciones = {};   // { numero_parte: descripcion }
 let mapaPrecios = {};         // { orden_compra: precio_unitario_dlls }
 
@@ -1211,11 +1211,12 @@ async function cargarOrdenes() {
             .order('created_at', { ascending: false });
 
         if (!errorFolios && foliosGuardados) {
-            // Crear mapa: numero_oci -> último registro de folio
+            // Crear mapa: 'numero_oci|material|invoice' -> registro de folio (clave única por fila)
             mapaFoliosGuardados = {};
             foliosGuardados.forEach(f => {
-                if (!mapaFoliosGuardados[f.numero_oci]) {
-                    mapaFoliosGuardados[f.numero_oci] = f;
+                const claveUnica = `${f.numero_oci}|${f.material || ''}|${f.invoice || ''}`;
+                if (!mapaFoliosGuardados[claveUnica]) {
+                    mapaFoliosGuardados[claveUnica] = f;
                 }
             });
         }
@@ -1296,8 +1297,9 @@ function renderizarTabla(ordenes) {
             ? `<span style="font-size:12px; color:#475569;">${descTexto}</span>`
             : '<span class="text-muted">Sin descripción</span>';
 
-        // Verificar si ya tiene folio guardado
-        const folioGuardado = mapaFoliosGuardados[orden.numero_oci];
+        // Verificar si ya tiene folio guardado (clave única por fila)
+        const claveFilaRender = `${orden.numero_oci}|${orden.material_numero || ''}|${orden.invoice || ''}`;
+        const folioGuardado = mapaFoliosGuardados[claveFilaRender];
         const folioValor = folioGuardado ? folioGuardado.acciones || '' : '';
         // Determinar si el folio ya fue notificado (bloqueado)
         const esNotificado = folioGuardado && folioGuardado.acciones && folioGuardado.acciones.includes('[NOTIFICADO:');
@@ -1306,6 +1308,8 @@ function renderizarTabla(ordenes) {
         const folioStyle = esNotificado ? 'style="background:#e2e8f0; color:#64748b; cursor:not-allowed; border-color:#94a3b8;"' : '';
         const folioTitle = esNotificado ? 'title="Campo bloqueado: folio ya notificado"' : 'title="Ingresa el número de folio y presiona Enter o haz clic fuera para guardar"';
         const tieneFilaClass = folioValor ? 'tiene-folio' : '';
+        // Clave única de fila para identificar en el DOM
+        const claveFilaId = `${orden.numero_oci}__${orden.material_numero || 'x'}__${orden.invoice || 'x'}`;
 
         // Estado badge
         let estadoBadge = '';
@@ -1317,7 +1321,7 @@ function renderizarTabla(ordenes) {
 
         // Botón notificar
         const btnNotificar = folioValor
-            ? `<button class="btn btn-notificar btn-sm" onclick="abrirModalNotificar('${orden.numero_oci}')">
+            ? `<button class="btn btn-notificar btn-sm" onclick="abrirModalNotificar('${claveFilaId}')">
                    <i class="fas fa-bell"></i> Notificar
                </button>`
             : `<button class="btn btn-notificar btn-sm" disabled title="Primero asigna un folio">
@@ -1325,7 +1329,7 @@ function renderizarTabla(ordenes) {
                </button>`;
 
         return `
-            <tr data-oci="${orden.numero_oci}" class="${tieneFilaClass}">
+            <tr data-clave="${claveFilaId}" class="${tieneFilaClass}">
                 <td><span class="numero-oci">${orden.numero_oci}</span></td>
                 <td>${fecha}</td>
                 <td><strong>${orden.material_numero || '—'}</strong></td>
@@ -1339,23 +1343,23 @@ function renderizarTabla(ordenes) {
                         <input
                             type="text"
                             class="${folioClass}"
-                            id="folio-input-${orden.numero_oci}"
+                            id="folio-input-${claveFilaId}"
                             value="${folioValor}"
                             placeholder="Ej: F-2026-001"
-                            onkeydown="if(event.key==='Enter'){guardarFolio('${orden.numero_oci}', this.value, this)}"
-                            onblur="guardarFolio('${orden.numero_oci}', this.value, this)"
+                            onkeydown="if(event.key==='Enter'){guardarFolio('${claveFilaId}', this.value, this)}"
+                            onblur="guardarFolio('${claveFilaId}', this.value, this)"
                             ${folioReadonly}
                             ${folioStyle}
                             ${folioTitle}
                         />
-                        <span class="saving-indicator" id="saving-${orden.numero_oci}">
+                        <span class="saving-indicator" id="saving-${claveFilaId}">
                             <i class="fas fa-check-circle"></i> Guardado
                         </span>
                     </div>
                 </td>
-                <td id="estado-cell-${orden.numero_oci}">${estadoBadge}</td>
+                <td id="estado-cell-${claveFilaId}">${estadoBadge}</td>
                 <td>
-                    <div class="acciones-cell" id="acciones-cell-${orden.numero_oci}">
+                    <div class="acciones-cell" id="acciones-cell-${claveFilaId}">
                         ${btnNotificar}
                     </div>
                 </td>
@@ -1366,19 +1370,33 @@ function renderizarTabla(ordenes) {
 // ============================================================
 // GUARDAR FOLIO
 // ============================================================
-async function guardarFolio(numeroOci, valor, inputEl) {
+async function guardarFolio(claveFilaId, valor, inputEl) {
     const folio = valor ? valor.trim() : '';
 
     // Si el folio está vacío, no hacer nada
     if (!folio) return;
 
+    // Reconstruir numero_oci, material e invoice desde la clave de fila
+    // Formato: 'numero_oci__material__invoice'
+    const partes = claveFilaId.split('__');
+    const numeroOci = partes[0];
+    const materialClave = partes[1] === 'x' ? '' : partes[1];
+    const invoiceClave = partes[2] === 'x' ? '' : partes[2];
+
+    // Clave para el mapa (mismo formato que al cargar)
+    const claveMapa = `${numeroOci}|${materialClave}|${invoiceClave}`;
+
     // Verificar si el valor cambió
-    const folioActual = mapaFoliosGuardados[numeroOci];
+    const folioActual = mapaFoliosGuardados[claveMapa];
     if (folioActual && folioActual.acciones === folio) return;
 
     try {
-        // Obtener datos de la orden
-        const orden = todasLasOrdenes.find(o => o.numero_oci === numeroOci);
+        // Obtener datos de la orden (buscar por numero_oci + material + invoice)
+        const orden = todasLasOrdenes.find(o =>
+            o.numero_oci === numeroOci &&
+            (o.material_numero || '') === materialClave &&
+            (o.invoice || '') === invoiceClave
+        );
         if (!orden) return;
 
         const fechaCreacion = orden.fecha_creacion
@@ -1421,8 +1439,8 @@ async function guardarFolio(numeroOci, valor, inputEl) {
             resultado = data;
         }
 
-        // Actualizar mapa local
-        mapaFoliosGuardados[numeroOci] = resultado;
+        // Actualizar mapa local con clave única
+        mapaFoliosGuardados[claveMapa] = resultado;
 
         // Actualizar UI del input
         if (inputEl) {
@@ -1430,14 +1448,14 @@ async function guardarFolio(numeroOci, valor, inputEl) {
         }
 
         // Mostrar indicador de guardado
-        const indicator = document.getElementById(`saving-${numeroOci}`);
+        const indicator = document.getElementById(`saving-${claveFilaId}`);
         if (indicator) {
             indicator.classList.add('visible');
             setTimeout(() => indicator.classList.remove('visible'), 2500);
         }
 
         // Actualizar estado y botón notificar en la fila
-        actualizarFilaEstado(numeroOci, folio);
+        actualizarFilaEstado(claveFilaId, folio);
 
         // Actualizar historial
         await cargarHistorial();
@@ -1454,10 +1472,10 @@ async function guardarFolio(numeroOci, valor, inputEl) {
 // ============================================================
 // ACTUALIZAR ESTADO DE FILA
 // ============================================================
-function actualizarFilaEstado(numeroOci, folio) {
-    const estadoCell = document.getElementById(`estado-cell-${numeroOci}`);
-    const accionesCell = document.getElementById(`acciones-cell-${numeroOci}`);
-    const fila = document.querySelector(`tr[data-oci="${numeroOci}"]`);
+function actualizarFilaEstado(claveFilaId, folio) {
+    const estadoCell = document.getElementById(`estado-cell-${claveFilaId}`);
+    const accionesCell = document.getElementById(`acciones-cell-${claveFilaId}`);
+    const fila = document.querySelector(`tr[data-clave="${claveFilaId}"]`);
 
     if (estadoCell) {
         estadoCell.innerHTML = `<span class="badge badge-con-folio"><i class="fas fa-check" style="margin-right:4px;"></i>Con Folio</span>`;
@@ -1465,7 +1483,7 @@ function actualizarFilaEstado(numeroOci, folio) {
 
     if (accionesCell) {
         accionesCell.innerHTML = `
-            <button class="btn btn-notificar btn-sm" onclick="abrirModalNotificar('${numeroOci}')">
+            <button class="btn btn-notificar btn-sm" onclick="abrirModalNotificar('${claveFilaId}')">
                 <i class="fas fa-bell"></i> Notificar
             </button>`;
     }
@@ -1495,9 +1513,15 @@ function filtrarOrdenes() {
     }
 
     if (estadoFiltro === 'sin_folio') {
-        filtradas = filtradas.filter(o => !mapaFoliosGuardados[o.numero_oci] || !mapaFoliosGuardados[o.numero_oci].acciones);
+        filtradas = filtradas.filter(o => {
+            const clave = `${o.numero_oci}|${o.material_numero || ''}|${o.invoice || ''}`;
+            return !mapaFoliosGuardados[clave] || !mapaFoliosGuardados[clave].acciones;
+        });
     } else if (estadoFiltro === 'con_folio') {
-        filtradas = filtradas.filter(o => mapaFoliosGuardados[o.numero_oci] && mapaFoliosGuardados[o.numero_oci].acciones);
+        filtradas = filtradas.filter(o => {
+            const clave = `${o.numero_oci}|${o.material_numero || ''}|${o.invoice || ''}`;
+            return mapaFoliosGuardados[clave] && mapaFoliosGuardados[clave].acciones;
+        });
     }
 
     renderizarTabla(filtradas);
@@ -1526,11 +1550,14 @@ async function recargarOrdenes() {
 // ============================================================
 function actualizarEstadisticas(ordenes) {
     const total = ordenes.length;
-    const conFolio = ordenes.filter(o => mapaFoliosGuardados[o.numero_oci] && mapaFoliosGuardados[o.numero_oci].acciones).length;
+    const conFolio = ordenes.filter(o => {
+        const clave = `${o.numero_oci}|${o.material_numero || ''}|${o.invoice || ''}`;
+        return mapaFoliosGuardados[clave] && mapaFoliosGuardados[clave].acciones;
+    }).length;
     const sinFolio = total - conFolio;
 
     // Contar notificados desde historial
-    const notificados = historialFolios.filter(h => h._notificado).length;
+    const notificados = historialFolios.filter(h => h.acciones && h.acciones.includes('[NOTIFICADO:')).length;
 
     document.getElementById('stat-pendientes').textContent = sinFolio;
     document.getElementById('stat-asignados').textContent = conFolio;
@@ -1541,16 +1568,27 @@ function actualizarEstadisticas(ordenes) {
 // ============================================================
 // ABRIR MODAL NOTIFICAR
 // ============================================================
-function abrirModalNotificar(numeroOci) {
-    const orden = todasLasOrdenes.find(o => o.numero_oci === numeroOci);
-    const folioData = mapaFoliosGuardados[numeroOci];
+function abrirModalNotificar(claveFilaId) {
+    // Reconstruir partes desde la clave de fila
+    const partes = claveFilaId.split('__');
+    const numeroOci = partes[0];
+    const materialClave = partes[1] === 'x' ? '' : partes[1];
+    const invoiceClave = partes[2] === 'x' ? '' : partes[2];
+    const claveMapa = `${numeroOci}|${materialClave}|${invoiceClave}`;
+
+    const orden = todasLasOrdenes.find(o =>
+        o.numero_oci === numeroOci &&
+        (o.material_numero || '') === materialClave &&
+        (o.invoice || '') === invoiceClave
+    );
+    const folioData = mapaFoliosGuardados[claveMapa];
 
     if (!orden || !folioData) {
         showToast('No se encontró la información de la OCI', 'error');
         return;
     }
 
-    ordenParaNotificar = { orden, folioData };
+    ordenParaNotificar = { orden, folioData, claveFilaId, claveMapa };
 
     const fecha = orden.fecha_creacion
         ? new Date(orden.fecha_creacion).toLocaleDateString('es-MX')
@@ -1610,7 +1648,7 @@ async function confirmarNotificacion() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
 
     try {
-        const { orden, folioData } = ordenParaNotificar;
+        const { orden, folioData, claveFilaId, claveMapa } = ordenParaNotificar;
         const usuario = usuarioActual ? (usuarioActual.nombre_completo || usuarioActual.username) : 'Sistema';
 
         // Registrar la notificación en el historial de folios_pago_carton
@@ -1624,15 +1662,15 @@ async function confirmarNotificacion() {
 
         if (error) throw error;
 
-        // Actualizar mapa local
-        mapaFoliosGuardados[orden.numero_oci] = {
+        // Actualizar mapa local usando la clave única de fila
+        mapaFoliosGuardados[claveMapa] = {
             ...folioData,
             acciones: notaNotificacion,
             _notificado: true
         };
 
-        // Bloquear el campo FOLIO MTK de esa OCI inmediatamente
-        const inputFolio = document.getElementById(`folio-input-${orden.numero_oci}`);
+        // Bloquear el campo FOLIO MTK de esa fila inmediatamente
+        const inputFolio = document.getElementById(`folio-input-${claveFilaId}`);
         if (inputFolio) {
             inputFolio.setAttribute('readonly', true);
             inputFolio.style.background = '#e2e8f0';
