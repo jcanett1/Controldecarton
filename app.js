@@ -222,13 +222,14 @@ function redirigirASeccionPermitida(rol) {
 
     // Auto-abrir la página correspondiente si el rol tiene una sola página asignada
     if (rol === 'REVISOR') {
-        // Marcar Revisar OCI como activo
+        // Marcar Revisar OCI como activo (primer ítem exclusivo del Revisor, excluyendo Folios para Pagos)
         document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
-        const item = document.querySelector('[data-roles*="REVISOR"]:not([data-roles*="ADMIN,REVISOR,USUARIO"])');
-        // Buscar el item de Revisar OCI específicamente
+        // Buscar el item de Revisar OCI específicamente (excluye USUARIO, RECEPCION y el ítem de Folios para Pagos)
         document.querySelectorAll('.menu-item[data-roles]').forEach(i => {
             const roles = i.getAttribute('data-roles').split(',').map(r => r.trim());
-            if (roles.includes('REVISOR') && !roles.includes('USUARIO') && !roles.includes('RECEPCION')) {
+            const seccion = i.getAttribute('data-section') || '';
+            const tieneOnclick = i.hasAttribute('onclick') && i.getAttribute('onclick').includes('abrirRevisarOCI');
+            if (roles.includes('REVISOR') && !roles.includes('USUARIO') && !roles.includes('RECEPCION') && tieneOnclick) {
                 i.classList.add('active');
             }
         });
