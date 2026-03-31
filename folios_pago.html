@@ -1093,9 +1093,226 @@ let usuarioActual = null;
 let todasLasOrdenes = [];
 let historialFolios = [];
 let ordenParaNotificar = null;
-let mapaFoliosGuardados = {}; // { 'numero_oci|material|invoice': registro_folio }
+let mapaFoliosGuardados = {}; // { 'numero_oci|material|invoice_normalizado': registro_folio }
+let mapaClavesFila = {};      // { claveFilaId: { claveMapa, numeroOci, materialClave, invoiceClave } }
 let mapaDescripciones = {};   // { numero_parte: descripcion }
 let mapaPrecios = {};         // { orden_compra: precio_unitario_dlls }
+
+function normalizarInvoiceValor(invoice) {
+    if (invoice === null || invoice === undefined) return '';
+    if (Array.isArray(invoice)) {
+        return invoice.map(function (item) { return String(item).trim(); }).filter(Boolean).join(', ');
+    }
+
+    const texto = String(invoice).trim();
+    if (!texto) return '';
+
+    if ((texto.startsWith('[') && texto.endsWith(']')) || (texto.startsWith('{') && texto.endsWith('}'))) {
+        try {
+            const parsed = JSON.parse(texto);
+            if (Array.isArray(parsed)) {
+                return parsed.map(function (item) { return String(item).trim(); }).filter(Boolean).join(', ');
+            }
+        } catch (e) {
+            // Si no se puede parsear, usar el texto original
+        }
+    }
+
+    return texto;
+}
+
+function construirClaveMapa(numeroOci, material, invoice) {
+    return `${numeroOci || ''}|${material || ''}|${normalizarInvoiceValor(invoice)}`;
+}
+
+function codificarClaveFila(claveMapa) {
+    return btoa(unescape(encodeURIComponent(claveMapa)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '');
+}
+
+function obtenerDatosFilaPorClave(claveFilaId) {
+    return mapaClavesFila[claveFilaId] || null;
+}
+
+function escaparHtml(texto) {
+    return String(texto)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function obtenerInvoiceDisplay(invoice) {
+    const invoiceNormalizado = normalizarInvoiceValor(invoice);
+    return invoiceNormalizado || '—';
+}
+
+function obtenerFolioLimpio(acciones) {
+    return acciones ? String(acciones).replace(/\s*\[NOTIFICADO:.*?\]/g, '').trim() : '';
+}
+
+function esFolioNotificado(acciones) {
+    return !!(acciones && String(acciones).includes('[NOTIFICADO:'));
+}
+
+function construirNotaNotificacion(folioBase, usuario) {
+    return `${folioBase} [NOTIFICADO: ${new Date().toLocaleString('es-MX')} por ${usuario}]`;
+}
+
+function actualizarControlesFilaNotificada(claveFilaId, folioMostrado) {
+    const inputFolio = document.getElementById(`folio-input-${claveFilaId}`);
+    const accionesCell = document.getElementById(`acciones-cell-${claveFilaId}`);
+    const estadoCell = document.getElementById(`estado-cell-${claveFilaId}`);
+
+    if (inputFolio) {
+        inputFolio.value = folioMostrado || inputFolio.value;
+        inputFolio.setAttribute('readonly', true);
+        inputFolio.style.background = '#e2e8f0';
+        inputFolio.style.color = '#64748b';
+        inputFolio.style.cursor = 'not-allowed';
+        inputFolio.style.borderColor = '#94a3b8';
+        inputFolio.title = 'Campo bloqueado: folio ya notificado';
+    }
+
+    if (estadoCell) {
+        estadoCell.innerHTML = `<span class="badge badge-con-folio"><i class="fas fa-check" style="margin-right:4px;"></i>Con Folio</span>`;
+    }
+
+    if (accionesCell) {
+        accionesCell.innerHTML = `
+            <button class="btn btn-notificar btn-sm" disabled title="Folio ya notificado">
+                <i class="fas fa-check-double"></i> Notificado
+            </button>`;
+    }
+}
+
+function actualizarFilaEstado(claveFilaId, folio, notificado) {
+    const estadoCell = document.getElementById(`estado-cell-${claveFilaId}`);
+    const accionesCell = document.getElementById(`acciones-cell-${claveFilaId}`);
+    const fila = document.querySelector(`tr[data-clave="${claveFilaId}"]`);
+
+    if (estadoCell) {
+        estadoCell.innerHTML = `<span class="badge badge-con-folio"><i class="fas fa-check" style="margin-right:4px;"></i>Con Folio</span>`;
+    }
+
+    if (accionesCell) {
+        if (notificado) {
+            accionesCell.innerHTML = `
+                <button class="btn btn-notificar btn-sm" disabled title="Folio ya notificado">
+                    <i class="fas fa-check-double"></i> Notificado
+                </button>`;
+        } else {
+            accionesCell.innerHTML = `
+                <button class="btn btn-notificar btn-sm" onclick="abrirModalNotificar('${claveFilaId}')">
+                    <i class="fas fa-bell"></i> Notificar
+                </button>`;
+        }
+    }
+
+    if (fila) {
+        fila.classList.add('tiene-folio');
+    }
+
+    if (notificado) {
+        actualizarControlesFilaNotificada(claveFilaId, folio);
+    }
+}
+
+function obtenerEstadoFolio(folioGuardado) {
+    const acciones = folioGuardado ? folioGuardado.acciones || '' : '';
+    return {
+        folioValor: acciones,
+        folioLimpio: obtenerFolioLimpio(acciones),
+        esNotificado: esFolioNotificado(acciones)
+    };
+}
+
+function construirBotonNotificar(claveFilaId, estadoFolio) {
+    if (estadoFolio.esNotificado) {
+        return `<button class="btn btn-notificar btn-sm" disabled title="Folio ya notificado">
+                   <i class="fas fa-check-double"></i> Notificado
+               </button>`;
+    }
+
+    if (estadoFolio.folioLimpio) {
+        return `<button class="btn btn-notificar btn-sm" onclick="abrirModalNotificar('${claveFilaId}')">
+                   <i class="fas fa-bell"></i> Notificar
+               </button>`;
+    }
+
+    return `<button class="btn btn-notificar btn-sm" disabled title="Primero asigna un folio">
+               <i class="fas fa-bell"></i> Notificar
+           </button>`;
+}
+
+function construirBadgeEstado(estadoFolio) {
+    if (estadoFolio.folioLimpio) {
+        return `<span class="badge badge-con-folio"><i class="fas fa-check" style="margin-right:4px;"></i>Con Folio</span>`;
+    }
+    return `<span class="badge badge-pendiente"><i class="fas fa-clock" style="margin-right:4px;"></i>Pendiente</span>`;
+}
+
+function obtenerClaveMapaDesdeOrden(orden) {
+    return construirClaveMapa(orden.numero_oci, orden.material_numero || '', orden.invoice || '');
+}
+
+function obtenerClaveFilaDesdeOrden(orden) {
+    const claveMapa = obtenerClaveMapaDesdeOrden(orden);
+    const claveFilaId = codificarClaveFila(claveMapa);
+    mapaClavesFila[claveFilaId] = {
+        claveMapa,
+        numeroOci: orden.numero_oci || '',
+        materialClave: orden.material_numero || '',
+        invoiceClave: normalizarInvoiceValor(orden.invoice || '')
+    };
+    return claveFilaId;
+}
+
+function obtenerOrdenPorDatosFila(datosFila) {
+    if (!datosFila) return null;
+    return todasLasOrdenes.find(function (o) {
+        return construirClaveMapa(o.numero_oci, o.material_numero || '', o.invoice || '') === datosFila.claveMapa;
+    }) || null;
+}
+
+function obtenerFolioGuardadoPorOrden(orden) {
+    const claveMapa = obtenerClaveMapaDesdeOrden(orden);
+    return mapaFoliosGuardados[claveMapa] || null;
+}
+
+function obtenerFechaRegistro(fechaFuente) {
+    return fechaFuente
+        ? new Date(fechaFuente).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0];
+}
+
+function construirRegistroFolio(orden, folio) {
+    return {
+        numero_oci: orden.numero_oci || null,
+        fecha: obtenerFechaRegistro(orden.fecha_creacion),
+        material: orden.material_numero || null,
+        descripcion: orden.descripcion_material || null,
+        oc_mtk: orden.oc_mtk || null,
+        qty_recibido: orden.qty_recibida ? parseInt(orden.qty_recibida) : null,
+        invoice: normalizarInvoiceValor(orden.invoice || '') || null,
+        acciones: folio
+    };
+}
+
+function obtenerTextoInvoiceHistorial(registro) {
+    return obtenerInvoiceDisplay(registro.invoice);
+}
+
+function obtenerTextoInvoiceTabla(orden) {
+    return obtenerInvoiceDisplay(orden.invoice);
+}
+
+function obtenerValorNotificacion(acciones) {
+    return obtenerFolioLimpio(acciones) || acciones || '';
+}
 
 // ============================================================
 // INICIALIZACIÓN
@@ -1211,10 +1428,10 @@ async function cargarOrdenes() {
             .order('created_at', { ascending: false });
 
         if (!errorFolios && foliosGuardados) {
-            // Crear mapa: 'numero_oci|material|invoice' -> registro de folio (clave única por fila)
+            // Crear mapa con invoice normalizado para soportar valores simples o serializados como JSON
             mapaFoliosGuardados = {};
             foliosGuardados.forEach(f => {
-                const claveUnica = `${f.numero_oci}|${f.material || ''}|${f.invoice || ''}`;
+                const claveUnica = construirClaveMapa(f.numero_oci, f.material || '', f.invoice || '');
                 if (!mapaFoliosGuardados[claveUnica]) {
                     mapaFoliosGuardados[claveUnica] = f;
                 }
@@ -1245,6 +1462,7 @@ async function cargarOrdenes() {
 // ============================================================
 function renderizarTabla(ordenes) {
     const tbody = document.getElementById('tabla-body');
+    mapaClavesFila = {};
     document.getElementById('count-mostrados').textContent = ordenes.length;
     document.getElementById('count-total').textContent = todasLasOrdenes.length;
 
@@ -1270,8 +1488,9 @@ function renderizarTabla(ordenes) {
             ? `<span class="oc-mtk-badge">${orden.oc_mtk}</span>`
             : '<span class="text-muted">—</span>';
 
-        const invoice = orden.invoice
-            ? `<span class="invoice-badge"><i class="fas fa-file-invoice" style="margin-right:4px;"></i>${orden.invoice}</span>`
+        const invoiceTexto = obtenerTextoInvoiceTabla(orden);
+        const invoice = invoiceTexto !== '—'
+            ? `<span class="invoice-badge"><i class="fas fa-file-invoice" style="margin-right:4px;"></i>${escaparHtml(invoiceTexto)}</span>`
             : '<span class="text-muted">—</span>';
 
         const qtyRecibida = orden.qty_recibida !== null && orden.qty_recibida !== undefined
@@ -1297,36 +1516,19 @@ function renderizarTabla(ordenes) {
             ? `<span style="font-size:12px; color:#475569;">${descTexto}</span>`
             : '<span class="text-muted">Sin descripción</span>';
 
-        // Verificar si ya tiene folio guardado (clave única por fila)
-        const claveFilaRender = `${orden.numero_oci}|${orden.material_numero || ''}|${orden.invoice || ''}`;
+        const claveFilaRender = obtenerClaveMapaDesdeOrden(orden);
         const folioGuardado = mapaFoliosGuardados[claveFilaRender];
-        const folioValor = folioGuardado ? folioGuardado.acciones || '' : '';
-        // Determinar si el folio ya fue notificado (bloqueado)
-        const esNotificado = folioGuardado && folioGuardado.acciones && folioGuardado.acciones.includes('[NOTIFICADO:');
+        const estadoFolio = obtenerEstadoFolio(folioGuardado);
+        const folioValor = estadoFolio.folioValor;
+        const esNotificado = estadoFolio.esNotificado;
         const folioClass = folioValor ? 'folio-input folio-guardado' : 'folio-input';
         const folioReadonly = esNotificado ? 'readonly' : '';
         const folioStyle = esNotificado ? 'style="background:#e2e8f0; color:#64748b; cursor:not-allowed; border-color:#94a3b8;"' : '';
         const folioTitle = esNotificado ? 'title="Campo bloqueado: folio ya notificado"' : 'title="Ingresa el número de folio y presiona Enter o haz clic fuera para guardar"';
         const tieneFilaClass = folioValor ? 'tiene-folio' : '';
-        // Clave única de fila para identificar en el DOM
-        const claveFilaId = `${orden.numero_oci}__${orden.material_numero || 'x'}__${orden.invoice || 'x'}`;
-
-        // Estado badge
-        let estadoBadge = '';
-        if (folioGuardado && folioGuardado.acciones) {
-            estadoBadge = `<span class="badge badge-con-folio"><i class="fas fa-check" style="margin-right:4px;"></i>Con Folio</span>`;
-        } else {
-            estadoBadge = `<span class="badge badge-pendiente"><i class="fas fa-clock" style="margin-right:4px;"></i>Pendiente</span>`;
-        }
-
-        // Botón notificar
-        const btnNotificar = folioValor
-            ? `<button class="btn btn-notificar btn-sm" onclick="abrirModalNotificar('${claveFilaId}')">
-                   <i class="fas fa-bell"></i> Notificar
-               </button>`
-            : `<button class="btn btn-notificar btn-sm" disabled title="Primero asigna un folio">
-                   <i class="fas fa-bell"></i> Notificar
-               </button>`;
+        const claveFilaId = obtenerClaveFilaDesdeOrden(orden);
+        const estadoBadge = construirBadgeEstado(estadoFolio);
+        const btnNotificar = construirBotonNotificar(claveFilaId, estadoFolio);
 
         return `
             <tr data-clave="${claveFilaId}" class="${tieneFilaClass}">
@@ -1373,46 +1575,27 @@ function renderizarTabla(ordenes) {
 async function guardarFolio(claveFilaId, valor, inputEl) {
     const folio = valor ? valor.trim() : '';
 
-    // Si el folio está vacío, no hacer nada
     if (!folio) return;
 
-    // Reconstruir numero_oci, material e invoice desde la clave de fila
-    // Formato: 'numero_oci__material__invoice'
-    const partes = claveFilaId.split('__');
-    const numeroOci = partes[0];
-    const materialClave = partes[1] === 'x' ? '' : partes[1];
-    const invoiceClave = partes[2] === 'x' ? '' : partes[2];
+    const datosFila = obtenerDatosFilaPorClave(claveFilaId);
+    if (!datosFila) {
+        showToast('No se pudo identificar la fila del folio', 'error');
+        return;
+    }
 
-    // Clave para el mapa (mismo formato que al cargar)
-    const claveMapa = `${numeroOci}|${materialClave}|${invoiceClave}`;
-
-    // Verificar si el valor cambió
+    const { claveMapa, numeroOci } = datosFila;
     const folioActual = mapaFoliosGuardados[claveMapa];
-    if (folioActual && folioActual.acciones === folio) return;
+    const folioActualLimpio = obtenerFolioLimpio(folioActual ? folioActual.acciones : '');
+    if (folioActualLimpio === folio) return;
 
     try {
-        // Obtener datos de la orden (buscar por numero_oci + material + invoice)
-        const orden = todasLasOrdenes.find(o =>
-            o.numero_oci === numeroOci &&
-            (o.material_numero || '') === materialClave &&
-            (o.invoice || '') === invoiceClave
-        );
-        if (!orden) return;
+        const orden = obtenerOrdenPorDatosFila(datosFila);
+        if (!orden) {
+            showToast('No se encontró la orden asociada al folio', 'error');
+            return;
+        }
 
-        const fechaCreacion = orden.fecha_creacion
-            ? new Date(orden.fecha_creacion).toISOString().split('T')[0]
-            : new Date().toISOString().split('T')[0];
-
-        const registro = {
-            numero_oci: numeroOci,
-            fecha: fechaCreacion,
-            material: orden.material_numero || null,
-            descripcion: orden.descripcion_material || null,
-            oc_mtk: orden.oc_mtk || null,
-            qty_recibido: orden.qty_recibida ? parseInt(orden.qty_recibida) : null,
-            invoice: orden.invoice || null,
-            acciones: folio
-        };
+        const registro = construirRegistroFolio(orden, folio);
 
         let resultado;
 
@@ -1472,27 +1655,6 @@ async function guardarFolio(claveFilaId, valor, inputEl) {
 // ============================================================
 // ACTUALIZAR ESTADO DE FILA
 // ============================================================
-function actualizarFilaEstado(claveFilaId, folio) {
-    const estadoCell = document.getElementById(`estado-cell-${claveFilaId}`);
-    const accionesCell = document.getElementById(`acciones-cell-${claveFilaId}`);
-    const fila = document.querySelector(`tr[data-clave="${claveFilaId}"]`);
-
-    if (estadoCell) {
-        estadoCell.innerHTML = `<span class="badge badge-con-folio"><i class="fas fa-check" style="margin-right:4px;"></i>Con Folio</span>`;
-    }
-
-    if (accionesCell) {
-        accionesCell.innerHTML = `
-            <button class="btn btn-notificar btn-sm" onclick="abrirModalNotificar('${claveFilaId}')">
-                <i class="fas fa-bell"></i> Notificar
-            </button>`;
-    }
-
-    if (fila) {
-        fila.classList.add('tiene-folio');
-    }
-}
-
 // ============================================================
 // FILTRAR ÓRDENES
 // ============================================================
@@ -1514,13 +1676,13 @@ function filtrarOrdenes() {
 
     if (estadoFiltro === 'sin_folio') {
         filtradas = filtradas.filter(o => {
-            const clave = `${o.numero_oci}|${o.material_numero || ''}|${o.invoice || ''}`;
-            return !mapaFoliosGuardados[clave] || !mapaFoliosGuardados[clave].acciones;
+            const clave = obtenerClaveMapaDesdeOrden(o);
+            return !mapaFoliosGuardados[clave] || !obtenerFolioLimpio(mapaFoliosGuardados[clave].acciones);
         });
     } else if (estadoFiltro === 'con_folio') {
         filtradas = filtradas.filter(o => {
-            const clave = `${o.numero_oci}|${o.material_numero || ''}|${o.invoice || ''}`;
-            return mapaFoliosGuardados[clave] && mapaFoliosGuardados[clave].acciones;
+            const clave = obtenerClaveMapaDesdeOrden(o);
+            return mapaFoliosGuardados[clave] && obtenerFolioLimpio(mapaFoliosGuardados[clave].acciones);
         });
     }
 
@@ -1551,8 +1713,8 @@ async function recargarOrdenes() {
 function actualizarEstadisticas(ordenes) {
     const total = ordenes.length;
     const conFolio = ordenes.filter(o => {
-        const clave = `${o.numero_oci}|${o.material_numero || ''}|${o.invoice || ''}`;
-        return mapaFoliosGuardados[clave] && mapaFoliosGuardados[clave].acciones;
+        const clave = obtenerClaveMapaDesdeOrden(o);
+        return mapaFoliosGuardados[clave] && obtenerFolioLimpio(mapaFoliosGuardados[clave].acciones);
     }).length;
     const sinFolio = total - conFolio;
 
@@ -1569,26 +1731,21 @@ function actualizarEstadisticas(ordenes) {
 // ABRIR MODAL NOTIFICAR
 // ============================================================
 function abrirModalNotificar(claveFilaId) {
-    // Reconstruir partes desde la clave de fila
-    const partes = claveFilaId.split('__');
-    const numeroOci = partes[0];
-    const materialClave = partes[1] === 'x' ? '' : partes[1];
-    const invoiceClave = partes[2] === 'x' ? '' : partes[2];
-    const claveMapa = `${numeroOci}|${materialClave}|${invoiceClave}`;
+    const datosFila = obtenerDatosFilaPorClave(claveFilaId);
+    if (!datosFila) {
+        showToast('No se encontró la fila a notificar', 'error');
+        return;
+    }
 
-    const orden = todasLasOrdenes.find(o =>
-        o.numero_oci === numeroOci &&
-        (o.material_numero || '') === materialClave &&
-        (o.invoice || '') === invoiceClave
-    );
-    const folioData = mapaFoliosGuardados[claveMapa];
+    const orden = obtenerOrdenPorDatosFila(datosFila);
+    const folioData = mapaFoliosGuardados[datosFila.claveMapa];
 
     if (!orden || !folioData) {
         showToast('No se encontró la información de la OCI', 'error');
         return;
     }
 
-    ordenParaNotificar = { orden, folioData, claveFilaId, claveMapa };
+    ordenParaNotificar = { orden, folioData, claveFilaId, claveMapa: datosFila.claveMapa };
 
     const fecha = orden.fecha_creacion
         ? new Date(orden.fecha_creacion).toLocaleDateString('es-MX')
@@ -1613,11 +1770,11 @@ function abrirModalNotificar(claveFilaId) {
         </div>
         <div class="modal-info-item">
             <label>Invoice</label>
-            <span>${orden.invoice || '—'}</span>
+            <span>${escaparHtml(obtenerTextoInvoiceTabla(orden))}</span>
         </div>
         <div class="modal-info-item">
                     <label>FOLIO MTK</label>
-            <span style="color:#7c3aed; font-size:15px;">${folioData.acciones || '—'}</span>
+            <span style="color:#7c3aed; font-size:15px;">${escaparHtml(obtenerValorNotificacion(folioData.acciones) || '—')}</span>
         </div>
     `;
 
@@ -1650,10 +1807,8 @@ async function confirmarNotificacion() {
     try {
         const { orden, folioData, claveFilaId, claveMapa } = ordenParaNotificar;
         const usuario = usuarioActual ? (usuarioActual.nombre_completo || usuarioActual.username) : 'Sistema';
-
-        // Registrar la notificación en el historial de folios_pago_carton
-        // Actualizamos el campo acciones para incluir la nota de notificación
-        const notaNotificacion = `${folioData.acciones} [NOTIFICADO: ${new Date().toLocaleString('es-MX')} por ${usuario}]`;
+        const folioBase = obtenerValorNotificacion(folioData.acciones);
+        const notaNotificacion = construirNotaNotificacion(folioBase, usuario);
 
         const { error } = await sb
             .from('folios_pago_carton')
@@ -1669,19 +1824,10 @@ async function confirmarNotificacion() {
             _notificado: true
         };
 
-        // Bloquear el campo FOLIO MTK de esa fila inmediatamente
-        const inputFolio = document.getElementById(`folio-input-${claveFilaId}`);
-        if (inputFolio) {
-            inputFolio.setAttribute('readonly', true);
-            inputFolio.style.background = '#e2e8f0';
-            inputFolio.style.color = '#64748b';
-            inputFolio.style.cursor = 'not-allowed';
-            inputFolio.style.borderColor = '#94a3b8';
-            inputFolio.title = 'Campo bloqueado: folio ya notificado';
-        }
+        actualizarFilaEstado(claveFilaId, folioBase, true);
 
         cerrarModal();
-        showToast(`Notificación registrada para ${orden.numero_oci} — Folio MTK: ${folioData.acciones}`, 'success');
+        showToast(`Notificación registrada para ${orden.numero_oci} — Folio MTK: ${folioBase}`, 'success');
 
         // Recargar historial y estadísticas
         await cargarHistorial();
@@ -1743,10 +1889,8 @@ function renderizarHistorial(registros) {
             })
             : '—';
 
-        const esNotificado = reg.acciones && reg.acciones.includes('[NOTIFICADO:');
-        const folioLimpio = reg.acciones
-            ? reg.acciones.replace(/\s*\[NOTIFICADO:.*?\]/g, '').trim()
-            : '—';
+        const esNotificado = esFolioNotificado(reg.acciones);
+        const folioLimpio = obtenerFolioLimpio(reg.acciones) || '—';
 
         const iconClass = esNotificado ? 'notificado' : 'folio-asignado';
         const iconName = esNotificado ? 'fas fa-bell' : 'fas fa-tag';
@@ -1760,7 +1904,7 @@ function renderizarHistorial(registros) {
                     <div class="titulo">${reg.numero_oci}</div>
                     <div class="detalle">
                         <strong>Material:</strong> ${reg.material || '—'} &nbsp;|&nbsp;
-                        <strong>Invoice:</strong> ${reg.invoice || '—'} &nbsp;|&nbsp;
+                        <strong>Invoice:</strong> ${escaparHtml(obtenerTextoInvoiceHistorial(reg))} &nbsp;|&nbsp;
                         <strong>OC-MTK:</strong> ${reg.oc_mtk || '—'}
                         ${reg.descripcion ? `<br><strong>Descripción:</strong> ${reg.descripcion}` : ''}
                         ${reg.qty_recibido ? `<br><strong>Qty Recibida:</strong> ${reg.qty_recibido}` : ''}
