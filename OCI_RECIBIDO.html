@@ -350,6 +350,102 @@
             display: inline-block;
         }
 
+        .zor-adicionales-cell {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .zor-adicionales-lista {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-width: 220px;
+        }
+
+        .zor-adicional-badge {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .zor-adicionales-empty {
+            color: #999;
+            font-style: italic;
+            font-size: 11px;
+            padding-top: 6px;
+        }
+
+        .btn-zor-adicional {
+            min-width: 30px;
+            height: 30px;
+            padding: 0 10px;
+            justify-content: center;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .btn-zor-adicional:hover {
+            transform: translateY(-1px);
+        }
+
+        .zor-principal-box {
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .zor-adicional-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .zor-adicional-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .zor-adicional-input:focus {
+            outline: none;
+            border-color: #059669;
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
+        }
+
+        .btn-remove-zor {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 38px;
+            height: 38px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .btn-remove-zor:hover {
+            background: #c82333;
+        }
+
         .field-empty {
             color: #999;
             font-style: italic;
@@ -859,6 +955,7 @@
                             <th>Pallets</th>
                             <th>OC-MTK</th>
                             <th>ZOR</th>
+                            <th>ZOR adicionales</th>
                             <th>Qty Recibida</th>
                             <th>Comentarios</th>
                             <th>Invoice</th>
@@ -868,7 +965,7 @@
                     </thead>
                     <tbody id="cuerpo-tabla-ordenes">
                         <tr>
-                            <td colspan="12" class="cargando">
+                            <td colspan="13" class="cargando">
                                 <div class="spinner-oci"></div>
                                 <p>Cargando órdenes...</p>
                             </td>
@@ -917,8 +1014,118 @@
     // ===== VARIABLES GLOBALES =====
     let usuarioActual = null;
     let ordenSeleccionada = null;
+    let ordenZorAdicionalActual = null;
     let todasLasOrdenes = [];
     let mapaDescripcionesMateriales = {}; // Mapa numero_parte -> descripcion
+    let campoZorAdicionalesDetectado = null;
+
+    function escaparHtml(valor) {
+        return String(valor || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function obtenerValorZorAdicionales(orden) {
+        if (!orden) return null;
+        if (orden.zor_adicionales !== undefined) return orden.zor_adicionales;
+        if (orden['ZOR adicionales'] !== undefined) return orden['ZOR adicionales'];
+        return null;
+    }
+
+    function parsearZorAdicionales(valor) {
+        if (!valor) return [];
+
+        if (Array.isArray(valor)) {
+            return valor.map(function(item) { return String(item || '').trim(); }).filter(Boolean);
+        }
+
+        if (typeof valor === 'string') {
+            const texto = valor.trim();
+            if (!texto) return [];
+
+            try {
+                const json = JSON.parse(texto);
+                if (Array.isArray(json)) {
+                    return json.map(function(item) { return String(item || '').trim(); }).filter(Boolean);
+                }
+            } catch (e) {
+                // Si no viene en JSON, intentar formato simple separado por comas o saltos de línea
+            }
+
+            return texto.split(/[\n,;]+/).map(function(item) {
+                return item.trim();
+            }).filter(Boolean);
+        }
+
+        return [];
+    }
+
+    function serializarZorAdicionales(zores) {
+        const limpios = (zores || []).map(function(item) {
+            return String(item || '').trim();
+        }).filter(Boolean);
+
+        return limpios.length ? JSON.stringify(limpios) : null;
+    }
+
+    function renderizarZorAdicionales(orden) {
+        const zores = parsearZorAdicionales(obtenerValorZorAdicionales(orden));
+        const lista = zores.length
+            ? '<div class="zor-adicionales-lista">' + zores.map(function(zor) {
+                return '<span class="zor-adicional-badge">' + escaparHtml(zor) + '</span>';
+            }).join('') + '</div>'
+            : '<span class="zor-adicionales-empty">Sin ZOR</span>';
+
+        return '<div class="zor-adicionales-cell">' +
+            lista +
+            '<button class="btn btn-sm btn-primary btn-zor-adicional" onclick="abrirModalZorAdicionales(' + orden.id + ')" title="Agregar o editar ZOR adicionales">+</button>' +
+            '</div>';
+    }
+
+    async function actualizarCampoZorAdicionales(ordenId, valorSerializado) {
+        const intentos = [];
+
+        if (campoZorAdicionalesDetectado) {
+            intentos.push(campoZorAdicionalesDetectado);
+        }
+
+        ['zor_adicionales', 'ZOR adicionales'].forEach(function(campo) {
+            if (!intentos.includes(campo)) {
+                intentos.push(campo);
+            }
+        });
+
+        let ultimoError = null;
+
+        for (const campo of intentos) {
+            const payload = {};
+            payload[campo] = valorSerializado;
+
+            const { error } = await supabaseClient
+                .from('ordenes_compra')
+                .update(payload)
+                .eq('id', ordenId);
+
+            if (!error) {
+                campoZorAdicionalesDetectado = campo;
+                return campo;
+            }
+
+            ultimoError = error;
+
+            const detalleError = ((error.message || '') + ' ' + (error.details || '') + ' ' + (error.hint || '')).toLowerCase();
+            const pareceErrorDeColumna = detalleError.includes('column') || detalleError.includes('schema cache') || error.code === 'PGRST204';
+
+            if (!pareceErrorDeColumna) {
+                break;
+            }
+        }
+
+        throw ultimoError || new Error('No se pudo guardar ZOR adicionales');
+    }
 
     // ===== CARGAR MAPA DE DESCRIPCIONES =====
     async function cargarMapaDescripciones() {
@@ -995,7 +1202,7 @@
     // ===== CARGAR ÓRDENES =====
     async function cargarOrdenes() {
         const tbody = document.getElementById('cuerpo-tabla-ordenes');
-        tbody.innerHTML = '<tr><td colspan="12" class="cargando"><div class="spinner-oci"></div><p>Cargando órdenes...</p></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" class="cargando"><div class="spinner-oci"></div><p>Cargando órdenes...</p></td></tr>';
 
         try {
             const filtroEstado = document.getElementById('filtro-estado').value;
@@ -1020,7 +1227,7 @@
 
         } catch (error) {
             console.error('Error cargando órdenes:', error);
-            tbody.innerHTML = '<tr><td colspan="12" class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar las órdenes</p></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="13" class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar las órdenes</p></td></tr>';
         }
     }
 
@@ -1058,7 +1265,7 @@
         const tbody = document.getElementById('cuerpo-tabla-ordenes');
 
         if (!ordenes || ordenes.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="12" class="empty-state"><i class="fas fa-inbox"></i><p>No hay órdenes para mostrar</p></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="13" class="empty-state"><i class="fas fa-inbox"></i><p>No hay órdenes para mostrar</p></td></tr>';
             return;
         }
 
@@ -1075,6 +1282,7 @@
             const zorDisplay = orden.zor 
                 ? '<span class="zor-display">' + orden.zor + '</span>' 
                 : '<span class="field-empty">-</span>';
+            const zorAdicionalesDisplay = renderizarZorAdicionales(orden);
             
             // Qty Recibida - campo editable
             const qtyRecibida = orden.qty_recibida || '';
@@ -1099,6 +1307,7 @@
                 '<td>' + orden.cantidad_pallets + '</td>' +
                 '<td>' + ocMtkDisplay + '</td>' +
                 '<td>' + zorDisplay + '</td>' +
+                '<td>' + zorAdicionalesDisplay + '</td>' +
                 '<td>' +
                     '<input type="number" class="qty-recibida-input ' + qtyClass + '" ' +
                         'value="' + qtyRecibida + '" ' +
@@ -1146,6 +1355,12 @@
             const fecha = new Date(orden.fecha_creacion).toLocaleString('es-ES');
             const usuario = orden.usuarios_carton ? orden.usuarios_carton.nombre_completo : 'N/A';
             const estado = orden.estado;
+            const zoresAdicionales = parsearZorAdicionales(obtenerValorZorAdicionales(orden));
+            const zorAdicionalesDetalle = zoresAdicionales.length
+                ? '<div class="zor-adicionales-lista">' + zoresAdicionales.map(function(zor) {
+                    return '<span class="zor-adicional-badge">' + escaparHtml(zor) + '</span>';
+                }).join('') + '</div>'
+                : '<span class="field-empty">Sin asignar</span>';
             
             // ✨ CORREGIDO: Usar qty_a_enviar_piezas (total real enviado)
             const totalEnviado = orden.qty_a_enviar_piezas 
@@ -1206,6 +1421,10 @@
                 '<div class="detail-item">' +
                 '<div class="detail-label">ZOR</div>' +
                 '<div class="detail-value">' + (orden.zor ? '<span class="zor-display">' + orden.zor + '</span>' : '<span class="field-empty">Sin asignar</span>') + '</div>' +
+                '</div>' +
+                '<div class="detail-item">' +
+                '<div class="detail-label">ZOR adicionales</div>' +
+                '<div class="detail-value">' + zorAdicionalesDetalle + '</div>' +
                 '</div>';
             
             // ✨ Agregar TOTAL REAL A ENVIAR si existe
@@ -1354,10 +1573,129 @@
         }
     }
 
+    function abrirModalZorAdicionales(ordenId) {
+        const orden = todasLasOrdenes.find(function(item) { return item.id === ordenId; });
+
+        if (!orden) {
+            alert('No se encontró la orden seleccionada');
+            return;
+        }
+
+        ordenZorAdicionalActual = orden;
+        const zoresActuales = parsearZorAdicionales(obtenerValorZorAdicionales(orden));
+
+        document.getElementById('modalTitulo').textContent = 'ZOR adicionales';
+        document.getElementById('modalBody').innerHTML = '' +
+            '<div class="recepcion-info">' +
+                '<h4><i class="fas fa-hashtag"></i> Captura de ZOR adicionales</h4>' +
+                '<p><strong>OCI:</strong> ' + escaparHtml(orden.numero_oci) + '</p>' +
+                '<p><strong>Material:</strong> #' + escaparHtml(orden.material_numero) + '</p>' +
+            '</div>' +
+            '<div class="zor-principal-box"><strong>ZOR principal:</strong> ' +
+                (orden.zor ? '<span class="zor-display">' + escaparHtml(orden.zor) + '</span>' : '<span class="field-empty">Sin asignar</span>') +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label><i class="fas fa-list"></i> Agrega uno o más ZOR adicionales:</label>' +
+                '<div id="listaZorAdicionales"></div>' +
+                '<button type="button" class="btn btn-secondary" onclick="agregarCampoZorAdicional()">' +
+                    '<i class="fas fa-plus"></i> Agregar otro ZOR' +
+                '</button>' +
+                '<p style="margin-top: 10px; font-size: 12px; color: #666;">Puedes dejar un solo ZOR o capturar varios. Los valores vacíos no se guardarán.</p>' +
+            '</div>';
+
+        document.getElementById('modalFooter').innerHTML = '' +
+            '<button class="btn-modal btn-modal-secondary" onclick="cerrarModal()">' +
+                '<i class="fas fa-times"></i> Cancelar' +
+            '</button>' +
+            '<button class="btn-modal btn-modal-primary" onclick="guardarZorAdicionales()">' +
+                '<i class="fas fa-save"></i> Guardar ZOR adicionales' +
+            '</button>';
+
+        document.getElementById('modalDetalles').classList.add('active');
+        renderizarCamposZorAdicionales(zoresActuales.length ? zoresActuales : ['']);
+    }
+
+    function renderizarCamposZorAdicionales(valores) {
+        const contenedor = document.getElementById('listaZorAdicionales');
+        if (!contenedor) return;
+
+        const lista = (valores && valores.length ? valores : ['']).map(function(valor) {
+            return String(valor || '');
+        });
+
+        contenedor.innerHTML = lista.map(function(valor, index) {
+            return '<div class="zor-adicional-row">' +
+                '<input type="text" class="zor-adicional-input" value="' + escaparHtml(valor) + '" placeholder="Ej. ZOR-12345">' +
+                (lista.length > 1
+                    ? '<button type="button" class="btn-remove-zor" onclick="eliminarCampoZorAdicional(' + index + ')" title="Eliminar ZOR"><i class="fas fa-trash"></i></button>'
+                    : '') +
+                '</div>';
+        }).join('');
+    }
+
+    function obtenerValoresFormularioZorAdicional() {
+        return Array.from(document.querySelectorAll('.zor-adicional-input')).map(function(input) {
+            return input.value.trim();
+        });
+    }
+
+    function agregarCampoZorAdicional() {
+        const valores = obtenerValoresFormularioZorAdicional();
+        valores.push('');
+        renderizarCamposZorAdicionales(valores);
+
+        const inputs = document.querySelectorAll('.zor-adicional-input');
+        if (inputs.length) {
+            inputs[inputs.length - 1].focus();
+        }
+    }
+
+    function eliminarCampoZorAdicional(index) {
+        const valores = obtenerValoresFormularioZorAdicional();
+        valores.splice(index, 1);
+        renderizarCamposZorAdicionales(valores.length ? valores : ['']);
+    }
+
+    async function guardarZorAdicionales() {
+        if (!ordenZorAdicionalActual) {
+            alert('No hay una orden seleccionada');
+            return;
+        }
+
+        const valores = obtenerValoresFormularioZorAdicional().filter(Boolean);
+        const valorSerializado = serializarZorAdicionales(valores);
+
+        try {
+            const campoGuardado = await actualizarCampoZorAdicionales(ordenZorAdicionalActual.id, valorSerializado);
+            const orden = todasLasOrdenes.find(function(item) { return item.id === ordenZorAdicionalActual.id; });
+
+            if (orden) {
+                orden.zor_adicionales = null;
+                orden['ZOR adicionales'] = null;
+                orden[campoGuardado] = valorSerializado;
+            }
+
+            const busqueda = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
+            if (busqueda) {
+                filtrarOrdenes();
+            } else {
+                renderizarTabla(todasLasOrdenes);
+            }
+
+            alert(valores.length ? 'ZOR adicionales guardados correctamente' : 'ZOR adicionales eliminados correctamente');
+            cerrarModal();
+
+        } catch (error) {
+            console.error('Error guardando ZOR adicionales:', error);
+            alert('Error al guardar los ZOR adicionales: ' + error.message);
+        }
+    }
+
     // ===== FUNCIONES DEL MODAL =====
     function cerrarModal() {
         document.getElementById('modalDetalles').classList.remove('active');
         ordenSeleccionada = null;
+        ordenZorAdicionalActual = null;
     }
 
     document.getElementById('modalDetalles').addEventListener('click', function(e) {
