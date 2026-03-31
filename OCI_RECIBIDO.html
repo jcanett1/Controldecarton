@@ -521,6 +521,105 @@
             display: inline-block;
         }
 
+        .invoice-multiple-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            min-width: 170px;
+        }
+
+        .invoice-lista {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            min-height: 28px;
+            flex: 1;
+        }
+
+        .invoice-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffe08a;
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .invoice-empty {
+            color: #999;
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        .btn-invoice-adicional {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .invoice-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .invoice-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .invoice-multiple-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #fd7e14;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .invoice-multiple-input:focus {
+            outline: none;
+            border-color: #fd7e14;
+            box-shadow: 0 0 0 3px rgba(253, 126, 20, 0.15);
+        }
+
+        .btn-remove-invoice {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 38px;
+            height: 38px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .btn-remove-invoice:hover {
+            background: #c82333;
+        }
+
+        .invoice-principal-box {
+            background: #fff8e1;
+            border: 1px solid #ffe08a;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            color: #856404;
+        }
+
         /* MODAL DE DETALLES */
         .modal-overlay {
             display: none;
@@ -1015,6 +1114,7 @@
     let usuarioActual = null;
     let ordenSeleccionada = null;
     let ordenZorAdicionalActual = null;
+    let ordenInvoiceActual = null;
     let todasLasOrdenes = [];
     let mapaDescripcionesMateriales = {}; // Mapa numero_parte -> descripcion
     let campoZorAdicionalesDetectado = null;
@@ -1125,6 +1225,56 @@
         }
 
         throw ultimoError || new Error('No se pudo guardar ZOR adicionales');
+    }
+
+    function parsearInvoices(valor) {
+        if (!valor) return [];
+
+        if (Array.isArray(valor)) {
+            return valor.map(function(item) { return String(item || '').trim(); }).filter(Boolean);
+        }
+
+        if (typeof valor === 'string') {
+            const texto = valor.trim();
+            if (!texto) return [];
+
+            try {
+                const json = JSON.parse(texto);
+                if (Array.isArray(json)) {
+                    return json.map(function(item) { return String(item || '').trim(); }).filter(Boolean);
+                }
+            } catch (e) {
+                // Si no viene en JSON, intentar formato simple separado por comas o saltos de línea
+            }
+
+            return texto.split(/[\n,;]+/).map(function(item) {
+                return item.trim();
+            }).filter(Boolean);
+        }
+
+        return [];
+    }
+
+    function serializarInvoices(invoices) {
+        const limpios = (invoices || []).map(function(item) {
+            return String(item || '').trim();
+        }).filter(Boolean);
+
+        return limpios.length ? JSON.stringify(limpios) : null;
+    }
+
+    function renderizarInvoices(orden) {
+        const invoices = parsearInvoices(orden.invoice);
+        const lista = invoices.length
+            ? '<div class="invoice-lista">' + invoices.map(function(invoice) {
+                return '<span class="invoice-badge">' + escaparHtml(invoice) + '</span>';
+            }).join('') + '</div>'
+            : '<span class="invoice-empty">Sin invoice</span>';
+
+        return '<div class="invoice-multiple-cell">' +
+            lista +
+            '<button class="btn btn-sm btn-warning btn-invoice-adicional" onclick="abrirModalInvoices(' + orden.id + ')" title="Agregar o editar invoices">+</button>' +
+            '</div>';
     }
 
     // ===== CARGAR MAPA DE DESCRIPCIONES =====
@@ -1292,9 +1442,7 @@
             const comentarios = orden.comentarios_recepcion || '';
             const comentariosClass = orden.comentarios_recepcion ? 'saved' : '';
             
-            // Invoice - campo editable
-            const invoice = orden.invoice || '';
-            const invoiceClass = orden.invoice ? 'saved' : '';
+            const invoiceDisplay = renderizarInvoices(orden);
             
             // Obtener descripción del material desde el mapa
             const descripcionMat = mapaDescripcionesMateriales[orden.material_numero] || '<em style="color:#999;">Sin descripción</em>';
@@ -1323,13 +1471,7 @@
                         'onchange="guardarComentarios(' + orden.id + ', this.value)" ' +
                         'title="Comentarios de recepción">' +
                 '</td>' +
-                '<td>' +
-                    '<input type="text" class="invoice-input ' + invoiceClass + '" ' +
-                        'value="' + invoice + '" ' +
-                        'placeholder="Invoice" ' +
-                        'onchange="guardarInvoice(' + orden.id + ', this.value)" ' +
-                        'title="Número de Invoice">' +
-                '</td>' +
+                '<td>' + invoiceDisplay + '</td>' +
                 '<td><span class="estado ' + estadoClass + '">' + orden.estado + '</span></td>' +
                 '<td>' +
                     '<div class="acciones">' +
@@ -1359,6 +1501,12 @@
             const zorAdicionalesDetalle = zoresAdicionales.length
                 ? '<div class="zor-adicionales-lista">' + zoresAdicionales.map(function(zor) {
                     return '<span class="zor-adicional-badge">' + escaparHtml(zor) + '</span>';
+                }).join('') + '</div>'
+                : '<span class="field-empty">Sin asignar</span>';
+            const invoicesDetalle = parsearInvoices(orden.invoice);
+            const invoiceDetalleHtml = invoicesDetalle.length
+                ? '<div class="invoice-lista">' + invoicesDetalle.map(function(invoice) {
+                    return '<span class="invoice-badge">' + escaparHtml(invoice) + '</span>';
                 }).join('') + '</div>'
                 : '<span class="field-empty">Sin asignar</span>';
             
@@ -1448,7 +1596,7 @@
                 '</div>' +
                 '<div class="detail-item">' +
                 '<div class="detail-label">Invoice</div>' +
-                '<div class="detail-value">' + (orden.invoice ? '<span class="invoice-display">' + orden.invoice + '</span>' : '<span class="field-empty">Sin asignar</span>') + '</div>' +
+                '<div class="detail-value">' + invoiceDetalleHtml + '</div>' +
                 '</div>' +
                 '<div class="detail-item full-width">' +
                 '<div class="detail-label">Comentarios de Recepción</div>' +
@@ -1691,11 +1839,137 @@
         }
     }
 
+    function abrirModalInvoices(ordenId) {
+        const orden = todasLasOrdenes.find(function(item) { return item.id === ordenId; });
+
+        if (!orden) {
+            alert('No se encontró la orden seleccionada');
+            return;
+        }
+
+        ordenInvoiceActual = orden;
+        const invoicesActuales = parsearInvoices(orden.invoice);
+
+        document.getElementById('modalTitulo').textContent = 'Invoices';
+        document.getElementById('modalBody').innerHTML = '' +
+            '<div class="recepcion-info">' +
+                '<h4><i class="fas fa-file-invoice"></i> Captura de invoices</h4>' +
+                '<p><strong>OCI:</strong> ' + escaparHtml(orden.numero_oci) + '</p>' +
+                '<p><strong>Material:</strong> #' + escaparHtml(orden.material_numero) + '</p>' +
+            '</div>' +
+            '<div class="invoice-principal-box"><strong>Invoices actuales:</strong> ' +
+                (invoicesActuales.length
+                    ? '<div class="invoice-lista" style="margin-top: 8px;">' + invoicesActuales.map(function(invoice) {
+                        return '<span class="invoice-badge">' + escaparHtml(invoice) + '</span>';
+                    }).join('') + '</div>'
+                    : '<span class="field-empty"> Sin asignar</span>') +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label><i class="fas fa-list"></i> Agrega uno o más invoices:</label>' +
+                '<div id="listaInvoices"></div>' +
+                '<button type="button" class="btn btn-secondary" onclick="agregarCampoInvoice()">' +
+                    '<i class="fas fa-plus"></i> Agregar otro invoice' +
+                '</button>' +
+                '<p style="margin-top: 10px; font-size: 12px; color: #666;">Puedes dejar un solo invoice o capturar varios. Los valores vacíos no se guardarán.</p>' +
+            '</div>';
+
+        document.getElementById('modalFooter').innerHTML = '' +
+            '<button class="btn-modal btn-modal-secondary" onclick="cerrarModal()">' +
+                '<i class="fas fa-times"></i> Cancelar' +
+            '</button>' +
+            '<button class="btn-modal btn-modal-primary" onclick="guardarInvoices()">' +
+                '<i class="fas fa-save"></i> Guardar invoices' +
+            '</button>';
+
+        document.getElementById('modalDetalles').classList.add('active');
+        renderizarCamposInvoices(invoicesActuales.length ? invoicesActuales : ['']);
+    }
+
+    function renderizarCamposInvoices(valores) {
+        const contenedor = document.getElementById('listaInvoices');
+        if (!contenedor) return;
+
+        const lista = (valores && valores.length ? valores : ['']).map(function(valor) {
+            return String(valor || '');
+        });
+
+        contenedor.innerHTML = lista.map(function(valor, index) {
+            return '<div class="invoice-row">' +
+                '<input type="text" class="invoice-multiple-input" value="' + escaparHtml(valor) + '" placeholder="Ej. INV-12345">' +
+                (lista.length > 1
+                    ? '<button type="button" class="btn-remove-invoice" onclick="eliminarCampoInvoice(' + index + ')" title="Eliminar invoice"><i class="fas fa-trash"></i></button>'
+                    : '') +
+                '</div>';
+        }).join('');
+    }
+
+    function obtenerValoresFormularioInvoice() {
+        return Array.from(document.querySelectorAll('.invoice-multiple-input')).map(function(input) {
+            return input.value.trim();
+        });
+    }
+
+    function agregarCampoInvoice() {
+        const valores = obtenerValoresFormularioInvoice();
+        valores.push('');
+        renderizarCamposInvoices(valores);
+
+        const inputs = document.querySelectorAll('.invoice-multiple-input');
+        if (inputs.length) {
+            inputs[inputs.length - 1].focus();
+        }
+    }
+
+    function eliminarCampoInvoice(index) {
+        const valores = obtenerValoresFormularioInvoice();
+        valores.splice(index, 1);
+        renderizarCamposInvoices(valores.length ? valores : ['']);
+    }
+
+    async function guardarInvoices() {
+        if (!ordenInvoiceActual) {
+            alert('No hay una orden seleccionada');
+            return;
+        }
+
+        const valores = obtenerValoresFormularioInvoice().filter(Boolean);
+        const valorSerializado = serializarInvoices(valores);
+
+        try {
+            const { error } = await supabaseClient
+                .from('ordenes_compra')
+                .update({ invoice: valorSerializado })
+                .eq('id', ordenInvoiceActual.id);
+
+            if (error) throw error;
+
+            const orden = todasLasOrdenes.find(function(item) { return item.id === ordenInvoiceActual.id; });
+            if (orden) {
+                orden.invoice = valorSerializado;
+            }
+
+            const busqueda = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
+            if (busqueda) {
+                filtrarOrdenes();
+            } else {
+                renderizarTabla(todasLasOrdenes);
+            }
+
+            alert(valores.length ? 'Invoices guardados correctamente' : 'Invoices eliminados correctamente');
+            cerrarModal();
+
+        } catch (error) {
+            console.error('Error guardando invoices:', error);
+            alert('Error al guardar los invoices: ' + error.message);
+        }
+    }
+
     // ===== FUNCIONES DEL MODAL =====
     function cerrarModal() {
         document.getElementById('modalDetalles').classList.remove('active');
         ordenSeleccionada = null;
         ordenZorAdicionalActual = null;
+        ordenInvoiceActual = null;
     }
 
     document.getElementById('modalDetalles').addEventListener('click', function(e) {
@@ -1769,37 +2043,6 @@
         } catch (error) {
             console.error('Error guardando comentarios:', error);
             alert('Error al guardar los comentarios');
-        }
-    }
-
-    // ===== GUARDAR INVOICE =====
-    async function guardarInvoice(ordenId, invoice) {
-        const input = document.querySelector('tr[data-id="' + ordenId + '"] .invoice-input');
-        
-        try {
-            const invoiceValue = invoice.trim() || null;
-
-            const { error } = await supabaseClient
-                .from('ordenes_compra')
-                .update({ invoice: invoiceValue })
-                .eq('id', ordenId);
-
-            if (error) throw error;
-
-            // Actualizar visualmente
-            if (invoiceValue) {
-                input.classList.add('saved');
-            } else {
-                input.classList.remove('saved');
-            }
-            
-            // Actualizar en el array local
-            const orden = todasLasOrdenes.find(function(o) { return o.id === ordenId; });
-            if (orden) orden.invoice = invoiceValue;
-
-        } catch (error) {
-            console.error('Error guardando invoice:', error);
-            alert('Error al guardar el número de invoice');
         }
     }
 
