@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -2035,6 +2036,10 @@
                                         <i class="fas fa-search"></i>
                                         Filtrar
                                     </button>
+                                    <button onclick="descargarBalancesExcel('activos')" class="btn btn-success">
+                                        <i class="fas fa-file-excel"></i>
+                                        Descargar Excel
+                                    </button>
                                 </div>
                                 
                                 <div class="inventory-table">
@@ -2070,6 +2075,10 @@
                                     <button onclick="filtrarBalancesUsados()" class="btn btn-primary">
                                         <i class="fas fa-search"></i>
                                         Filtrar
+                                    </button>
+                                    <button onclick="descargarBalancesExcel('usados')" class="btn btn-success">
+                                        <i class="fas fa-file-excel"></i>
+                                        Descargar Excel
                                     </button>
                                 </div>
                                 

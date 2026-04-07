@@ -3017,6 +3017,8 @@ function limpiarFormularioOCI() {
 
 let balances = [];
 let balanceEditando = null;
+let balancesActivosActuales = [];
+let balancesUsadosActuales = [];
 
 /**
  * Cargar todos los balances desde la base de datos
@@ -3041,6 +3043,7 @@ async function cargarBalances() {
         }
         
         balances = data || [];
+        balancesActivosActuales = [...balances];
         console.log('✅ Balances cargados:', balances.length);
         renderizarBalances(balances);
         
@@ -3377,6 +3380,7 @@ async function filtrarBalances() {
             return;
         }
         
+        balancesActivosActuales = data || [];
         renderizarBalances(data || []);
         
     } catch (error) {
@@ -3546,6 +3550,7 @@ async function cargarBalancesUsados() {
         }
         
         if (!balancesAgotados || balancesAgotados.length === 0) {
+            balancesUsadosActuales = [];
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="empty-state">
@@ -3619,6 +3624,7 @@ async function cargarBalancesUsados() {
         );
         
         console.log('✅ Datos completos de balances usados:', balancesConOCIs.length);
+        balancesUsadosActuales = [...balancesConOCIs];
         
         // 3. Renderizar tabla
         tbody.innerHTML = balancesConOCIs.map(balance => {
@@ -3729,6 +3735,7 @@ async function filtrarBalancesUsados() {
         }
         
         if (!balancesAgotados || balancesAgotados.length === 0) {
+            balancesUsadosActuales = [];
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="empty-state">
@@ -3784,6 +3791,8 @@ async function filtrarBalancesUsados() {
             })
         );
         
+        balancesUsadosActuales = [...balancesConOCIs];
+
         // Renderizar resultados (mismo código que en cargarBalancesUsados)
         tbody.innerHTML = balancesConOCIs.map(balance => {
             const ocisLista = balance.ocis.length > 0
@@ -3833,6 +3842,73 @@ async function filtrarBalancesUsados() {
         
     } catch (error) {
         console.error('❌ Error:', error);
+    }
+}
+
+function descargarBalancesExcel(tipo = 'activos') {
+    try {
+        if (typeof XLSX === 'undefined') {
+            alert('No se pudo cargar la librería de Excel. Intenta recargar la página.');
+            return;
+        }
+
+        let datos = [];
+        let nombreArchivo = '';
+
+        if (tipo === 'usados') {
+            datos = (balancesUsadosActuales || []).map(balance => ({
+                'Orden Compra': balance.orden_compra || '',
+                'Material de Cartón': balance.material_carton || '',
+                'Número de Parte': balance.producto?.numero_parte || '',
+                'Descripción': balance.producto?.descripcion || '',
+                'Balance Inicial': Number(balance.balance_inicial || 0),
+                'Balance Pedido': Number(balance.balance_pedido || 0),
+                'Balance Enviado': Number(balance.balance_enviado || 0),
+                'OCIs Ligadas': balance.ocis && balance.ocis.length > 0 ? balance.ocis.map(oci => oci.numero_oci).join(', ') : '',
+                'Cantidad de OCIs': balance.ocis ? balance.ocis.length : 0,
+                'Fecha Agotamiento': balance.fecha_agotamiento ? formatearFechaHora(balance.fecha_agotamiento) : ''
+            }));
+            nombreArchivo = 'balances_usados';
+        } else {
+            datos = (balancesActivosActuales || []).map(balance => {
+                const balanceNum = parseFloat(balance.balance || 0);
+                let estado = 'Disponible';
+
+                if (balanceNum === 0) {
+                    estado = 'Agotado';
+                } else if (balanceNum > 0 && balanceNum < 1000) {
+                    estado = 'Bajo';
+                }
+
+                return {
+                    'Orden Compra': balance.orden_compra || '',
+                    'Fecha Orden': balance.fecha_orden_compra ? formatearFecha(balance.fecha_orden_compra) : '',
+                    'Material de Cartón': balance.material_carton || '',
+                    'Número de Parte': balance.producto?.numero_parte || '',
+                    'Descripción': balance.producto?.descripcion || '',
+                    'Balance': Number(balance.balance || 0),
+                    'Precio Unitario DLLS': balance.precio_unitario_dlls != null ? Number(balance.precio_unitario_dlls) : '',
+                    'Estado': estado,
+                    'Fecha Creación': balance.fecha_creacion ? formatearFechaHora(balance.fecha_creacion) : ''
+                };
+            });
+            nombreArchivo = 'balances_activos';
+        }
+
+        if (!datos.length) {
+            alert('No hay balances para descargar con los filtros actuales.');
+            return;
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(datos);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, tipo === 'usados' ? 'Balances Usados' : 'Balances Activos');
+
+        const fechaExportacion = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(workbook, `${nombreArchivo}_${fechaExportacion}.xlsx`);
+    } catch (error) {
+        console.error('❌ Error exportando balances a Excel:', error);
+        alert('Ocurrió un error al generar el archivo de Excel.');
     }
 }
 
