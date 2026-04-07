@@ -1070,7 +1070,9 @@
                             'value="' + qtyEnviarPiezas + '" ' +
                             'placeholder="0" ' +
                             'min="0" ' +
-                            'onchange="guardarQtyEnviarPiezas(' + orden.id + ', this.value, ' + (orden.piezas_por_pallet || 1) + ')" ' +
+                            'max="' + totalPiezas + '" ' +
+                            'oninput="validarLimiteQtyEnviar(this, ' + totalPiezas + ')" ' +
+                            'onchange="guardarQtyEnviarPiezas(' + orden.id + ', this.value, ' + (orden.piezas_por_pallet || 1) + ', ' + totalPiezas + ', this)" ' +
                             'title="Cantidad de piezas a enviar" ' +
                             'style="font-weight: 600;">' +
                     '</td>' +
@@ -1523,12 +1525,44 @@
             }
         }
 
+        function mostrarAdvertenciaExcesoQty(totalPiezas) {
+            alert(
+                'No puedes enviar más de ' + totalPiezas.toLocaleString() + ' piezas, porque ese es el total solicitado en la columna Total Piezas.\n\n' +
+                'Si necesitas agregar más del total de piezas solicitadas, debes hablar con Janeth Ruelas para solicitar una orden de compra nueva para ese material.'
+            );
+        }
+
+        function validarLimiteQtyEnviar(input, totalPiezas) {
+            const valorActual = parseInt(input.value, 10);
+
+            if (isNaN(valorActual)) return;
+
+            if (valorActual > totalPiezas) {
+                mostrarAdvertenciaExcesoQty(totalPiezas);
+                input.value = totalPiezas;
+            }
+        }
+
         // ===== GUARDAR QTY A ENVIAR EN PIEZAS =====
-        async function guardarQtyEnviarPiezas(ordenId, cantidadPiezas, piezasPorPallet) {
-            const input = document.querySelector('tr[data-id="' + ordenId + '"] .qty-input');
+        async function guardarQtyEnviarPiezas(ordenId, cantidadPiezas, piezasPorPallet, totalPiezas, inputElement = null) {
+            const input = inputElement || document.querySelector('tr[data-id="' + ordenId + '"] .qty-input');
             
             try {
-                const cantidadPiezasNum = parseInt(cantidadPiezas) || 0;
+                let cantidadPiezasNum = parseInt(cantidadPiezas, 10);
+
+                if (isNaN(cantidadPiezasNum) || cantidadPiezasNum < 0) {
+                    cantidadPiezasNum = 0;
+                }
+
+                if (cantidadPiezasNum > totalPiezas) {
+                    mostrarAdvertenciaExcesoQty(totalPiezas);
+                    cantidadPiezasNum = totalPiezas;
+                }
+
+                if (input) {
+                    input.value = cantidadPiezasNum;
+                }
+
                 // Convertir piezas a pallets para compatibilidad
                 const cantidadPallets = Math.ceil(cantidadPiezasNum / piezasPorPallet);
 
@@ -1546,7 +1580,9 @@
                 console.log('✅ Guardado: Piezas manuales =', cantidadPiezasNum, ', Pallets =', cantidadPallets);
 
                 // Actualizar visualmente
-                input.classList.add('qty-saved');
+                if (input) {
+                    input.classList.add('qty-saved');
+                }
                 
                 // Actualizar en el array local
                 const orden = ordenesOriginal.find(o => o.id === ordenId);
@@ -1556,9 +1592,11 @@
                 }
 
                 // Mostrar feedback temporal
-                setTimeout(function() {
-                    input.classList.remove('qty-saved');
-                }, 2000);
+                if (input) {
+                    setTimeout(function() {
+                        input.classList.remove('qty-saved');
+                    }, 2000);
+                }
 
             } catch (error) {
                 console.error('Error guardando cantidad:', error);
