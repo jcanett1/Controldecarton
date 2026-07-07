@@ -1223,9 +1223,11 @@ function actualizarFilaEstado(claveFilaId, folio, notificado) {
 
 function obtenerEstadoFolio(folioGuardado) {
     const acciones = folioGuardado ? folioGuardado.acciones || '' : '';
+    // Usar folio_mtk si está disponible; si no, extraerlo de acciones (compatibilidad con registros anteriores)
+    const folioMtk = folioGuardado ? (folioGuardado.folio_mtk || obtenerFolioLimpio(acciones)) : '';
     return {
-        folioValor: acciones,
-        folioLimpio: obtenerFolioLimpio(acciones),
+        folioValor: folioMtk || acciones,
+        folioLimpio: folioMtk || obtenerFolioLimpio(acciones),
         esNotificado: esFolioNotificado(acciones)
     };
 }
@@ -1298,7 +1300,8 @@ function construirRegistroFolio(orden, folio) {
         oc_mtk: orden.oc_mtk || null,
         qty_recibido: orden.qty_recibida ? parseInt(orden.qty_recibida) : null,
         invoice: normalizarInvoiceValor(orden.invoice || '') || null,
-        acciones: folio
+        acciones: folio,
+        folio_mtk: folio
     };
 }
 
@@ -1603,7 +1606,7 @@ async function guardarFolio(claveFilaId, valor, inputEl) {
             // Actualizar registro existente
             const { data, error } = await sb
                 .from('folios_pago_carton')
-                .update({ acciones: folio })
+                .update({ acciones: folio, folio_mtk: folio })
                 .eq('id', folioActual.id)
                 .select()
                 .single();
@@ -1774,7 +1777,7 @@ function abrirModalNotificar(claveFilaId) {
         </div>
         <div class="modal-info-item">
                     <label>FOLIO MTK</label>
-            <span style="color:#7c3aed; font-size:15px;">${escaparHtml(obtenerValorNotificacion(folioData.acciones) || '—')}</span>
+            <span style="color:#7c3aed; font-size:15px;">${escaparHtml(folioData.folio_mtk || obtenerValorNotificacion(folioData.acciones) || '—')}</span>
         </div>
     `;
 
@@ -1807,12 +1810,13 @@ async function confirmarNotificacion() {
     try {
         const { orden, folioData, claveFilaId, claveMapa } = ordenParaNotificar;
         const usuario = usuarioActual ? (usuarioActual.nombre_completo || usuarioActual.username) : 'Sistema';
-        const folioBase = obtenerValorNotificacion(folioData.acciones);
+        // Usar folio_mtk si está disponible; si no, extraerlo de acciones (compatibilidad)
+        const folioBase = folioData.folio_mtk || obtenerValorNotificacion(folioData.acciones);
         const notaNotificacion = construirNotaNotificacion(folioBase, usuario);
 
         const { error } = await sb
             .from('folios_pago_carton')
-            .update({ acciones: notaNotificacion })
+            .update({ acciones: notaNotificacion, folio_mtk: folioBase })
             .eq('id', folioData.id);
 
         if (error) throw error;
@@ -1890,7 +1894,8 @@ function renderizarHistorial(registros) {
             : '—';
 
         const esNotificado = esFolioNotificado(reg.acciones);
-        const folioLimpio = obtenerFolioLimpio(reg.acciones) || '—';
+        // Usar folio_mtk si está disponible; si no, extraerlo de acciones (compatibilidad)
+        const folioLimpio = reg.folio_mtk || obtenerFolioLimpio(reg.acciones) || '—';
 
         const iconClass = esNotificado ? 'notificado' : 'folio-asignado';
         const iconName = esNotificado ? 'fas fa-bell' : 'fas fa-tag';
